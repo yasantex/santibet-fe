@@ -1,0 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Fustat:wght@200..800&display=swap');
+@import 'tailwindcss';
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #ffffff;
+  font-family: 'Fustat', sans-serif;
+}
+
+@theme {
+  --color-text-black: #000005;
+  --color-neutral-10: #515151;
+  --font-fustat: 'Fustat', sans-serif;
+  --background: #ffffff;
+  --color-error: #ef4444;
+  --color-error-bg: #ffeded;
+  --color-surface-error: #fff2f2;
+  --color-border-error: #ff2e2e;
+  --color-border: #dfe0e1;
+  --color-hover: #eaeaea;
+  --color-success: #238b45;
+  --color-surface-success: #eefcf3;
+}
