@@ -23,6 +23,8 @@ import {
 import SearchResultsList from '../data_layer/SearchResultsList'
 import MobileSearchOverlay from '../mobile/MobileSearchOverlay'
 import MobileBottomNav from '../mobile/MobileBottomNav'
+import { Button } from '../components/globals/Button'
+import { useAppSelector } from '../utils/hooks'
 
 const CategoryRow = () => (
   <div className='hide-scroll-bar flex items-center gap-6 overflow-x-auto border-b border-border px-4 py-3 text-sm font-medium text-neutral-40 md:px-6'>
@@ -42,9 +44,11 @@ const CategoryRow = () => (
 )
 
 const Header = () => {
-    const navigate = useNavigate()
+  const navigate = useNavigate()
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
+  const { user } = useAppSelector((state) => state.user)
+
   const [searchTerm, setSearchTerm] = useState('')
   const [activeMobileTab, setActiveMobileTab] = useState<
     'browse' | 'live' | 'search' | 'social'
@@ -64,11 +68,11 @@ const Header = () => {
 
   return (
     <header className='sticky top-0 z-50 bg-white'>
-      <div className='hidden items-center gap-6 px-6 py-3 md:flex'>
+      <div className='flex items-center justify-between gap-6 px-6 py-3'>
         <Link to='/'>
           <img src={logo} alt='Santibet' className='h-15 w-full' />
         </Link>
-        <nav className='flex items-center gap-6 text-sm font-semibold'>
+        <nav className='lg:flex items-center gap-6 text-sm font-semibold hidden'>
           {primaryNavLinks.map((link) => (
             <a
               key={link.label}
@@ -106,59 +110,69 @@ const Header = () => {
             </span>
           </Dropdown>
         </nav>
-
-        <Dropdown
-          className='ml-auto flex-1 max-w-md'
-          menuClassName='w-full max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
-          menu={({ close }) => (
-            <SearchResultsList
-              results={filteredResults}
-              onSelect={(result) => {
-                close()
-                handleSelectResult(result)
-              }}
+        <main className='ml-auto lg:flex items-center gap-2.5 hidden'>
+          <Dropdown
+            className='ml-auto flex-1 w-80!'
+            menuClassName='w-full max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
+            menu={({ close }) => (
+              <SearchResultsList
+                results={filteredResults}
+                onSelect={(result) => {
+                  close()
+                  handleSelectResult(result)
+                }}
+              />
+            )}
+          >
+            <SearchInput
+              searchTerm={searchTerm}
+              handleChange={(e) => setSearchTerm(e.target.value)}
+              placeholder='Trade on anything'
             />
+          </Dropdown>
+
+          {user && (
+            <>
+              <button type='button' aria-label='Rewards' className='shrink-0'>
+                <HugeiconsIcon icon={Award01Icon} size={22} />
+              </button>
+              <button
+                type='button'
+                aria-label='Notifications'
+                className='shrink-0'
+              >
+                <HugeiconsIcon icon={Notification03Icon} size={22} />
+              </button>
+              <button type='button' aria-label='Menu' className='shrink-0'>
+                <HugeiconsIcon icon={Menu01Icon} size={22} />
+              </button>
+            </>
           )}
-        >
-          <SearchInput
-            searchTerm={searchTerm}
-            handleChange={(e) => setSearchTerm(e.target.value)}
-            placeholder='Trade on anything'
-            containerClassName='rounded-full border border-border w-full'
+        </main>
+
+        {user ? (
+          <Button
+            type='button'
+            text='Deposit cash'
+            onClick={() => handleModalOpen('deposit')}
           />
-        </Dropdown>
-
-        <button
-          type='button'
-          onClick={() => handleModalOpen('deposit')}
-        >
-          Deposit cash
-        </button>
-
-        <button type='button' aria-label='Rewards' className='shrink-0'>
-          <HugeiconsIcon icon={Award01Icon} size={22} />
-        </button>
-        <button type='button' aria-label='Notifications' className='shrink-0'>
-          <HugeiconsIcon icon={Notification03Icon} size={22} />
-        </button>
-        <button type='button' aria-label='Menu' className='shrink-0'>
-          <HugeiconsIcon icon={Menu01Icon} size={22} />
-        </button>
+        ) : (
+          <div className='flex items-center gap-4'>
+            <Button
+              type='button'
+              text='Login'
+              onClick={() => navigate('/signin')}
+            />
+            <Button
+              type='button'
+              text='Sign up'
+              variation='plain'
+              onClick={() => navigate('/signup')}
+            />
+          </div>
+        )}
       </div>
 
-      <div className='flex items-center justify-between px-4 py-3 md:hidden'>
-        <Link to='/'>
-          <img src={logo} alt='Santibet' className='h-15 w-full' />
-        </Link>{' '}
-        <div className='flex items-center gap-4'>
-          <button type='button' aria-label='Notifications'>
-            <HugeiconsIcon icon={Notification03Icon} size={22} />
-          </button>
-          <button type='button' aria-label='Menu'>
-            <HugeiconsIcon icon={Menu01Icon} size={22} />
-          </button>
-        </div>
-      </div>
 
       <CategoryRow />
 

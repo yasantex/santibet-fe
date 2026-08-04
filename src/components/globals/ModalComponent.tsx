@@ -1,7 +1,8 @@
 import classNames from 'classnames'
 import type { ReactNode } from 'react'
 import ReactDOM from 'react-dom'
-import { Icon } from './Icon'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { MultiplicationSignIcon } from '@hugeicons/core-free-icons'
 
 export type ModalProps = {
   open: boolean
@@ -47,32 +48,24 @@ const ModalComponent: React.FC<ModalProps> = ({
           if (closeOnOverlayClick) handleClose()
         }}
       />
-
-      {/* Modal dialog  */}
       <div
-        className={`z-30 w-full bg-white py-3 px-6 rounded max-w-[90dvh] h-fit max-h-[90dvh] flex flex-col overflow-hidden ${className}`}
+        className={`z-30 w-full bg-white py-3 px-6 rounded-2xl max-w-[90dvh] h-fit max-h-[90dvh] flex flex-col overflow-hidden ${className}`}
       >
         {showHeader && (
           <div
-            className={`flex items-center justify-between border-b border-border pb-3 gap-4`}
+            className={`flex items-start justify-between pb-2 gap-4`}
           >
             {title && (
               <div className='flex flex-col gap-2.5'>
-                <div className='font-medium text-base'>{title}</div>
+                <div className='font-semibold text-base'>{title}</div>
                 <div className='text-sm'>{subtitle}</div>
               </div>
             )}
 
             {showCloseIcon && (
               <div className='flex flex-1 items-end cursor-pointer justify-end'>
-                <button type='button' onClick={handleClose} className={`w-fit`}>
-                  <Icon
-                    svg={'close-icon'}
-                    className='soft-shrink'
-                    width={24}
-                    height={24}
-                    containerClassName='cursor'
-                  />
+                <button type='button' onClick={handleClose}>
+                 <HugeiconsIcon icon={MultiplicationSignIcon} size={20} />
                 </button>
               </div>
             )}
@@ -80,7 +73,7 @@ const ModalComponent: React.FC<ModalProps> = ({
         )}
 
         <div
-          className={`hide-scroll-bar my-4 flex-1 overflow-y-scroll ${dialogClassName} `}
+          className={`hide-scroll-bar mb-2.5 flex-1 overflow-y-scroll ${dialogClassName} `}
         >
           {children}
         </div>

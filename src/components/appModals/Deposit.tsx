@@ -55,7 +55,7 @@ const Deposit = ({ open, handleClose, onSelectOption }: DepositModalProps) => {
               key={option.id}
               type='button'
               onClick={() => onSelectOption?.(option)}
-              className='flex items-center justify-between rounded-xl border border-border px-4 py-3.5 text-left transition-colors hover:bg-neutral-2'
+              className='flex items-center cursor-pointer justify-between rounded-xl border border-border px-4 py-3.5 text-left transition-colors hover:bg-neutral-2'
             >
               <span className='flex items-center gap-3 font-semibold'>
                 <OptionIcon icon={option.icon} />
@@ -64,7 +64,7 @@ const Deposit = ({ open, handleClose, onSelectOption }: DepositModalProps) => {
 
               <span className='flex items-center gap-2'>
                 {option.mostPopular && (
-                  <span className='rounded-full bg-brand-green/15 px-2.5 py-1 text-xs font-medium text-brand-green'>
+                  <span className='rounded-full bg-brand-green/15 px-2.5 py-1 text-xs font-medium text-black'>
                     Most popular
                   </span>
                 )}

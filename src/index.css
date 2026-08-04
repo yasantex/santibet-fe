@@ -12,15 +12,16 @@ body {
 
 @theme {
   --color-text-black: #000005;
-  --color-neutral-10: #515151;
+  --color-neutral-10: #9AA09C;
   --font-fustat: 'Fustat', sans-serif;
   --background: #ffffff;
   --color-error: #ef4444;
   --color-error-bg: #ffeded;
   --color-surface-error: #fff2f2;
   --color-border-error: #ff2e2e;
-  --color-border: #dfe0e1;
+  --color-border: #22262A;
   --color-hover: #eaeaea;
   --color-success: #238b45;
   --color-surface-success: #eefcf3;
+  --color-brand-green: #c6f135;
 }
