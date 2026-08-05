@@ -53,7 +53,7 @@ const SearchResultsList = ({
           <button
             type='button'
             onClick={() => onSelect?.(result)}
-            className='flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-neutral-2'
+            className='flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-hover'
           >
             <span
               className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold'

@@ -7,6 +7,8 @@ import LoginPage from './pages/auth/LoginPage'
 import SignupPage from './pages/auth/SignupPage'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import RecoverPassword from './pages/auth/RecoverPassword'
+import ChangePassword from './pages/auth/ChangePassword'
+import Profile from './pages/account/Profile'
 
 function App() {
   return (
@@ -21,9 +23,12 @@ function App() {
           <Route path='/forgot-password' element={<ForgotPassword />} />
 
           <Route
-            path='/recover-password/:token'
+            path='/recover-password/:email'
             element={<RecoverPassword />}
           />
+          <Route path='/change-password' element={<ChangePassword />} />
+          <Route path='/account-profile' element={<Profile />} />
+
         </Route>
       </Routes>
     </>

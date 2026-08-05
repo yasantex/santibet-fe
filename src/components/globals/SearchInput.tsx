@@ -16,18 +16,18 @@ const SearchInput = ({
 }) => {
   return (
     <div
-      className={`flex w-full items-center gap-2.5 rounded-full border border-border px-2.5
-    focus-within:outline  focus-within:outline-brand-green focus-within:border-transparent
+      className={`flex w-full items-center gap-2.5  rounded-[10px] border border-glass bg-glass px-2.5
+    focus-within:outline  focus-within:outline-brand-green focus-within:border-transparent focus-within:outline-border-2!
     ${containerClassName}`}
     >
-      {showIcon && <HugeiconsIcon icon={Search01Icon} size={18} />}
+      {showIcon && <HugeiconsIcon icon={Search01Icon} size={18} className=' text-black'/>}
 
       <input
         type='text'
         value={searchTerm}
         onChange={handleChange}
         placeholder={placeholder}
-        className='h-11! w-full py-1! text-sm font-medium text-black outline-none placeholder:text-neutral-10!'
+        className='h-11! w-full py-1! text-sm font-medium text-black outline-none placeholder:text-placeholder'
       />
     </div>
   )

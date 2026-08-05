@@ -7,7 +7,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 
-type MobileTab = 'browse' | 'live' | 'search' | 'social'
+type MobileTab = 'browse' | 'trending' | 'search' | 'social'
 
 type MobileBottomNavProps = {
   activeTab?: MobileTab
@@ -23,12 +23,11 @@ const NAV_ITEMS: {
   icon: typeof Compass01Icon
 }[] = [
   { key: 'browse', label: 'Browse', icon: Compass01Icon },
-  { key: 'live', label: 'Live', icon: SatelliteIcon },
+  { key: 'trending', label: 'Trending', icon: SatelliteIcon },
 ]
 
 const MobileBottomNav = ({
   activeTab,
-  liveCount = 82,
   onNavigate,
   onOpenDeposit,
   onOpenSearch,
@@ -48,15 +47,13 @@ const MobileBottomNav = ({
             <HugeiconsIcon
               icon={Icon}
               size={20}
-              className={isActive ? 'text-brand-green' : 'text-neutral-40'}
+              className={isActive ? 'text-brand-green' : 'text-black'}
             />
             <span
-              className={`flex items-center gap-1 ${isActive ? 'text-brand-green font-medium' : 'text-neutral-40'}`}
+              className={`flex items-center gap-1 ${isActive ? 'text-brand-green font-medium' : 'text-black'}`}
             >
               {item.label}
-              {item.key === 'live' && (
-                <span className='text-error'>{liveCount}</span>
-              )}
+
             </span>
           </button>
         )
@@ -68,7 +65,7 @@ const MobileBottomNav = ({
         onClick={onOpenDeposit}
         className='flex flex-1 flex-col items-center gap-1 py-1 text-xs'
       >
-        <HugeiconsIcon icon={MoneySend01Icon} size={18} />
+        <HugeiconsIcon icon={MoneySend01Icon} size={18}  className='text-brand-green'/>
         <span className='text-brand-green font-medium'>Deposit</span>
       </button>
 
@@ -81,14 +78,14 @@ const MobileBottomNav = ({
           icon={Search01Icon}
           size={20}
           className={
-            activeTab === 'search' ? 'text-brand-green' : 'text-neutral-40'
+            activeTab === 'search' ? 'text-brand-green' : 'text-black'
           }
         />
         <span
           className={
             activeTab === 'search'
               ? 'text-brand-green font-medium'
-              : 'text-neutral-40'
+              : 'text-black'
           }
         >
           Search
@@ -104,14 +101,14 @@ const MobileBottomNav = ({
           icon={UserGroupIcon}
           size={20}
           className={
-            activeTab === 'social' ? 'text-brand-green' : 'text-neutral-40'
+            activeTab === 'social' ? 'text-brand-green' : 'text-black'
           }
         />
         <span
           className={
             activeTab === 'social'
               ? 'text-brand-green font-medium'
-              : 'text-neutral-40'
+              : 'text-black'
           }
         >
           Social

@@ -1,27 +1,61 @@
-@import url('https://fonts.googleapis.com/css2?family=Fustat:wght@200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap');
 @import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 * {
   box-sizing: border-box;
 }
 
 body {
-  background-color: #ffffff;
-  font-family: 'Fustat', sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Sora', sans-serif;
 }
 
 @theme {
-  --color-text-black: #000005;
-  --color-neutral-10: #9AA09C;
-  --font-fustat: 'Fustat', sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-track: #a4a4a4;
+  --color-plain: #f0f0f0;
+  --color-surface-base: #ddf1e4;
+  --color-black: #000000;
+  --color-text-black: #000000;
+  --color-neutral-10: #9aa09c;
+  --font-sora: 'Sora', sans-serif;
   --background: #ffffff;
   --color-error: #ef4444;
   --color-error-bg: #ffeded;
   --color-surface-error: #fff2f2;
   --color-border-error: #ff2e2e;
-  --color-border: #22262A;
+  --color-border: #E4E5E3;
   --color-hover: #eaeaea;
   --color-success: #238b45;
   --color-surface-success: #eefcf3;
   --color-brand-green: #c6f135;
+  --color-card: #16191a;
+  --color-glass: #e4e5e3;
+  --color-placeholder: #6B706D;
+}
+
+:root {
+  color-scheme: light;
+  color-scheme: light;
+  --background: #ffffff;
+  --gradient: #f0f2fa;
+  --white: #ffffff;
+  --black: #000000;
+  --foreground: #171717;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #1d1d1d;
+  --color-white: #1d1d1d;
+  --color-black: #f5f6f5;
+  --color-card: #16191a;
+  --color-glass: #22262a;
+  --color-border: #22262A;
+  --color-hover: #E4E5E3;
+
 }

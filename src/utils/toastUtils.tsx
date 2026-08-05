@@ -1,6 +1,8 @@
 import { toast } from 'sonner'
 import type { ReactElement } from 'react'
 import { Icon } from '../components/globals/Icon'
+import { MultiplicationSignIcon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 
 type ToastType = 'success' | 'error'
 
@@ -13,10 +15,11 @@ const showToast = (message: string, type: ToastType) => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'start',
-          width: '300px',
           gap: '15px',
           padding: '10px',
-          fontFamily: 'Fustat',
+          fontFamily: 'Sora',
+          zIndex: 9999,
+
         }}
       >
         <div
@@ -28,7 +31,7 @@ const showToast = (message: string, type: ToastType) => {
           }}
           onClick={() => toast.dismiss(t)}
         >
-          <Icon svg='close-icon' height={24} width={24} />
+          <HugeiconsIcon icon={MultiplicationSignIcon} size={20} className='text-black' />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -59,7 +62,7 @@ const showToast = (message: string, type: ToastType) => {
       duration: 3000,
       position: 'top-right',
       style: {
-        background: 'white',
+        background: 'var(--color-white)',
         border: type === 'success' ? '1px solid #238b45' : '1px solid #EF4444',
       },
     },

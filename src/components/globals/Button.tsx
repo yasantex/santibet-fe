@@ -62,18 +62,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const getColors = () => {
       if (variation === 'primary')
-        return 'bg-brand-green text-black font-semibold px-5 w-fit'
+        return 'bg-brand-green hover:bg-brand-green/75 transition-all duration-300 ease-in-out text-black dark:text-[#000000]! font-semibold px-5 w-fit'
       if (variation === 'white')
         return 'bg-white text-black px-5 font-semibold px-5 w-fit'
       if (variation === 'plain')
-        return 'border border-border text-black font-semibold w-fit px-5'
-      if (variation === 'secondary')
-        return 'border border-border text-neutral-10 px-5'
-      if (variation === 'grey') return 'bg-form-bg text-black px-5'
-      if (variation === 'error') return 'bg-error-bg text-error px-5'
+        return 'border border-border text-black hover:bg-hover dark:hover:text-[#000000]! transition-all duration-300 ease-in-out font-semibold w-fit px-5 '
 
       // Ultimate fallback
-      return 'bg-brand-green text-black font-semibold w-fit px-5'
+        return 'bg-brand-green hover:bg-brand-green/75 transition-all duration-300 ease-in-out text-black dark:text-[#000000]! font-semibold px-5 w-fit'
     }
     const getLoaderColor = () => {
       if (variation) {

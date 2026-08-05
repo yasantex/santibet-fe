@@ -70,7 +70,7 @@ export default function Dropdown({
         <div
           ref={menuRef}
           className={classNames(
-            'absolute border-[0.5px] z-80 bg-white border-border',
+            'absolute border-[0.5px] z-80 bg-white dark:bg-card border-border',
             alignmentClass,
             menuClassName
           )}

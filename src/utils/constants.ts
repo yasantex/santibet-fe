@@ -1,7 +1,6 @@
 export type NavLink = {
   label: string
   href: string
-  badge?: number
 }
 
 export type CategoryLink = {
@@ -24,10 +23,11 @@ export type SearchResult = {
 }
 
 export const primaryNavLinks: NavLink[] = [
-  { label: 'MARKETS', href: '/markets' },
-  { label: 'PERPS', href: '/perps' },
-  { label: 'LIVE', href: '/live', badge: 82 },
-  { label: 'SOCIAL', href: '/social' },
+  { label: 'Trending', href: '/trending' },
+  { label: 'Politics', href: '/politics' },
+  { label: 'Sports', href: '/sports' },
+  { label: 'Crypto', href: '/crypto' },
+  { label: 'Entertainments', href: '/entertainments' },
 ]
 
 export const moreNavLinks: NavLink[] = [
@@ -36,22 +36,6 @@ export const moreNavLinks: NavLink[] = [
   { label: 'Tech & Science', href: '/tech-and-science' },
   { label: 'Help center', href: '/help' },
 ]
-
-export const categoryLinks: CategoryLink[] = [
-  { label: 'Trending', href: '/', isTrending: true },
-  { label: 'Elections', href: '/elections' },
-  { label: 'Politics', href: '/politics' },
-  { label: 'Sports', href: '/sports' },
-  { label: 'Culture', href: '/culture' },
-  { label: 'Crypto', href: '/crypto' },
-  { label: 'Commodities', href: '/commodities' },
-  { label: 'Climate', href: '/climate' },
-  { label: 'Economics', href: '/economics' },
-  { label: 'Mentions', href: '/mentions' },
-  { label: 'Finance', href: '/finance' },
-  { label: 'Tech & Science', href: '/tech-and-science' },
-]
-
 
 
 export const mockSearchResults: SearchResult[] = [

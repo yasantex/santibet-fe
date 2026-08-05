@@ -6,9 +6,10 @@ import type {
   InputHTMLAttributes,
   ReactNode,
 } from 'react'
-import { Icon } from './Icon'
 import { useWindowDimensions } from '../../hooks/useWindowDimensions'
 import { ErrorText } from './ReusedText'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { EyeIcon, EyeOffIcon } from '@hugeicons/core-free-icons'
 
 export type FormInputProps = {
   type: string
@@ -18,7 +19,7 @@ export type FormInputProps = {
   onChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>
   onBlur: FocusEventHandler<HTMLInputElement | HTMLTextAreaElement>
   onKeyDown?: (
-    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void
   errors?: string
   rows?: number
@@ -72,8 +73,8 @@ export const FormInput = ({
   const inputClassName = `
   bg-transparent w-full 
   outline-none focus:outline-none
-  font-bold
-  placeholder:text-text-placeholder placeholder:font-normal
+  font-bold text-neutral-10
+  placeholder:text-placeholder placeholder:font-normal
   autofill:focus:bg-transparent autofill:bg-transparent
   text-sm
   transition-all duration-300
@@ -108,8 +109,8 @@ export const FormInput = ({
       )}
       <div
         className={classNames(
-          `group w-full flex border border-form-bg rounded items-center `,
-          ` px-2.5 py-px text-sm font-normal bg-transparent!`,
+          `group w-full flex border border-border rounded items-center `,
+          ` px-2.5 py-px text-sm font-normal bg-transparent! focus-within:border-brand-green focus-within:border-2`,
           {
             'focus-within:border-error!': !!errors,
             'bg-gray-100!': disabled,
@@ -118,7 +119,7 @@ export const FormInput = ({
             'h-11': type !== 'textarea',
             'h-30': type === 'textarea',
           },
-          className
+          className,
         )}
       >
         {type !== 'textarea' ? (
@@ -170,11 +171,10 @@ export const FormInput = ({
               setViewPassword(!viewPassword)
             }}
           >
-            <Icon
-              svg={viewPassword ? 'eyeClose' : 'eyeOpen'}
-              width={16}
-              height={16}
-              className={`w-5 cursor-pointer ${viewPassword && 'rotate-180'} `}
+            <HugeiconsIcon
+              icon={viewPassword ? EyeOffIcon : EyeIcon}
+              size={16}
+              className='text-black'
             />
           </button>
         )}

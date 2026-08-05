@@ -1,5 +1,4 @@
 import { useCookies } from 'react-cookie'
-import type { LoginResponse } from '../types/types'
 
 const COOKIE_OPTIONS = {
   path: '/',
@@ -15,9 +14,8 @@ const useUpdateToken = () => {
     setCookie(key, value, COOKIE_OPTIONS)
   }
 
-  return async (data: string | LoginResponse) => {
-    const token =
-      typeof data === 'string' ? data : data?.data?.authorization?.token
+  return async (data: string) => {
+    const token = data
 
     if (!token) return
     setAppCookie('token', token)

@@ -4,7 +4,7 @@ import useUpdateToken from '../../hooks/useUpdateToken'
 import { useAppDispatch } from '../../utils/hooks'
 import { useFormik } from 'formik'
 import { useSantiBetMutation } from '../../data_layer/utils'
-import type { LoginResponse } from '../../types/types'
+import type { AuthResponse } from '../../types/types'
 import { SignInSchema } from '../../utils/validations'
 import { isAxiosError } from 'axios'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
@@ -34,7 +34,7 @@ const LoginPage = () => {
     })
 
   const { mutateAsync: postLogin, isPending } = useSantiBetMutation<
-    LoginResponse,
+    AuthResponse,
     { email: string; password: string }
   >({
     path: `/auth/login`,
@@ -48,16 +48,16 @@ const LoginPage = () => {
         }
       },
       onSuccess: (data) => {
-        const { ...userData } = data.data
-        if (userData.two_fa_enabled) {
+        const { ...userData } = data.user
+        if (userData.twoFaEnabled) {
           navigate(
-            `/two-fa?userId=${userData?.user_uuid}&authToken=${userData?.pre_auth_token}`,
+            `/two-fa?userId=${userData?.id}&authToken=${userData?.preAuthToken}`,
           )
           return
         }
-        updateToken(data)
+        updateToken(data?.accessToken)
         dispatch(setUser(userData))
-        showSuccessToast(data?.message)
+        showSuccessToast(userData?.message ?? 'Login Successful')
       },
     },
   })
@@ -77,7 +77,10 @@ const LoginPage = () => {
         icon='google-icon'
         iconClassName='mb-1'
       />
-      <main className='w-full flex flex-col gap-2.5 mt-2.5'>
+      <form
+        onSubmit={handleSubmit}
+        className='w-full flex flex-col gap-2.5 mt-2.5'
+      >
         <FormInput
           type='text'
           name='email'
@@ -128,7 +131,7 @@ const LoginPage = () => {
             Sign Up
           </Link>
         </p>
-      </main>
+      </form>
     </div>
   )
 }

@@ -13,7 +13,7 @@ const useLogout = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { mutateAsync: apiLogoutAll, isPending: isPendingAll } =
-    useSantiBetMutation<void, void>({ path: '/user/auth/logout-all' })
+    useSantiBetMutation<void, void>({ path: '/auth/logout-all' })
 
   const deleteAppCookie = (key: 'token') => {
     removeCookie(key, { path: '/', sameSite: 'lax', secure: true })
@@ -25,7 +25,7 @@ const useLogout = () => {
 
   const handleLogout = async () => {
     try {
-      // await apiLogoutAll()
+      await apiLogoutAll()
       clearAllCookies()
       dispatch(clearUser())
       queryClient.clear()

@@ -5,11 +5,11 @@ import type { UserData } from '../types/types'
 
 export interface UserState {
   user: UserData | null
-  twoFaToken: string | null
+  twoFaToken: boolean 
 }
 const initialState: UserState = {
   user: null,
-  twoFaToken: null,
+  twoFaToken: false,
 }
 
 const userSlice = createSlice({
@@ -28,7 +28,7 @@ const userSlice = createSlice({
     clearTwoFaToken: (state) => {
       state.user = null
     },
-    setEnableTwoFA: (state, action: PayloadAction<number>) => {
+    setEnableTwoFA: (state, action: PayloadAction<boolean>) => {
       if (state.user) {
         state.user.security.two_factor_enabled = action.payload
       }
