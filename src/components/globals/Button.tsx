@@ -67,20 +67,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         return 'bg-white text-black px-5 font-semibold px-5 w-fit'
       if (variation === 'plain')
         return 'border border-border text-black hover:bg-hover dark:hover:text-[#000000]! transition-all duration-300 ease-in-out font-semibold w-fit px-5 '
-
+      if (variation === 'error')
+        return 'text-error bg-surface-error font-semibold w-fit rounded-full! px-5 '
       // Ultimate fallback
-        return 'bg-brand-green hover:bg-brand-green/75 transition-all duration-300 ease-in-out text-black dark:text-[#000000]! font-semibold px-5 w-fit'
-    }
-    const getLoaderColor = () => {
-      if (variation) {
-        return variation === 'primary' ? '#ffffff' : '#04000A'
-      }
-      return '#ffffff'
+      return 'bg-brand-green hover:bg-brand-green/75 transition-all duration-300 ease-in-out text-black dark:text-[#000000]! font-semibold px-5 w-fit'
     }
 
-    const loaderBorderStyle = {
-      borderColor: `${getLoaderColor()} transparent transparent transparent`,
-    }
     return (
       <button
         {...otherProps}
@@ -97,11 +89,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           `soft-shrink relative flex w-full items-center rounded-full justify-center gap-2.5 cursor-pointer  font-semibold`,
           getColors(),
           {
-            'text-transparent opacity-40 cursor-not-allowed!':
+            'text-transparent opacity-70 cursor-not-allowed!':
               loading || disabled,
             group: hover,
-
-            'disabled:cursor-not-allowed disabled:opacity-40 ': loading,
+            'disabled:cursor-not-allowed disabled:opacity-70 ': loading,
             'h-6 text-[13px]': size == 'small',
             'h-8.5 text-sm': size === 'medium',
             'h-13 text-base': size === 'large',
@@ -140,10 +131,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
         {loading && (
           <div className='absolute inset-0 flex items-center justify-center'>
-            <span
-              className='h-6 w-6 animate-spin rounded-full border-2 border-solid'
-              style={loaderBorderStyle}
-            />
+            <span className='h-6 w-6 animate-spin rounded-full border-2 border-white' />
           </div>
         )}
       </button>

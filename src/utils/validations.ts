@@ -39,3 +39,7 @@ export const ChangePasswordSchema = Yup.object({
       'New password must be different from current password',
     ),
 })
+
+export const VerifySchema = Yup.object({
+  code: Yup.string().required('Code is required'),
+})

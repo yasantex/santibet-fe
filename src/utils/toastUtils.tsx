@@ -15,11 +15,12 @@ const showToast = (message: string, type: ToastType) => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'start',
+          minWidth: '350px',
+          maxWidth: '350px',
           gap: '15px',
           padding: '10px',
           fontFamily: 'Sora',
           zIndex: 9999,
-
         }}
       >
         <div
@@ -31,7 +32,11 @@ const showToast = (message: string, type: ToastType) => {
           }}
           onClick={() => toast.dismiss(t)}
         >
-          <HugeiconsIcon icon={MultiplicationSignIcon} size={20} className='text-black' />
+          <HugeiconsIcon
+            icon={MultiplicationSignIcon}
+            size={20}
+            className='text-black'
+          />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

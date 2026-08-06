@@ -53,7 +53,7 @@ const ModalComponent: React.FC<ModalProps> = ({
       >
         {showHeader && (
           <div
-            className={`flex items-start justify-between pb-2 gap-4`}
+            className={`flex items-start text-black justify-between pb-2 gap-4`}
           >
             {title && (
               <div className='flex flex-col gap-2.5'>
@@ -63,7 +63,7 @@ const ModalComponent: React.FC<ModalProps> = ({
             )}
 
             {showCloseIcon && (
-              <div className='flex flex-1 items-end cursor-pointer justify-end'>
+              <div className='flex flex-1 items-end cursor-pointer text-black justify-end'>
                 <button type='button' onClick={handleClose}>
                  <HugeiconsIcon icon={MultiplicationSignIcon} size={20} />
                 </button>

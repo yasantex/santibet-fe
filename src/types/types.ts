@@ -27,4 +27,5 @@ export type AuthResponse = {
   user: UserData
   accessToken: string
   expiresIn: number
+  refreshToken?: string
 }

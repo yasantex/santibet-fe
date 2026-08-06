@@ -7,7 +7,7 @@ import { useSantiBetMutation } from '../../data_layer/utils'
 import type { AuthResponse } from '../../types/types'
 import { SignInSchema } from '../../utils/validations'
 import { isAxiosError } from 'axios'
-import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
+import {  showWarningToast } from '../../utils/toastUtils'
 import { setUser } from '../../redux/userSlice'
 import { Button } from '../../components/globals/Button'
 import { FormInput } from '../../components/globals/FormInput'
@@ -55,9 +55,12 @@ const LoginPage = () => {
           )
           return
         }
-        updateToken(data?.accessToken)
+        updateToken({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+        })
         dispatch(setUser(userData))
-        showSuccessToast(userData?.message ?? 'Login Successful')
+        navigate('/')
       },
     },
   })

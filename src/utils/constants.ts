@@ -132,3 +132,11 @@ export const depositOptions: DepositOption[] = [
   { id: 'google-pay', label: 'Google Pay', icon: 'google-pay' },
   { id: 'crypto', label: 'Crypto', icon: 'crypto' },
 ]
+// 
+export type MarketCategory =
+  | 'All'
+  | 'Politics'
+  | 'Sports'
+  | 'Crypto'
+  | 'Entertainment'
+  | 'Tech'

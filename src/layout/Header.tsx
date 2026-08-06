@@ -15,8 +15,9 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Award01Icon,
-  Menu01Icon,
+  Logout03Icon,
   Notification03Icon,
+  User02FreeIcons,
 } from '@hugeicons/core-free-icons'
 import SearchResultsList from '../data_layer/SearchResultsList'
 import MobileSearchOverlay from '../mobile/MobileSearchOverlay'
@@ -25,6 +26,8 @@ import { Button } from '../components/globals/Button'
 import { useAppSelector } from '../utils/hooks'
 import { FormSwitch } from '../components/globals/FormSwitch'
 import { useTheme } from '../hooks/useTheme'
+import useLogout from '../hooks/useLogout'
+import { ProfileAvatar } from '../components/globals/ReusedText'
 
 const CategoryRow = () => (
   <div className='hide-scroll-bar  lg:hidden flex items-center gap-6 overflow-x-auto px-4  text-sm font-medium text-neutral-10 md:px-6'>
@@ -45,6 +48,7 @@ const Header = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
   const { isDark, toggleTheme } = useTheme()
+  const { logout } = useLogout()
 
   const { user } = useAppSelector((state) => state.user)
 
@@ -88,7 +92,7 @@ const Header = () => {
           {user && (
             <main className='lg:flex items-center  gap-2.5 hidden'>
               <Dropdown
-                className='flex-1 w-60!'
+                className='flex-1 w-55!'
                 menuClassName='w-[400px] max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
                 menu={({ close }) => (
                   <SearchResultsList
@@ -107,7 +111,11 @@ const Header = () => {
                 />
               </Dropdown>
 
-              <button type='button' aria-label='Rewards' className='shrink-0 text-black'>
+              <button
+                type='button'
+                aria-label='Rewards'
+                className='shrink-0 text-black'
+              >
                 <HugeiconsIcon icon={Award01Icon} size={22} />
               </button>
               <button
@@ -117,15 +125,12 @@ const Header = () => {
               >
                 <HugeiconsIcon icon={Notification03Icon} size={22} />
               </button>
-              <button type='button' aria-label='Menu' className='shrink-0  text-black'>
-                <HugeiconsIcon icon={Menu01Icon} size={22} />
-              </button>
             </main>
           )}
 
           {user ? (
             <div className='flex items-center gap-2.5'>
-                 <FormSwitch
+              <FormSwitch
                 checked={isDark}
                 onChange={toggleTheme}
                 onLabel='Dark'
@@ -133,18 +138,54 @@ const Header = () => {
                 className='md:flex! hidden!'
                 labelClassName='font-semibold text-neutral-10'
               />
-                  <Button
-              type='button'
-              text='Deposit cash'
-              onClick={() => handleModalOpen('deposit')}
-              className='w-fit!'
-            />
-              
+              <Button
+                type='button'
+                text='Deposit cash'
+                onClick={() => handleModalOpen('deposit')}
+                className='shrink-0 w-fit!'
+              />
+              <Dropdown
+                align='end'
+                className='w-full'
+                menuClassName='shadow-sm w-[200px]'
+                menu={({ close }) => (
+                  <div className='flex text-sm flex-col p-2'>
+                    <div
+                      onClick={() => {
+                        navigate('/account-profile')
+                        close()
+                      }}
+                      className='flex gap-2.5 text-black items-center p-2  cursor-pointer'
+                    >
+                      <HugeiconsIcon icon={User02FreeIcons} size={20} />
+                      <p className='text-sm text-neutral-10 font-medium'>
+                        Account Profile
+                      </p>
+                    </div>
+                    <div
+                      onClick={() => {
+                        close()
+                        logout()
+                      }}
+                      className='flex gap-2.5 text-black items-center p-2  cursor-pointer'
+                    >
+                      <HugeiconsIcon icon={Logout03Icon} size={20} />
+                      <p className='text-sm text-neutral-10 font-medium'>
+                        Logout
+                      </p>
+                    </div>
+                  </div>
+                )}
+              >
+                <ProfileAvatar
+                  firstName={user?.name ?? ''}
+                  lastName={user?.name ?? ''}
+                  imageUrl={null}
+                />
+              </Dropdown>
             </div>
-        
           ) : (
             <div className='flex items-center gap-2.5'>
-           
               <Button
                 type='button'
                 text='Login'
