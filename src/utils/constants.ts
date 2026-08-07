@@ -1,3 +1,18 @@
+import {
+  Award01FreeIcons,
+  BankIcon,
+  Bitcoin01Icon,
+  CreditCardIcon,
+  FilesFreeIcons,
+  GiftFreeIcons,
+  HelpSquareFreeIcons,
+  MoneyReceiveFlow02Icon,
+  User02FreeIcons,
+  Wallet01FreeIcons,
+  Wallet03FreeIcons,
+} from '@hugeicons/core-free-icons'
+import type { NavigateFunction } from 'react-router'
+
 export type NavLink = {
   label: string
   href: string
@@ -36,7 +51,6 @@ export const moreNavLinks: NavLink[] = [
   { label: 'Tech & Science', href: '/tech-and-science' },
   { label: 'Help center', href: '/help' },
 ]
-
 
 export const mockSearchResults: SearchResult[] = [
   {
@@ -127,12 +141,43 @@ export type DepositOption = {
   mostPopular?: boolean
 }
 
+export type WithdrawalOption = {
+  id: string
+  heading: string
+
+  label: string
+  icon: any
+  mostPopular?: boolean
+}
+
 export const depositOptions: DepositOption[] = [
   { id: 'card', label: 'Card', icon: 'card', mostPopular: true },
   { id: 'google-pay', label: 'Google Pay', icon: 'google-pay' },
   { id: 'crypto', label: 'Crypto', icon: 'crypto' },
 ]
-// 
+
+export const withdrawalOptions: WithdrawalOption[] = [
+  {
+    id: 'bank',
+    heading: 'Bank Transfer',
+    label: '1-2 business days · No limit',
+    icon: BankIcon,
+    mostPopular: true,
+  },
+  {
+    id: 'card',
+    heading: 'Card',
+    label: 'Instant · ₦500K limit',
+    icon: CreditCardIcon,
+  },
+  {
+    id: 'crypto',
+    heading: 'Crypto',
+    label: 'Instant · USDT, USDC',
+    icon: Bitcoin01Icon,
+  },
+]
+//
 export type MarketCategory =
   | 'All'
   | 'Politics'
@@ -140,3 +185,96 @@ export type MarketCategory =
   | 'Crypto'
   | 'Entertainment'
   | 'Tech'
+
+import type { IconSvgElement } from '@hugeicons/react'
+
+export type ProfileAction = {
+  id: string
+  label: string
+  icon: IconSvgElement
+  path: string
+  action: (navigate: NavigateFunction, close: () => void) => void
+}
+
+export const profileMenuItems: ProfileAction[] = [
+  {
+    id: 'wallet',
+    label: 'Wallet',
+    icon: Wallet01FreeIcons,
+    path: '/account-wallet',
+    action: (navigate, close) => {
+      navigate('/account-wallet')
+      close()
+    },
+  },
+  {
+    id: 'portfolio',
+    label: 'Portfolio',
+    icon: Wallet03FreeIcons,
+    path: '/portfolio',
+    action: (navigate, close) => {
+      navigate('/account-portfolio')
+      close()
+    },
+  },
+  {
+    id: 'profile-settings',
+    label: 'Profile & Settings',
+    icon: User02FreeIcons,
+    path: '/account-profile',
+    action: (navigate, close) => {
+      navigate('/account-profile')
+      close()
+    },
+  },
+  {
+    id: 'leaderboard',
+    label: 'Leaderboard',
+    icon: Award01FreeIcons,
+    path: '/leaderboard',
+    action: (navigate, close) => {
+      // navigate('/leaderboard');
+      close()
+    },
+  },
+  {
+    id: 'rewards',
+    label: 'Rewards',
+    icon: GiftFreeIcons,
+    path: '/rewards',
+    action: (navigate, close) => {
+      // navigate('/rewards');
+      close()
+    },
+  },
+  {
+    id: 'refer-earn',
+    label: 'Refer & Earn',
+    icon: MoneyReceiveFlow02Icon,
+    path: '/refer-earn',
+    action: (navigate, close) => {
+      // navigate('/refer-earn');
+      close()
+    },
+  },
+  {
+    id: 'help-center',
+    label: 'Help Center',
+    icon: HelpSquareFreeIcons,
+    path: '/help-center',
+    action: (navigate, close) => {
+      // navigate('/help-center');
+      close()
+    },
+  },
+  {
+    id: 'terms',
+    label: 'Terms of Service',
+    icon: FilesFreeIcons,
+    path: '/terms',
+    action: (navigate, close) => {
+      // navigate('/terms');
+      close()
+    },
+  },
+]

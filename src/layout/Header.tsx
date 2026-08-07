@@ -10,14 +10,14 @@ import { useModalControl } from '../hooks/useModalControl'
 import {
   mockSearchResults,
   primaryNavLinks,
+  profileMenuItems,
   type SearchResult,
 } from '../utils/constants'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Award01Icon,
-  Logout03Icon,
+  Menu01FreeIcons,
   Notification03Icon,
-  User02FreeIcons,
 } from '@hugeicons/core-free-icons'
 import SearchResultsList from '../data_layer/SearchResultsList'
 import MobileSearchOverlay from '../mobile/MobileSearchOverlay'
@@ -147,41 +147,52 @@ const Header = () => {
               <Dropdown
                 align='end'
                 className='w-full'
-                menuClassName='shadow-sm w-[200px]'
+                menuClassName='shadow-sm w-[300px] mt-2.5! px-2 rounded-lg!'
                 menu={({ close }) => (
-                  <div className='flex text-sm flex-col p-2'>
-                    <div
-                      onClick={() => {
-                        navigate('/account-profile')
-                        close()
-                      }}
-                      className='flex gap-2.5 text-black items-center p-2  cursor-pointer'
-                    >
-                      <HugeiconsIcon icon={User02FreeIcons} size={20} />
-                      <p className='text-sm text-neutral-10 font-medium'>
-                        Account Profile
-                      </p>
+                  <div className='flex text-sm flex-col gap-1 p-2'>
+                    <div className='flex items-center gap-2.5'>
+                      <ProfileAvatar
+                        firstName={user?.name ?? ''}
+                        lastName={user?.name ?? ''}
+                        imageUrl={null}
+                        className='dark:bg-[#e4e5e3]!'
+                      />
+                      <div className='flex flex-col gap-1'>
+                        <p className='font-semibold text-xs text-black'>
+                          {user?.name ?? ''}
+                        </p>
+                        <p className='text-neutral-10 text-xs font-medium'>
+                          {user?.phone ?? ''}
+                        </p>
+                      </div>
                     </div>
-                    <div
+
+                    {profileMenuItems.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => item.action(navigate, close)}
+                        className='flex gap-2.5 text-black items-center p-2 cursor-pointer'
+                      >
+                        <HugeiconsIcon icon={item.icon} size={20} />
+                        <p className='text-sm text-black font-medium'>
+                          {item.label}
+                        </p>
+                      </div>
+                    ))}
+
+                    <p
                       onClick={() => {
                         close()
                         logout()
                       }}
-                      className='flex gap-2.5 text-black items-center p-2  cursor-pointer'
+                      className='text-sm text-error font-medium mt-2 cursor-pointer'
                     >
-                      <HugeiconsIcon icon={Logout03Icon} size={20} />
-                      <p className='text-sm text-neutral-10 font-medium'>
-                        Logout
-                      </p>
-                    </div>
+                      Log Out
+                    </p>
                   </div>
                 )}
               >
-                <ProfileAvatar
-                  firstName={user?.name ?? ''}
-                  lastName={user?.name ?? ''}
-                  imageUrl={null}
-                />
+                <HugeiconsIcon icon={Menu01FreeIcons} size={20} className='text-black' />
               </Dropdown>
             </div>
           ) : (

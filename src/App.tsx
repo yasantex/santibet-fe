@@ -11,6 +11,8 @@ import AccountProfile from './pages/account/AccountProfile'
 import AuthRoute from './routes/AuthRoute'
 import ProtectedRoute from './routes/ProtectedRoute'
 import MarketsDashboard from './pages/MarketsDashboard'
+import AccountWallet from './pages/account/AccountWallet'
+import AccountPortfolio from './pages/account/AccountPortfolio'
 
 function App() {
   return (
@@ -32,6 +34,8 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path='/change-password' element={<ChangePassword />} />
             <Route path='/account-profile' element={<AccountProfile />} />
+            <Route path='/account-wallet' element={<AccountWallet />} />
+            <Route path='/account-portfolio' element={<AccountPortfolio />} />
           </Route>
         </Route>
       </Routes>

@@ -18,7 +18,7 @@ const FeaturedMarketCard = ({ market }: { market: FeaturedMarket }) => {
           <span>{market.question}</span>
         </div>
         <div className='flex items-baseline gap-2'>
-          <span className='text-3xl font-bold text-white'>
+          <span className='text-3xl font-bold text-black'>
             {market.yesPercent}% chance
           </span>
           <span
@@ -50,13 +50,13 @@ const FeaturedMarketCard = ({ market }: { market: FeaturedMarket }) => {
       <div className='grid grid-cols-2 gap-3'>
         <button
           type='button'
-          className='rounded-lg bg-surface-success py-3 text-sm font-bold text-success'
+          className='rounded-lg bg-market-success py-3 text-sm font-bold text-success'
         >
           YES {market.yesPercent}%
         </button>
         <button
           type='button'
-          className='rounded-lg bg-error-bg py-3 text-sm font-bold text-error'
+          className='rounded-lg bg-market-error py-3 text-sm font-bold text-error'
         >
           NO {market.noPercent}%
         </button>

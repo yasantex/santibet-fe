@@ -28,14 +28,17 @@ body {
   --color-error-bg: #ffeded;
   --color-surface-error: #fff2f2;
   --color-border-error: #ff2e2e;
-  --color-border: #E4E5E3;
+  --color-border: #e4e5e3;
   --color-hover: #eaeaea;
+  --color-surface-hover: #9AA09C;
   --color-success: #238b45;
   --color-surface-success: #eefcf3;
   --color-brand-green: #c6f135;
-  --color-card: #16191a;
+  --color-card: #e4e5e3;
   --color-glass: #e4e5e3;
-  --color-placeholder: #6B706D;
+  --color-placeholder: #6b706d;
+  --color-market-success: #183123;
+  --color-market-error: #341f20;
 }
 
 :root {
@@ -55,7 +58,8 @@ body {
   --color-black: #f5f6f5;
   --color-card: #16191a;
   --color-glass: #22262a;
-  --color-border: #22262A;
-  --color-hover: #E4E5E3;
+  --color-border: #22262a;
+  --color-hover: #e4e5e3;
+  --color-card: #16191a;
 
 }

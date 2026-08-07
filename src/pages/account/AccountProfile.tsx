@@ -199,6 +199,7 @@ const AccountProfile = () => {
           lastName={profile?.name ?? ''}
           imageUrl={profile?.avatarUrl}
           isLoading={isLoading}
+          className='bg-[#16191a]! dark:bg-[#e4e5e3]! dark:text-[#000000]!'
         />
         <div className='flex flex-col gap-1'>
           {isLoading ? (

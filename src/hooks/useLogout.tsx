@@ -15,7 +15,7 @@ const useLogout = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { mutateAsync: apiLogoutAll, isPending: isPendingAll } =
-    useSantiBetMutation<void, void>({ path: '/auth/logout-all' })
+    useSantiBetMutation<void, void>({ path: '/auth/logout' })
 
   const deleteAppCookie = (key: 'token' | 'sb_rt') => {
     removeCookie(key, { path: '/', sameSite: 'lax', secure: true })
@@ -26,13 +26,13 @@ const useLogout = () => {
     deleteAppCookie('sb_rt')
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
-      apiLogoutAll()
+      await apiLogoutAll()
       clearAllCookies()
       dispatch(clearUser())
       queryClient.clear()
-      persistor.purge()
+      await persistor.purge()
       showSuccessToast('Logged out successfully')
       navigate('/')
     } catch (error) {

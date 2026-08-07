@@ -20,10 +20,11 @@ export const ProfileAvatar: FC<{
   firstName: string
   lastName: string
   imageUrl?: string | null
-}> = ({ firstName, lastName, imageUrl, isLoading = false }) => {
+  className?: string
+}> = ({ firstName, lastName, imageUrl, isLoading = false, className }) => {
   if (isLoading) {
     return (
-      <div className='h-10 w-10 shrink-0 overflow-hidden rounded-full bg-card'>
+      <div className={`h-10 w-10 shrink-0 overflow-hidden rounded-full bg-card  `}>
         <div className='h-full w-full animate-pulse bg-neutral-10/20' />
       </div>
     )
@@ -39,7 +40,7 @@ export const ProfileAvatar: FC<{
   }
   return (
     <div
-      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card text-[10px] font-bold text-white select-none`}
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card text-[10px] font-bold text-white select-none ${className}`}
     >
       {getInitials(firstName, lastName)}
     </div>

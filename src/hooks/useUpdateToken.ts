@@ -1,5 +1,4 @@
 import { useCookies } from 'react-cookie'
-import type { AuthResponse } from '../types/types'
 
 const COOKIE_OPTIONS = {
   path: '/',

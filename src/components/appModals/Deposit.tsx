@@ -8,10 +8,6 @@ import {
 } from '@hugeicons/core-free-icons'
 import { depositOptions, type DepositOption } from '../../utils/constants'
 
-type DepositModalProps = ModalProps & {
-  onSelectOption?: (option: DepositOption) => void
-}
-
 const OptionIcon = ({ icon }: { icon: DepositOption['icon'] }) => {
   switch (icon) {
     case 'google-pay':
@@ -28,7 +24,7 @@ const OptionIcon = ({ icon }: { icon: DepositOption['icon'] }) => {
   }
 }
 
-const Deposit = ({ open, handleClose, onSelectOption }: DepositModalProps) => {
+const Deposit = ({ open, handleClose }: ModalProps) => {
   return (
     <ModalComponent
       open={open}
@@ -43,10 +39,11 @@ const Deposit = ({ open, handleClose, onSelectOption }: DepositModalProps) => {
             size={16}
             className='text-brand-green'
           />
-          <span>Instant transfer</span>
-          <span>·</span>
-          <span className='text-black font-medium'>No fees</span>
-          <span>on first deposit</span>
+          <p>
+            Instant transfer.
+            <span className='text-black font-medium'>{' '}No fees {' '}</span>
+            on first deposit
+          </p>
         </div>
 
         <div className='flex flex-col gap-3'>
@@ -54,7 +51,6 @@ const Deposit = ({ open, handleClose, onSelectOption }: DepositModalProps) => {
             <button
               key={option.id}
               type='button'
-              onClick={() => onSelectOption?.(option)}
               className='flex items-center cursor-pointer justify-between rounded-xl border border-border px-4 py-3.5 text-left transition-colors '
             >
               <span className='flex items-center gap-3 text-black font-semibold'>

@@ -44,7 +44,7 @@ const MarketsDashboard = () => {
                   type='button'
                   className='flex items-center justify-between gap-4 py-3 text-left hover:opacity-80'
                 >
-                  <span className='text-sm text-white'>{topic.question}</span>
+                  <span className='text-sm text-black'>{topic.question}</span>
                   <span className='shrink-0 text-sm font-semibold text-neutral-10'>
                     {topic.percent}%
                   </span>
@@ -63,8 +63,8 @@ const MarketsDashboard = () => {
             onClick={() => setActiveCategory(category)}
             className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
               activeCategory === category
-                ? 'bg-brand-green text-black'
-                : 'bg-card text-neutral-10 hover:text-white'
+                ? 'bg-brand-green text-black dark:text-text-black!'
+                : 'bg-card text-neutral-10 hover:text-black'
             }`}
           >
             {category}
@@ -72,9 +72,7 @@ const MarketsDashboard = () => {
         ))}
         <button
           type='button'
-          // onClick={onOpenFilters}
-          aria-label='More filters'
-          className='shrink-0 rounded-full bg-card p-2 text-neutral-10 hover:text-white'
+          className='shrink-0 rounded-full bg-card p-2 text-neutral-10 hover:text-black'
         >
           <HugeiconsIcon icon={FilterIcon} size={18} />
         </button>
@@ -88,22 +86,22 @@ const MarketsDashboard = () => {
           : data.markets.map((market) => (
               <div
                 key={market.id}
-                className='flex flex-col gap-3 rounded-lg bg-card p-4'
+                className='flex flex-col gap-3 rounded-lg bg-card border border-border p-4'
               >
-                <div className='flex items-start gap-2 text-sm font-semibold text-white'>
+                <div className='flex items-start gap-2 text-sm font-semibold text-black'>
                   <span>🏴</span>
                   <span className='line-clamp-2'>{market.question}</span>
                 </div>
                 <div className='grid grid-cols-2 gap-2'>
                   <button
                     type='button'
-                    className='rounded-md bg-surface-success py-2 text-xs font-bold text-success'
+                    className='rounded-md bg-market-success py-2 text-xs font-bold text-success'
                   >
                     YES {market.yesPercent}%
                   </button>
                   <button
                     type='button'
-                    className='rounded-md bg-error-bg py-2 text-xs font-bold text-error'
+                    className='rounded-md bg-market-error py-2 text-xs font-bold text-error'
                   >
                     NO {market.noPercent}%
                   </button>
