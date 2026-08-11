@@ -43,3 +43,24 @@ export const ChangePasswordSchema = Yup.object({
 export const VerifySchema = Yup.object({
   code: Yup.string().required('Code is required'),
 })
+
+export const DisableTwoFactorSchema = Yup.object().shape({
+  code: Yup.string().required('Verification code is required'),
+  password: Yup.string().required('Password is required'),
+})
+
+export const TwoFactorSchema = Yup.object({
+  code: Yup.string().required('Authentication code is required'),
+})
+
+export const RegenerateRecoveryCodesSchema = Yup.object().shape({
+  code: Yup.string().required('Verification code is required'),
+})
+
+export const AddWithdrawalAccountSchema = Yup.object().shape({
+  accountNumber: Yup.string()
+    .matches(/^\d{10}$/, 'Enter a valid 10-digit account number')
+    .required('Account number is required'),
+  bankCode: Yup.string().required('Bank code is required'),
+  label: Yup.string().required('Label is required'),
+})

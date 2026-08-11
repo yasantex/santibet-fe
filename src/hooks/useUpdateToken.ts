@@ -3,7 +3,7 @@ import { useCookies } from 'react-cookie'
 const COOKIE_OPTIONS = {
   path: '/',
   sameSite: 'lax' as const,
-  secure: true,
+  secure: import.meta.env.PROD,
   maxAge: 60 * 60 * 24 * 7,
 }
 

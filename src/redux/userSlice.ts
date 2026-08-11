@@ -1,15 +1,11 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { UserData } from '../types/types'
 
-
-
 export interface UserState {
   user: UserData | null
-  twoFaToken: boolean 
 }
 const initialState: UserState = {
   user: null,
-  twoFaToken: false,
 }
 
 const userSlice = createSlice({
@@ -22,27 +18,16 @@ const userSlice = createSlice({
     clearUser: (state) => {
       state.user = null
     },
-    setTwoFaToken: (state, action: PayloadAction<UserData>) => {
-      state.user = action.payload
-    },
-    clearTwoFaToken: (state) => {
-      state.user = null
-    },
+
     setEnableTwoFA: (state, action: PayloadAction<boolean>) => {
       if (state.user) {
-        state.user.security.two_factor_enabled = action.payload
+        state.user.mfaEnabled = action.payload
       }
     },
   },
 })
 
 // Actions
-export const {
-  setUser,
-  clearUser,
-  setTwoFaToken,
-  clearTwoFaToken,
-  setEnableTwoFA,
-} = userSlice.actions
+export const { setUser, clearUser, setEnableTwoFA } = userSlice.actions
 
 export default userSlice.reducer

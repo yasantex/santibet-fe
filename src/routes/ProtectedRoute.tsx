@@ -7,7 +7,7 @@ const ProtectedRoute = () => {
   const { user } = useAppSelector((state) => state.user)
   const hasToken = Boolean(cookies?.token)
 
-  if (!hasToken && !user) {
+  if (!hasToken || !user) {
     return <Navigate to='/' replace />
   }
 

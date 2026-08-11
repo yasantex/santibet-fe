@@ -150,12 +150,6 @@ export type WithdrawalOption = {
   mostPopular?: boolean
 }
 
-export const depositOptions: DepositOption[] = [
-  { id: 'card', label: 'Card', icon: 'card', mostPopular: true },
-  { id: 'google-pay', label: 'Google Pay', icon: 'google-pay' },
-  { id: 'crypto', label: 'Crypto', icon: 'crypto' },
-]
-
 export const withdrawalOptions: WithdrawalOption[] = [
   {
     id: 'bank',
@@ -187,6 +181,7 @@ export type MarketCategory =
   | 'Tech'
 
 import type { IconSvgElement } from '@hugeicons/react'
+import type { StatusConfig } from '../types/types'
 
 export type ProfileAction = {
   id: string
@@ -278,3 +273,20 @@ export const profileMenuItems: ProfileAction[] = [
     },
   },
 ]
+
+export const currencySymbols: Record<string, string> = {
+  NGN: '₦',
+  USD: '$',
+  GBP: '£',
+  EUR: '€',
+  GHS: '₵',
+  KES: 'KSh',
+  ZAR: 'R',
+}
+// TODO: Check styling for these classes
+export const statusBadgeClass: Record<StatusConfig['color'], string> = {
+  green: 'bg-success-bg text-success ',
+  red: 'bg-error-bg text-error',
+  orange: 'bg-warning/20 text-warning',
+  plain: 'bg-hover/50 text-neutral-10',
+}
