@@ -59,3 +59,19 @@ export const MarketCardSkeleton = () => {
     </div>
   )
 }
+
+
+export const TextLoader = ({ count = 8 }: {count: number}) => {
+  const widths = ["w-full", "w-full", "w-5/6", "w-full", "w-2/3"];
+
+  return (
+    <div className="animate-pulse space-y-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className={`h-3.5 rounded bg-neutral-10/20 ${widths[i % widths.length]}`}
+        />
+      ))}
+    </div>
+  );
+};

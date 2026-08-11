@@ -13,6 +13,8 @@ import ProtectedRoute from './routes/ProtectedRoute'
 import MarketsDashboard from './pages/MarketsDashboard'
 import AccountWallet from './pages/account/AccountWallet'
 import AccountPortfolio from './pages/account/AccountPortfolio'
+import TermsOfService from './pages/TermsOfService'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 
 function App() {
   return (
@@ -22,6 +24,9 @@ function App() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route path='/' element={<MarketsDashboard />} />
+          <Route path='/terms-of-service' element={<TermsOfService />} />
+          <Route path='/privacy-policy' element={<PrivacyPolicy />} />
+
           <Route element={<AuthRoute />}>
             <Route path='/signin' element={<LoginPage />} />
             <Route path='/signup' element={<SignupPage />} />
