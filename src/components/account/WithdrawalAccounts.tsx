@@ -16,13 +16,14 @@ import { showWarningToast, showSuccessToast } from '../../utils/toastUtils'
 import { useQueryClient } from '@tanstack/react-query'
 import AddWithdrawalAccount from '../appModals/AddWithdrawalAccount'
 import { useModalControl } from '../../hooks/useModalControl'
+import type { BaseApiResponse } from '../../types/types'
 
 const AccountRow = ({ account }: { account: WithdrawalAccount }) => {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const queryClient = useQueryClient()
 
   const { mutateAsync: removeAccount, isPending: isDeleting } =
-    useSantiBetMutation<{ message: string }, string>({
+    useSantiBetMutation<BaseApiResponse>({
       path: `/wallet/withdrawal-accounts/${account.id}`,
       method: 'DELETE',
       mutationOptions: {
