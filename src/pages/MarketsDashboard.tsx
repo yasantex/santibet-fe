@@ -4,6 +4,8 @@ import { useMockDashboardData } from '../mockData/marketsMockData'
 import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon } from '@hugeicons/core-free-icons'
+import { useSantiBetQuery } from '../data_layer/utils'
+import type { MarketResponse } from '../types/market.types'
 
 const categories = [
   'All',
@@ -18,6 +20,10 @@ const MarketsDashboard = () => {
   const [activeCategory, setActiveCategory] = useState<
     'All' | 'Politics' | 'Sports' | 'Crypto' | 'Entertainment' | 'Tech'
   >('All')
+
+  const { data: markets, isLoading: marketLoading } = useSantiBetQuery<MarketResponse>({
+    path: '/market/markets',
+  })
 
   const { data, isLoading } = useMockDashboardData(activeCategory)
 
