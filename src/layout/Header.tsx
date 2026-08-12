@@ -89,44 +89,27 @@ const Header = () => {
           </nav>
         </div>
         <div className='flex items-center justify-end gap-5 w-full'>
-          {user && (
-            <main className='lg:flex items-center  gap-2.5 hidden'>
-              <Dropdown
-                className='flex-1 w-55!'
-                menuClassName='w-[400px] max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
-                menu={({ close }) => (
-                  <SearchResultsList
-                    results={filteredResults}
-                    onSelect={(result) => {
-                      close()
-                      handleSelectResult(result)
-                    }}
-                  />
-                )}
-              >
-                <SearchInput
-                  searchTerm={searchTerm}
-                  handleChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder='Search markets'
+          <main className='lg:flex items-center  gap-2.5 hidden'>
+            <Dropdown
+              className='flex-1 w-55!'
+              menuClassName='w-[400px] max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
+              menu={({ close }) => (
+                <SearchResultsList
+                  results={filteredResults}
+                  onSelect={(result) => {
+                    close()
+                    handleSelectResult(result)
+                  }}
                 />
-              </Dropdown>
-
-              <button
-                type='button'
-                aria-label='Rewards'
-                className='shrink-0 text-black'
-              >
-                <HugeiconsIcon icon={Award01Icon} size={22} />
-              </button>
-              <button
-                type='button'
-                aria-label='Notifications'
-                className='shrink-0  text-black'
-              >
-                <HugeiconsIcon icon={Notification03Icon} size={22} />
-              </button>
-            </main>
-          )}
+              )}
+            >
+              <SearchInput
+                searchTerm={searchTerm}
+                handleChange={(e) => setSearchTerm(e.target.value)}
+                placeholder='Search markets'
+              />
+            </Dropdown>
+          </main>
 
           {user ? (
             <div className='flex items-center gap-2.5'>
@@ -198,6 +181,20 @@ const Header = () => {
                   className='text-black'
                 />
               </Dropdown>
+              <button
+                type='button'
+                aria-label='Rewards'
+                className='shrink-0 text-black md:block hidden'
+              >
+                <HugeiconsIcon icon={Award01Icon} size={22} />
+              </button>
+              <button
+                type='button'
+                aria-label='Notifications'
+                className='shrink-0 text-black md:block hidden'
+              >
+                <HugeiconsIcon icon={Notification03Icon} size={22} />
+              </button>
             </div>
           ) : (
             <div className='flex items-center gap-2.5'>
@@ -220,6 +217,20 @@ const Header = () => {
                 variation='plain'
                 onClick={() => navigate('/signup')}
               />
+              <button
+                type='button'
+                aria-label='Rewards'
+                className='shrink-0 text-black md:block hidden'
+              >
+                <HugeiconsIcon icon={Award01Icon} size={22} />
+              </button>
+              <button
+                type='button'
+                aria-label='Notifications'
+                className='shrink-0 text-black md:block hidden'
+              >
+                <HugeiconsIcon icon={Notification03Icon} size={22} />
+              </button>
             </div>
           )}
         </div>
