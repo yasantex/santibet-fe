@@ -192,11 +192,23 @@ const Header = () => {
                   </div>
                 )}
               >
-                <HugeiconsIcon icon={Menu01FreeIcons} size={20} className='text-black' />
+                <HugeiconsIcon
+                  icon={Menu01FreeIcons}
+                  size={20}
+                  className='text-black'
+                />
               </Dropdown>
             </div>
           ) : (
             <div className='flex items-center gap-2.5'>
+              <FormSwitch
+                checked={isDark}
+                onChange={toggleTheme}
+                onLabel='Dark'
+                offLabel='Light'
+                className='md:flex! hidden!'
+                labelClassName='font-semibold text-neutral-10'
+              />
               <Button
                 type='button'
                 text='Login'

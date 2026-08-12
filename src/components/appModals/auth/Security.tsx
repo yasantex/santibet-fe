@@ -3,7 +3,6 @@ import ModalComponent, { type ModalProps } from '../../globals/ModalComponent'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { FormSwitch } from '../../globals/FormSwitch'
-import { useNavigate } from 'react-router'
 import { useSantiBetMutation } from '../../../data_layer/utils'
 import type { TwoFactorSetupResponse } from '../../../types/types'
 import { useAppSelector } from '../../../utils/hooks'
@@ -162,7 +161,10 @@ const Security = ({ open, handleClose }: ModalProps) => {
       />
       <ChangePassword
         open={modalOpen && modal === 'change-password'}
-        handleClose={handleModalClose}
+        handleClose={() => {
+          handleModalClose()
+          handleClose()
+        }}
       />
     </ModalComponent>
   )

@@ -117,7 +117,10 @@ const TwoFactorSetupModal = ({
             <span className='text-xs text-neutral-10'>
               Or enter this key manually
             </span>
-            <CopyButton value={secret} />
+            <div className='flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border'>
+              <p className='text-sm text-neutral-10'>{secret}</p>
+              <CopyButton value={secret} />
+            </div>
           </div>
 
           <Button
