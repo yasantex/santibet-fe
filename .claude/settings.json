@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm build *)",
+      "Bash(npx --no-install playwright --version)",
+      "Read(//Applications/**)",
+      "Bash(npx vite *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4179/)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless --disable-gpu --no-sandbox --virtual-time-budget=8000 --dump-dom http://localhost:4179/)",
+      "Bash(grep -o 'id=\"root\"[^>]*>.\\\\{0,200\\\\}' /Users/johnalalade/.claude/projects/-Users-johnalalade-Documents-Workspace-santi-inc-santi-bet-santibet-fe/eb105a21-e616-4fad-89ad-f8d16c1c2485/tool-results/bry07aqur.txt)",
+      "Bash(node -p \"JSON.parse\\(require\\('fs'\\).readFileSync\\('node_modules/vite/package.json'\\)\\).engines.node\")",
+      "Bash(node -p \"JSON.parse\\(require\\('fs'\\).readFileSync\\('package.json'\\)\\).packageManager || 'NOT SET'\")",
+      "Bash(VITE_APP_API_BASE_URL=https://santibet-8b7dfea9557d.herokuapp.com pnpm build)",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)",
+      "Bash(pkill -f \"vite preview --port 4179\")"
+    ]
+  }
+}

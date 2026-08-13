@@ -1,0 +1,15 @@
+[build]
+  command = "pnpm build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 8 requires ^20.19.0 || >=22.12.0 — Netlify's default is older on many sites.
+  NODE_VERSION = "22"
+  PNPM_VERSION = "10.13.1"
+
+# SPA fallback: react-router owns the routing, so every unmatched path
+# must serve index.html instead of Netlify's 404 page.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
