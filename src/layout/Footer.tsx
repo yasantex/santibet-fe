@@ -53,7 +53,7 @@ const Footer = () => {
               <li key={link.label}>
                 <a
                   href={link.href}
-                  className='text-neutral-10 hover:underline hover:underline-offset-2 hover:text-white'
+                  className='text-neutral-10 hover:underline hover:underline-offset-2 hover:text-black'
                 >
                   {link.label}
                 </a>
@@ -67,7 +67,7 @@ const Footer = () => {
                 key={social.name}
                 href={social.href}
                 aria-label={social.name}
-                className='flex h-9 w-9 items-center justify-center rounded-full bg-white text-neutral-10 transition-colors hover:bg-hover hover:text-white'
+                className='flex h-9 w-9 items-center justify-center rounded-full bg-white text-neutral-10 transition-colors hover:bg-hover hover:text-black'
               >
                 <HugeiconsIcon icon={social.icon} size={18} strokeWidth={1.5} />
               </a>

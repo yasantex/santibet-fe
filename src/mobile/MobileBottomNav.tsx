@@ -3,9 +3,9 @@ import {
   Compass01Icon,
   MoneySend01Icon,
   Search01Icon,
-  UserGroupIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { Button } from '../components/globals/Button'
 
 type MobileTab = 'browse' | 'trending' | 'search' | 'social'
 
@@ -21,10 +21,7 @@ const NAV_ITEMS: {
   key: MobileTab
   label: string
   icon: typeof Compass01Icon
-}[] = [
-  { key: 'browse', label: 'Browse', icon: Compass01Icon },
-  { key: 'trending', label: 'Trending', icon: SatelliteIcon },
-]
+}[] = [{ key: 'trending', label: 'Trending', icon: SatelliteIcon }]
 
 const MobileBottomNav = ({
   activeTab,
@@ -33,7 +30,7 @@ const MobileBottomNav = ({
   onOpenSearch,
 }: MobileBottomNavProps) => {
   return (
-    <nav className='fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-between border-t border-border bg-white px-2 pb-[env(safe-area-inset-bottom)] pt-2 md:hidden'>
+    <nav className='fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-between border-t border-border bg-white px-2 pb-[env(safe-area-inset-bottom)] pt-2 lg:hidden'>
       {NAV_ITEMS.map((item) => {
         const isActive = activeTab === item.key
         const Icon = item.icon
@@ -53,21 +50,17 @@ const MobileBottomNav = ({
               className={`flex items-center gap-1 ${isActive ? 'text-brand-green font-medium' : 'text-black'}`}
             >
               {item.label}
-
             </span>
           </button>
         )
       })}
 
-      {/* Deposit sits elevated in the center */}
-      <button
+      <Button
         type='button'
+        text='Deposit cash'
         onClick={onOpenDeposit}
-        className='flex flex-1 flex-col items-center gap-1 py-1 text-xs'
-      >
-        <HugeiconsIcon icon={MoneySend01Icon} size={18}  className='text-brand-green'/>
-        <span className='text-brand-green font-medium'>Deposit</span>
-      </button>
+        className='shrink-0 w-fit! mt-1.5!'
+      />
 
       <button
         type='button'
@@ -77,9 +70,7 @@ const MobileBottomNav = ({
         <HugeiconsIcon
           icon={Search01Icon}
           size={20}
-          className={
-            activeTab === 'search' ? 'text-brand-green' : 'text-black'
-          }
+          className={activeTab === 'search' ? 'text-brand-green' : 'text-black'}
         />
         <span
           className={
@@ -89,29 +80,6 @@ const MobileBottomNav = ({
           }
         >
           Search
-        </span>
-      </button>
-
-      <button
-        type='button'
-        onClick={() => onNavigate('social')}
-        className='flex flex-1 flex-col items-center gap-1 py-1 text-xs'
-      >
-        <HugeiconsIcon
-          icon={UserGroupIcon}
-          size={20}
-          className={
-            activeTab === 'social' ? 'text-brand-green' : 'text-black'
-          }
-        />
-        <span
-          className={
-            activeTab === 'social'
-              ? 'text-brand-green font-medium'
-              : 'text-black'
-          }
-        >
-          Social
         </span>
       </button>
     </nav>

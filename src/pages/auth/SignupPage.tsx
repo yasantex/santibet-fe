@@ -24,6 +24,8 @@ const SignupPage = () => {
   const { values, handleChange, handleBlur, errors, touched, handleSubmit } =
     useFormik({
       initialValues: {
+        name: '',
+
         email: '',
         password: '',
       },
@@ -31,6 +33,7 @@ const SignupPage = () => {
       onSubmit: async (vals) => {
         try {
           await postLogin({
+            name: vals.name,
             email: vals.email,
             password: vals.password,
           })
@@ -42,7 +45,7 @@ const SignupPage = () => {
 
   const { mutateAsync: postLogin, isPending } = useSantiBetMutation<
     AuthResponse,
-    { email: string; password: string }
+    { email: string; password: string; name: string }
   >({
     path: `/auth/signup`,
     mutationOptions: {
@@ -137,6 +140,17 @@ const SignupPage = () => {
         onSubmit={handleSubmit}
         className='w-full flex flex-col gap-2.5 mt-2.5'
       >
+        <FormInput
+          type='text'
+          name='name'
+          value={values.name}
+          hasTitle
+          title='Full name'
+          placeholder='Full name'
+          onChange={handleChange}
+          onBlur={handleBlur}
+          errors={errors.name && touched.name ? errors.name : ''}
+        />
         <FormInput
           type='text'
           name='email'
