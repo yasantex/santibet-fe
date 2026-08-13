@@ -31,9 +31,9 @@ const MobileSearchOverlay = ({
     : mockSearchResults
 
   return ReactDOM.createPortal(
-    <div className='fixed inset-0 z-999 flex flex-col bg-white md:hidden'>
+    <div className='fixed inset-0 z-999 flex flex-col bg-white lg:hidden'>
       <div className='flex items-center gap-3 border-b border-border px-4 py-3'>
-        <div className='flex flex-1 items-center gap-2.5 rounded-full border border-border bg-form-bg px-3.5 py-2.5'>
+        <div className='flex flex-1 text-black items-center gap-2.5 rounded-full border border-border bg-form-bg px-3.5 py-2.5'>
           <HugeiconsIcon icon={Search01Icon} size={18} />
           <input
             autoFocus
@@ -44,7 +44,7 @@ const MobileSearchOverlay = ({
             className='w-full bg-transparent text-sm font-medium text-black placeholder:text-neutral-30 focus:outline-none'
           />
         </div>
-        <button type='button' onClick={handleClose} aria-label='Close search'>
+        <button type='button' className='text-black' onClick={handleClose} aria-label='Close search'>
           <HugeiconsIcon icon={Cancel01Icon} size={22} />
         </button>
       </div>

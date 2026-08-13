@@ -118,15 +118,28 @@ const Header = () => {
                 onChange={toggleTheme}
                 onLabel='Dark'
                 offLabel='Light'
-                className='md:flex! hidden!'
                 labelClassName='font-semibold text-neutral-10'
               />
               <Button
                 type='button'
                 text='Deposit cash'
                 onClick={() => handleModalOpen('deposit')}
-                className='shrink-0 w-fit!'
+                className='shrink-0 w-fit! lg:flex! hidden!'
               />
+              <button
+                type='button'
+                aria-label='Rewards'
+                className='shrink-0 text-black'
+              >
+                <HugeiconsIcon icon={Award01Icon} size={22} />
+              </button>
+              <button
+                type='button'
+                aria-label='Notifications'
+                className='shrink-0 text-black'
+              >
+                <HugeiconsIcon icon={Notification03Icon} size={22} />
+              </button>
               <Dropdown
                 align='end'
                 className='w-full'
@@ -142,10 +155,10 @@ const Header = () => {
                       />
                       <div className='flex flex-col gap-1'>
                         <p className='font-semibold text-xs text-black'>
-                          {user?.name ?? ''}
+                          {user?.name ?? '--'}
                         </p>
                         <p className='text-neutral-10 text-xs font-medium'>
-                          {user?.phone ?? ''}
+                          {user?.phone ?? '--'}
                         </p>
                       </div>
                     </div>
@@ -154,7 +167,7 @@ const Header = () => {
                       <div
                         key={item.id}
                         onClick={() => item.action(navigate, close)}
-                        className='flex gap-2.5 text-black items-center p-2 cursor-pointer'
+                        className='flex gap-2.5 text-black items-center hover:bg-hover p-2 cursor-pointer'
                       >
                         <HugeiconsIcon icon={item.icon} size={20} />
                         <p className='text-sm text-black font-medium'>
@@ -181,20 +194,6 @@ const Header = () => {
                   className='text-black'
                 />
               </Dropdown>
-              <button
-                type='button'
-                aria-label='Rewards'
-                className='shrink-0 text-black md:block hidden'
-              >
-                <HugeiconsIcon icon={Award01Icon} size={22} />
-              </button>
-              <button
-                type='button'
-                aria-label='Notifications'
-                className='shrink-0 text-black md:block hidden'
-              >
-                <HugeiconsIcon icon={Notification03Icon} size={22} />
-              </button>
             </div>
           ) : (
             <div className='flex items-center gap-2.5'>
@@ -223,13 +222,6 @@ const Header = () => {
                 className='shrink-0 text-black md:block hidden'
               >
                 <HugeiconsIcon icon={Award01Icon} size={22} />
-              </button>
-              <button
-                type='button'
-                aria-label='Notifications'
-                className='shrink-0 text-black md:block hidden'
-              >
-                <HugeiconsIcon icon={Notification03Icon} size={22} />
               </button>
             </div>
           )}
