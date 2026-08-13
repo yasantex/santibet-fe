@@ -14,18 +14,36 @@ export interface UserData {
   avatarUrl: string | null
   emailVerified: boolean
   phoneVerified: boolean
+  mfaEnabled: boolean
   hasPassword: boolean
   createdAt: string
-  preAuthToken: string
-  twoFaEnabled: boolean
-  security: {
-    two_factor_enabled: boolean
-  }
 }
 
 export type AuthResponse = {
   user: UserData
   accessToken: string
+  challengeId?: string
+  mfaRequired: boolean
   expiresIn: number
   refreshToken?: string
 }
+
+export type TwoFactorSetupResponse = {
+  secret: string
+  otpauthUri: string
+}
+export interface TwoFactorEnableResponse {
+  recoveryCodes: string[]
+}
+
+export interface StatusConfig {
+  label: string
+  value: number | boolean | string
+  color: 'green' | 'red' | 'orange' | 'plain'
+}
+
+export type FormatDateTimeOptions = {
+  dateStyle?: "full" | "long" | "medium" | "short";
+  timeStyle?: "full" | "long" | "medium" | "short";
+  locale?: string;
+};

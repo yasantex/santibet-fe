@@ -3,7 +3,13 @@ import FeaturedMarketCard from '../components/markets/FeaturedMarketCard'
 import { useMockDashboardData } from '../mockData/marketsMockData'
 import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { FilterIcon } from '@hugeicons/core-free-icons'
+import {
+  FilterIcon,
+  Bookmark02Icon,
+  ArrowRight01Icon,
+} from '@hugeicons/core-free-icons'
+import { useSantiBetQuery } from '../data_layer/utils'
+import type { MarketResponse } from '../types/market.types'
 
 const categories = [
   'All',
@@ -14,10 +20,22 @@ const categories = [
   'Tech',
 ] as const
 
+const categoryIcons: Record<string, string> = {
+  Politics: '🏛️',
+  Sports: '🏴',
+  Crypto: '₿',
+  Entertainment: '🎤',
+  Tech: '💻',
+}
+
 const MarketsDashboard = () => {
   const [activeCategory, setActiveCategory] = useState<
     'All' | 'Politics' | 'Sports' | 'Crypto' | 'Entertainment' | 'Tech'
   >('All')
+
+  const { data: markets, isLoading: marketLoading } = useSantiBetQuery<MarketResponse>({
+    path: '/market/markets',
+  })
 
   const { data, isLoading } = useMockDashboardData(activeCategory)
 
@@ -86,29 +104,90 @@ const MarketsDashboard = () => {
           : data.markets.map((market) => (
               <div
                 key={market.id}
-                className='flex flex-col gap-3 rounded-lg bg-card border border-border p-4'
+                className='flex flex-col gap-4 rounded-2xl border border-border bg-card p-4'
               >
-                <div className='flex items-start gap-2 text-sm font-semibold text-black'>
-                  <span>🏴</span>
-                  <span className='line-clamp-2'>{market.question}</span>
-                </div>
-                <div className='grid grid-cols-2 gap-2'>
+                <div className='flex items-center justify-between'>
+                  <div className='flex items-center gap-2'>
+                    <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-border/30 text-base'>
+                      {categoryIcons[market.category] ?? '🏴'}
+                    </div>
+                    <span className='text-xs font-medium text-neutral-10'>
+                      {market.category}
+                    </span>
+                  </div>
                   <button
                     type='button'
-                    className='rounded-md bg-market-success py-2 text-xs font-bold text-success'
+                    aria-label='Save market'
+                    className='text-neutral-10 hover:text-black'
                   >
-                    YES {market.yesPercent}%
-                  </button>
-                  <button
-                    type='button'
-                    className='rounded-md bg-market-error py-2 text-xs font-bold text-error'
-                  >
-                    NO {market.noPercent}%
+                    <HugeiconsIcon icon={Bookmark02Icon} size={18} />
                   </button>
                 </div>
-                <span className='text-xs text-placeholder'>
-                  ₦{market.volume} Vol
-                </span>
+
+                <h3 className='text-base font-bold leading-snug text-black line-clamp-2'>
+                  {market.question}
+                </h3>
+
+                <div className='flex flex-col gap-4'>
+                  <div className='flex items-center gap-3'>
+                    <div className='flex-1 min-w-0'>
+                      <div className='mb-1.5 flex items-baseline justify-between text-sm'>
+                        <span className='font-bold text-black'>YES</span>
+                        <span className='font-bold text-success'>
+                          {market.yesPercent}%
+                        </span>
+                      </div>
+                      <div className='h-1 w-full overflow-hidden rounded-full bg-border/40'>
+                        <div
+                          className='h-full rounded-full bg-success'
+                          style={{ width: `${market.yesPercent}%` }}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type='button'
+                      className='shrink-0 rounded-lg bg-market-success px-4 py-2.5 text-xs font-bold text-success'
+                    >
+                      YES {market.yesPercent}%
+                    </button>
+                  </div>
+
+                  <div className='flex items-center gap-3'>
+                    <div className='flex-1 min-w-0'>
+                      <div className='mb-1.5 flex items-baseline justify-between text-sm'>
+                        <span className='font-bold text-black'>NO</span>
+                        <span className='font-bold text-error'>
+                          {market.noPercent}%
+                        </span>
+                      </div>
+                      <div className='h-1 w-full overflow-hidden rounded-full bg-border/40'>
+                        <div
+                          className='h-full rounded-full bg-error'
+                          style={{ width: `${market.noPercent}%` }}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type='button'
+                      className='shrink-0 rounded-lg bg-market-error px-4 py-2.5 text-xs font-bold text-error'
+                    >
+                      NO {market.noPercent}%
+                    </button>
+                  </div>
+                </div>
+
+                <div className='flex items-center justify-between pt-1'>
+                  <span className='text-xs text-placeholder'>
+                    Volume: ₦{market.volume}
+                  </span>
+                  <button
+                    type='button'
+                    className='flex items-center gap-0.5 text-xs font-semibold text-neutral-10 hover:text-black'
+                  >
+                    Explore
+                    <HugeiconsIcon icon={ArrowRight01Icon} size={14} />
+                  </button>
+                </div>
               </div>
             ))}
       </div>

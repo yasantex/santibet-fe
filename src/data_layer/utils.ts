@@ -1,4 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
+import {
+  useInfiniteQuery,
+  useQuery,
+  type InfiniteData,
+} from '@tanstack/react-query'
 import {
   type UseQueryOptions,
   useMutation,
@@ -10,6 +14,8 @@ import {
 import axios from 'axios'
 import type { AxiosRequestConfig } from 'axios'
 import { Cookies, useCookies } from 'react-cookie'
+import { persistor, store } from '../redux/store'
+import { clearUser } from '../redux/userSlice'
 
 export type QueryParams = Record<
   string,
@@ -17,6 +23,16 @@ export type QueryParams = Record<
 >
 
 type Truthy<T> = T extends false | '' | 0 | null | undefined ? never : T
+
+interface InfiniteQueryProps<TData> {
+  path: string
+  headers?: Record<string, string>
+  enabled?: boolean
+  queryKey?: QueryKey
+  params?: QueryParams
+  responseType?: 'json' | 'blob' | 'document' | 'formdata' | 'stream' | 'text'
+  getNextPageParam: (lastPage: TData) => string | undefined
+}
 
 interface QueryProps<TData> {
   path: string
@@ -66,22 +82,62 @@ apiClient.defaults.withCredentials = true
 const COOKIE_OPTIONS = {
   path: '/',
   sameSite: 'lax' as const,
-  secure: true,
+  secure: import.meta.env.PROD,
   maxAge: 60 * 60 * 24 * 7,
 }
 
+type RefreshTokenResponse = {
+  accessToken: string
+  refreshToken?: string
+  expiresIn: number
+}
+
+let refreshRequest: Promise<RefreshTokenResponse> | undefined
+
 const refreshAuthToken = async () => {
-  const response = await apiClient.post(
-    '/auth/refresh',
-    {},
-    { withCredentials: true },
-  )
-  return response.data as {
-    accessToken: string
-    refreshToken?: string
-    expiresIn: number
+  if (refreshRequest) {
+    return refreshRequest
+  }
+
+  const refreshToken = new Cookies().get('sb_rt')
+
+  refreshRequest = apiClient
+    .post('/auth/refresh', refreshToken ? { refreshToken } : {}, {
+      withCredentials: true,
+    })
+    .then((response) => response.data as RefreshTokenResponse)
+    .finally(() => {
+      refreshRequest = undefined
+    })
+
+  return refreshRequest
+}
+
+const persistRefreshedTokens = (tokens: RefreshTokenResponse) => {
+  const cookies = new Cookies()
+  cookies.set('token', tokens.accessToken, COOKIE_OPTIONS)
+
+  if (tokens.refreshToken) {
+    cookies.set('sb_rt', tokens.refreshToken, COOKIE_OPTIONS)
   }
 }
+
+const clearAuthenticatedSession = () => {
+  const cookies = new Cookies()
+  const removeOptions = {
+    path: '/',
+    sameSite: 'lax' as const,
+    secure: import.meta.env.PROD,
+  }
+
+  cookies.remove('token', removeOptions)
+  cookies.remove('sb_rt', removeOptions)
+  store.dispatch(clearUser())
+  void persistor.purge()
+}
+
+const isSessionRevokedError = (error: unknown) =>
+  axios.isAxiosError(error) && error.response?.data?.code === 'SESSION_REVOKED'
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -94,14 +150,14 @@ apiClient.interceptors.response.use(
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
-      originalRequest.url !== '/auth/refresh'
+      originalRequest.url !== '/auth/refresh' &&
+      originalRequest.url !== '/auth/login'
     ) {
       originalRequest._retry = true
       try {
         const refreshData = await refreshAuthToken()
         if (refreshData?.accessToken) {
-          const cookies = new Cookies()
-          cookies.set('token', refreshData.accessToken, COOKIE_OPTIONS)
+          persistRefreshedTokens(refreshData)
 
           originalRequest.headers = {
             ...originalRequest.headers,
@@ -111,6 +167,9 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest)
         }
       } catch (refreshError) {
+        if (isSessionRevokedError(refreshError)) {
+          clearAuthenticatedSession()
+        }
         return Promise.reject(refreshError)
       }
     }
@@ -118,6 +177,7 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   },
 )
+
 /**
  * Helper function to append query params to URL.
  */
@@ -221,23 +281,23 @@ export const useSantiBetMutation = <TData = unknown, TVariables = unknown>({
 export const useSantiBetInfiniteQuery = <TData = unknown>({
   path,
   headers = {},
-  queryOptions,
   enabled,
   queryKey,
   params = {},
-  onSuccess,
   responseType = 'json',
-}: QueryProps<TData>) => {
+  getNextPageParam,
+}: InfiniteQueryProps<TData>) => {
   const [cookies] = useCookies(['token'])
+
   const _headers = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
     ...(cookies?.token ? { Authorization: `Bearer ${cookies.token}` } : {}),
     ...headers,
-    api_token: cookies?.token || '',
   }
-  const url = `${path}${buildQueryParams(params)}`
-  const fetchData = async () => {
+
+  const fetchData = async (context: { pageParam: string | undefined }) => {
+    const url = `${path}${buildQueryParams({ ...params, cursor: context.pageParam })}`
     const config: AxiosRequestConfig = {
       url,
       method: 'GET',
@@ -248,17 +308,17 @@ export const useSantiBetInfiniteQuery = <TData = unknown>({
     return response.data
   }
 
-  const queryResult = useQuery<TData, Error>({
+  return useInfiniteQuery<
+    TData,
+    Error,
+    InfiniteData<TData, string | undefined>,
+    QueryKey,
+    string | undefined
+  >({
     queryKey: queryKey || [path, params],
     queryFn: fetchData,
-    ...(queryOptions || {}),
+    initialPageParam: undefined,
+    getNextPageParam,
     enabled: !!cookies?.token && enabled,
   })
-
-  // onSuccess callback have been deprecated in the react-query v5 that we are using, let's manually create it, If onSuccess handler is provided, invoke it when the query succeeds
-  if (queryResult.isSuccess && onSuccess) {
-    onSuccess(queryResult.data!)
-  }
-
-  return queryResult
 }

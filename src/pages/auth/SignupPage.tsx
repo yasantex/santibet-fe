@@ -56,12 +56,6 @@ const SignupPage = () => {
       },
       onSuccess: (data) => {
         const { ...userData } = data.user
-        if (userData.twoFaEnabled) {
-          navigate(
-            `/two-fa?userId=${userData?.id}&authToken=${userData?.preAuthToken}`,
-          )
-          return
-        }
         updateToken({
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
@@ -80,12 +74,6 @@ const SignupPage = () => {
     mutationOptions: {
       onSuccess: (data) => {
         const { ...userData } = data.user
-        if (userData.twoFaEnabled) {
-          navigate(
-            `/two-fa?userId=${userData?.id}&authToken=${userData?.preAuthToken}`,
-          )
-          return
-        }
         updateToken({
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,

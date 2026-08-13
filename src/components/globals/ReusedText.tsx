@@ -1,5 +1,7 @@
 import type { FC } from 'react'
 import { getInitials } from '../../utils/functions'
+import type { StatusConfig } from '../../types/types'
+import { statusBadgeClass } from '../../utils/constants'
 
 export const ErrorText = ({
   text,
@@ -75,3 +77,21 @@ export const TextLoader = ({ count = 8 }: {count: number}) => {
     </div>
   );
 };
+
+export const StatusBadge: React.FC<{
+  value: number | boolean | string
+  statusConfig: StatusConfig[]
+}> = ({ value, statusConfig }) => {
+  const config = statusConfig.find((s) => s.value === value)
+  if (!config) return <span className='text-neutral-10 text-xs'>—</span>
+
+  return (
+    <span
+      className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium  ${
+        statusBadgeClass[config.color]
+      }`}
+    >
+      {config.label}
+    </span>
+  )
+}

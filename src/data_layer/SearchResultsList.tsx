@@ -69,7 +69,7 @@ const SearchResultsList = ({
               <span className='truncate text-sm font-medium text-black'>
                 {result.title}
               </span>
-              <span className='truncate text-xs text-neutral-30'>
+              <span className='truncate text-xs text-neutral-10'>
                 {result.subtitle}
               </span>
             </span>

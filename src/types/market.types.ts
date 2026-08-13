@@ -23,3 +23,30 @@ export type DashboardData = {
   hotTopics: HotTopic[]
   markets: Market[]
 }
+
+// 
+export interface Outcome {
+  id: string;
+  label: string;
+  price: number;
+}
+
+export interface Markets {
+  id: string;
+  provider: string;
+  eventId: string;
+  title: string;
+  subtitle: string;
+  status: string;
+  outcomes: Outcome[];
+  volume: number;
+  liquidity: number;
+  openTime: string;
+  closeTime: string;
+  resolvedOutcomeId: string;
+}
+
+export interface MarketResponse {
+  data: Markets[];
+  cursor: string;
+}
