@@ -30,11 +30,14 @@ body {
   --color-border-error: #ff2e2e;
   --color-border: #e4e5e3;
   --color-hover: #eaeaea;
-  --color-surface-hover: #9AA09C;
+  --color-surface-hover: #9aa09c;
   --color-success: #238b45;
   --color-surface-success: #eefcf3;
   --color-brand-green: #c6f135;
   --color-card: #e4e5e3;
+  --color-warning: #ff8000;
+  --color-success-bg: #eefcf3;
+    --color-error-bg: #ffeded;
   --color-glass: #e4e5e3;
   --color-placeholder: #6b706d;
   --color-market-success: #183123;
@@ -59,7 +62,6 @@ body {
   --color-card: #16191a;
   --color-glass: #22262a;
   --color-border: #22262a;
-  --color-hover: #e4e5e3;
+  --color-hover: #22262a;
   --color-card: #16191a;
-
 }

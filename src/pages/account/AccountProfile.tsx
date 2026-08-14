@@ -20,6 +20,7 @@ import { showWarningToast } from '../../utils/toastUtils'
 import { useModalControl } from '../../hooks/useModalControl'
 import VerifyEmail from '../../components/appModals/auth/VerifyEmail'
 import { Button } from '../../components/globals/Button'
+import Security from '../../components/appModals/auth/Security'
 
 type ProfileRow = {
   icon: typeof UserIcon
@@ -63,6 +64,7 @@ const AccountProfile = () => {
   const { data: userProfile, isLoading } = useSantiBetQuery<UserData>({
     path: '/auth/me',
   })
+
   const { user } = useAppSelector((state) => state.user)
   const { logout } = useLogout()
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
@@ -81,7 +83,7 @@ const AccountProfile = () => {
         {
           icon: Shield01Icon,
           label: 'Security',
-          // onClick: () => navigate('/profile/security'),
+          onClick: () => handleModalOpen('security'),
         },
         {
           icon: CreditCardIcon,
@@ -283,6 +285,12 @@ const AccountProfile = () => {
           handleModalClose()
         }}
         type='phone'
+      />
+      <Security
+        open={modalOpen && modal === 'security'}
+        handleClose={() => {
+          handleModalClose()
+        }}
       />
     </main>
   )

@@ -1,3 +1,4 @@
+import Footer from './Footer'
 import Header from './Header'
 import { Outlet } from 'react-router'
 
@@ -7,9 +8,10 @@ const AppLayout = () => {
       <div className='flex w-full flex-1 flex-col '>
         <Header />
 
-        <main className='w-full flex-1 bg-white'>
+        <main className='w-full flex-1 bg-white pb-20'>
           <Outlet />
         </main>
+        <Footer />
       </div>
     </div>
   )

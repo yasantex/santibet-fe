@@ -66,7 +66,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       if (variation === 'white')
         return 'bg-white text-black px-5 font-semibold px-5 w-fit'
       if (variation === 'plain')
-        return 'border border-border text-black hover:bg-hover dark:hover:text-[#000000]! transition-all duration-300 ease-in-out font-semibold w-fit px-5 '
+        return 'border border-border text-black hover:bg-hover transition-all duration-300 ease-in-out font-semibold w-fit px-5 '
       if (variation === 'error')
         return 'text-error bg-surface-error font-semibold w-fit rounded-full! px-5 '
       // Ultimate fallback

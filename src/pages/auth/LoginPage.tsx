@@ -55,10 +55,9 @@ const LoginPage = () => {
         }
       },
       onSuccess: (data) => {
-        const { ...userData } = data.user
-        if (userData.twoFaEnabled) {
+        if (data?.mfaRequired) {
           navigate(
-            `/two-fa?userId=${userData?.id}&authToken=${userData?.preAuthToken}`,
+            `/two-fa?authToken=${data?.challengeId}`,
           )
           return
         }
@@ -66,7 +65,7 @@ const LoginPage = () => {
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
         })
-        dispatch(setUser(userData))
+        dispatch(setUser(data.user))
         navigate('/')
       },
     },
@@ -79,10 +78,9 @@ const LoginPage = () => {
     path: '/auth/google',
     mutationOptions: {
       onSuccess: (data) => {
-        const { ...userData } = data.user
-        if (userData.twoFaEnabled) {
+        if (data?.mfaRequired) {
           navigate(
-            `/two-fa?userId=${userData?.id}&authToken=${userData?.preAuthToken}`,
+            `/two-fa?authToken=${data?.challengeId}`,
           )
           return
         }
@@ -90,7 +88,7 @@ const LoginPage = () => {
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
         })
-        dispatch(setUser(userData))
+        dispatch(setUser(data?.user))
         navigate('/')
       },
       onError: (error) => {
