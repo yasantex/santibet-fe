@@ -15,6 +15,8 @@ import AccountPortfolio from './pages/account/AccountPortfolio'
 import TermsOfService from './pages/TermsOfService'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TwoFaPage from './pages/auth/TwoFaPage'
+import MarketDetail from './pages/MarketDetail'
+import Orders from './pages/Orders'
 
 function App() {
   return (
@@ -42,6 +44,9 @@ function App() {
             <Route path='/account-profile' element={<AccountProfile />} />
             <Route path='/account-wallet' element={<AccountWallet />} />
             <Route path='/account-portfolio' element={<AccountPortfolio />} />
+            <Route path='/orders' element={<Orders />} />
+            <Route path='/sports/:id' element={<MarketDetail />} />
+            <Route path='/crypto/:id' element={<MarketDetail />} />
           </Route>
         </Route>
       </Routes>

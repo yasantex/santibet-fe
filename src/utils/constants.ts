@@ -213,6 +213,16 @@ export const profileMenuItems: ProfileAction[] = [
     },
   },
   {
+    id: 'orders',
+    label: 'Orders',
+    icon: FilesFreeIcons,
+    path: '/orders',
+    action: (navigate, close) => {
+      navigate('/orders')
+      close()
+    },
+  },
+  {
     id: 'profile-settings',
     label: 'Profile & Settings',
     icon: User02FreeIcons,

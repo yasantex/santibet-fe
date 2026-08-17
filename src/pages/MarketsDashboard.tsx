@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import FeaturedMarketCard from '../components/markets/FeaturedMarketCard'
 import { useMockDashboardData } from '../mockData/marketsMockData'
-import { MarketCardSkeleton } from '../components/globals/ReusedText'
+import {
+  MarketCardSkeleton,
+  MarketCountdown,
+} from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   FilterIcon,
@@ -10,6 +13,8 @@ import {
 } from '@hugeicons/core-free-icons'
 import { useSantiBetQuery } from '../data_layer/utils'
 import type { MarketResponse } from '../types/market.types'
+import { mapMarketToCard } from '../utils/functions'
+import { useNavigate } from 'react-router'
 
 const categories = [
   'All',
@@ -20,22 +25,22 @@ const categories = [
   'Tech',
 ] as const
 
-const categoryIcons: Record<string, string> = {
-  Politics: '🏛️',
-  Sports: '🏴',
-  Crypto: '₿',
-  Entertainment: '🎤',
-  Tech: '💻',
-}
-
 const MarketsDashboard = () => {
   const [activeCategory, setActiveCategory] = useState<
     'All' | 'Politics' | 'Sports' | 'Crypto' | 'Entertainment' | 'Tech'
   >('All')
+  const navigate = useNavigate()
 
-  const { data: markets, isLoading: marketLoading } = useSantiBetQuery<MarketResponse>({
-    path: '/market/markets',
-  })
+  const { data: marketsResponse, isLoading: marketsLoading } =
+    useSantiBetQuery<MarketResponse>({
+      path: '/market/markets',
+      params: {
+        status: 'open',
+        category: activeCategory,
+      },
+    })
+
+  const cards = (marketsResponse?.data ?? []).map(mapMarketToCard)
 
   const { data, isLoading } = useMockDashboardData(activeCategory)
 
@@ -97,31 +102,35 @@ const MarketsDashboard = () => {
       </div>
 
       <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-        {isLoading || !data
+        {marketsLoading || !marketsResponse
           ? Array.from({ length: 8 }).map((_, i) => (
               <MarketCardSkeleton key={i} />
             ))
-          : data.markets.map((market) => (
+          : cards.map((market) => (
               <div
                 key={market.id}
+                onClick={() => navigate(`/crypto/${market.id}`)}
                 className='flex flex-col gap-4 rounded-2xl border border-border bg-card p-4'
               >
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
                     <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-border/30 text-base'>
-                      {categoryIcons[market.category] ?? '🏴'}
+                      🏴
                     </div>
-                    <span className='text-xs font-medium text-neutral-10'>
-                      {market.category}
-                    </span>
                   </div>
-                  <button
-                    type='button'
-                    aria-label='Save market'
-                    className='text-neutral-10 hover:text-black'
-                  >
-                    <HugeiconsIcon icon={Bookmark02Icon} size={18} />
-                  </button>
+                  <div className='flex gap-2.5 items-center'>
+                    <MarketCountdown
+                      openTime={market.openTime}
+                      closeTime={market.closeTime}
+                    />
+                    <button
+                      type='button'
+                      aria-label='Save market'
+                      className='text-neutral-10 hover:text-black'
+                    >
+                      <HugeiconsIcon icon={Bookmark02Icon} size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 <h3 className='text-base font-bold leading-snug text-black line-clamp-2'>
