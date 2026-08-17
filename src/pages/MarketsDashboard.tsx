@@ -6,6 +6,7 @@ import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon } from '@hugeicons/core-free-icons'
 import { useEvents } from '../data_layer/markets'
+import { marketHref } from '../utils/marketDisplay'
 import type { UiMarket, UiOutcome } from '../types/market.types'
 
 const MarketsDashboard = () => {
@@ -39,9 +40,8 @@ const MarketsDashboard = () => {
     return list
   }, [allMarkets, activeCategory])
 
-  const goToMarket = (m: UiMarket) => navigate(`/markets/${m.id}`)
-  const goToTrade = (m: UiMarket, o: UiOutcome) =>
-    navigate(`/markets/${m.id}?outcome=${o.id}`)
+  const goToMarket = (m: UiMarket) => navigate(marketHref(m))
+  const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
 
   return (
     <main className='mx-auto flex w-full flex-col gap-6 px-3 pt-4 pb-20 md:px-8'>
