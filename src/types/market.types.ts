@@ -39,6 +39,13 @@ export interface RawMarket {
   subtitle: string
   status: 'open' | 'closed' | string
   outcomes: MarketOutcome[]
+  volume: number
+  liquidity?: number
+  openTime: string
+  closeTime: string
+  resolvedOutcomeId?: string | null
+}
+
 export interface ApiMarket {
   id: string
   provider: MarketProvider
@@ -51,17 +58,12 @@ export interface ApiMarket {
   liquidity: number
   openTime: string
   closeTime: string
-}
-export interface MarketResponse {
-  data: RawMarket[]
-}
-
-//
-export interface FeaturedMarket extends Market {
-  changePercent: number
-  chartData: { value: number }[]
   resolvedOutcomeId?: string | null
   rules?: string | null
+}
+
+export interface MarketResponse {
+  data: RawMarket[]
 }
 
 export interface ApiMarketListResponse {

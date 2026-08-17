@@ -22,7 +22,6 @@ import Rewards from './pages/Rewards'
 import ReferEarn from './pages/ReferEarn'
 import HelpCenter from './pages/HelpCenter'
 import TwoFaPage from './pages/auth/TwoFaPage'
-import MarketDetail from './pages/MarketDetail'
 import Orders from './pages/Orders'
 
 function App() {
