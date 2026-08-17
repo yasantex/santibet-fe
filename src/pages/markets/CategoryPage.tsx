@@ -4,6 +4,7 @@ import MarketCard from '../../components/markets/MarketCard'
 import { MarketCardSkeleton } from '../../components/globals/ReusedText'
 import { Button } from '../../components/globals/Button'
 import { useEventsInfinite } from '../../data_layer/markets'
+import { marketHref } from '../../utils/marketDisplay'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 
 const CategoryPage = () => {
@@ -39,9 +40,8 @@ const CategoryPage = () => {
     [allMarkets, active],
   )
 
-  const goToMarket = (m: UiMarket) => navigate(`/markets/${m.id}`)
-  const goToTrade = (m: UiMarket, o: UiOutcome) =>
-    navigate(`/markets/${m.id}?outcome=${o.id}`)
+  const goToMarket = (m: UiMarket) => navigate(marketHref(m))
+  const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
 
   const selectCategory = (c: string) => {
     navigate(c === 'All' ? '/browse' : `/category/${c}`)

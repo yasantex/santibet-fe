@@ -4,6 +4,7 @@ import {
   useQuery,
   type InfiniteData,
 } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { apiClient, type QueryParams } from './utils'
 import { toCents, toPercent } from '../utils/functions'
 import { categoryIcon } from '../utils/marketDisplay'
@@ -91,7 +92,12 @@ export const normalizeEvent = (e: ApiEvent): UiEvent => ({
   title: e.title,
   category: e.category,
   closeTime: e.closeTime,
-  markets: (e.markets ?? []).map((m) => normalizeMarket(m, e.category)),
+  // Event-nested markets carry a null eventId and live in a different id space
+  // than the flat /market/markets feed. Stamp the parent event id so the detail
+  // page can resolve the market back through /market/events/{id}.
+  markets: (e.markets ?? []).map((m) =>
+    normalizeMarket({ ...m, eventId: m.eventId || e.id }, e.category),
+  ),
 })
 
 // ── Fetchers (public — no auth gating) ────────────────────────────────
@@ -158,13 +164,40 @@ export const useMarketsInfinite = (params: MarketQueryParams = {}) =>
     getNextPageParam: (last) => last.cursor ?? undefined,
   })
 
-export const useMarket = (id?: string) =>
+export const useMarket = (id?: string, eventId?: string) =>
   useQuery({
-    queryKey: ['market', id],
+    queryKey: ['market', id, eventId],
     enabled: !!id,
+    retry: false,
     queryFn: async () => {
-      const m = await get<ApiMarket>(`${MARKET_BASE}/markets/${id}`)
-      return normalizeMarket(m)
+      try {
+        const m = await get<ApiMarket>(`${MARKET_BASE}/markets/${id}`)
+        return normalizeMarket(m)
+      } catch (err) {
+        // Ids sourced from the events feed 404 on the single-market endpoint;
+        // fall back to locating the market inside its event.
+        if (isAxiosError(err) && err.response?.status === 404) {
+          // 1. Known event (in-app navigation carries ?event=): resolve directly.
+          if (eventId) {
+            const ev = await get<ApiEvent>(`${MARKET_BASE}/events/${eventId}`)
+            const found = (ev.markets ?? []).find((mm) => mm.id === id)
+            if (found) {
+              return normalizeMarket({ ...found, eventId: ev.id }, ev.category)
+            }
+          }
+          // 2. Bare deep link: scan the events feed for the market id.
+          const list = await get<ApiEventListResponse>(`${MARKET_BASE}/events`, {
+            limit: 100,
+          })
+          for (const ev of list.data ?? []) {
+            const found = (ev.markets ?? []).find((mm) => mm.id === id)
+            if (found) {
+              return normalizeMarket({ ...found, eventId: ev.id }, ev.category)
+            }
+          }
+        }
+        throw err
+      }
     },
   })
 
@@ -229,6 +262,7 @@ export const useMarketQuote = (
   useQuery({
     queryKey: ['market-quote', id, outcomeId, provider],
     enabled: !!id && !!outcomeId,
+    retry: false,
     refetchInterval: 15000,
     queryFn: () =>
       get<Quote>(`${MARKET_BASE}/markets/${id}/quote`, { outcomeId, provider }),
@@ -242,6 +276,7 @@ export const useMarketOrderBook = (
   useQuery({
     queryKey: ['market-orderbook', id, outcomeId, provider],
     enabled: !!id && !!outcomeId,
+    retry: false,
     refetchInterval: 15000,
     queryFn: () =>
       get<OrderBook>(`${MARKET_BASE}/markets/${id}/orderbook`, {
@@ -254,6 +289,7 @@ export const useMarketTrades = (id?: string, limit = 30, provider?: string) =>
   useQuery({
     queryKey: ['market-trades', id, limit, provider],
     enabled: !!id,
+    retry: false,
     refetchInterval: 20000,
     queryFn: () =>
       get<MarketTrade[]>(`${MARKET_BASE}/markets/${id}/trades`, {
@@ -270,7 +306,7 @@ const marketToSearchResult = (m: UiMarket): SearchResult => ({
   id: m.id,
   title: m.title,
   subtitle: m.subtitle || m.category,
-  href: `/markets/${m.id}`,
+  href: m.eventId ? `/markets/${m.id}?event=${m.eventId}` : `/markets/${m.id}`,
   iconLabel: categoryIcon(m.category),
   iconBg: '#183123',
   iconTextColor: '#c6f135',

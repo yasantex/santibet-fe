@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router'
 import { useEvent } from '../../data_layer/markets'
 import MarketCard from '../../components/markets/MarketCard'
-import { categoryIcon } from '../../utils/marketDisplay'
+import { categoryIcon, marketHref } from '../../utils/marketDisplay'
 import { MarketCardSkeleton } from '../../components/globals/ReusedText'
 import { formatCloseTimer } from '../../utils/functions'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
@@ -11,9 +11,8 @@ const EventDetail = () => {
   const navigate = useNavigate()
   const { data: event, isLoading, isError } = useEvent(id)
 
-  const goToMarket = (m: UiMarket) => navigate(`/markets/${m.id}`)
-  const goToTrade = (m: UiMarket, o: UiOutcome) =>
-    navigate(`/markets/${m.id}?outcome=${o.id}`)
+  const goToMarket = (m: UiMarket) => navigate(marketHref(m))
+  const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
 
   return (
     <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-4 pb-20 md:px-8'>
