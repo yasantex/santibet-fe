@@ -38,100 +38,18 @@ export type SearchResult = {
 }
 
 export const primaryNavLinks: NavLink[] = [
-  { label: 'Trending', href: '/trending' },
-  { label: 'Politics', href: '/politics' },
-  { label: 'Sports', href: '/sports' },
-  { label: 'Crypto', href: '/crypto' },
-  { label: 'Entertainments', href: '/entertainments' },
+  { label: 'Trending', href: '/browse' },
+  { label: 'Sports', href: '/category/Sports' },
+  { label: 'Crypto', href: '/category/Crypto' },
+  { label: 'Politics', href: '/category/Politics' },
+  { label: 'Business', href: '/category/Business' },
 ]
 
 export const moreNavLinks: NavLink[] = [
-  { label: 'Mentions', href: '/mentions' },
-  { label: 'Finance', href: '/finance' },
-  { label: 'Tech & Science', href: '/tech-and-science' },
-  { label: 'Help center', href: '/help' },
-]
-
-export const mockSearchResults: SearchResult[] = [
-  {
-    id: 'fritz-vs-jodar',
-    title: 'Fritz vs Jodar',
-    subtitle: 'Taylor Fritz',
-    href: '/markets/fritz-vs-jodar',
-    iconLabel: 'ATP',
-    iconBg: '#0B1D3A',
-    iconTextColor: '#FFFFFF',
-    percentage: 63,
-    change: 5,
-    direction: 'up',
-  },
-  {
-    id: 'mlb-cba',
-    title: 'Pro Baseball new CBA agreement before Dec 2, 2026',
-    subtitle: 'Yes',
-    href: '/markets/mlb-cba',
-    iconLabel: '⚾',
-    iconBg: '#1D4ED8',
-    percentage: 8,
-    change: 5,
-    direction: 'up',
-  },
-  {
-    id: 'steph-curry-next-team',
-    title: "Steph Curry's Next Team",
-    subtitle: 'GS Warriors',
-    href: '/markets/steph-curry-next-team',
-    iconLabel: '🏀',
-    iconBg: '#1D4ED8',
-    percentage: 86,
-    change: 4,
-    direction: 'down',
-  },
-  {
-    id: 'gov-shutdown-oct-2026',
-    title: 'Government shutdown on Oct 1, 2026?',
-    subtitle: 'Yes',
-    href: '/markets/gov-shutdown-oct-2026',
-    iconLabel: '🏛️',
-    iconBg: '#E5E7EB',
-    percentage: 16,
-    change: 20,
-    direction: 'down',
-  },
-  {
-    id: 'spiderman-rt-score',
-    title: 'Spider-Man: Brand New Day: Rotten Tomatoes score',
-    subtitle: 'Above 89',
-    href: '/markets/spiderman-rt-score',
-    iconLabel: 'RT',
-    iconBg: '#DC2626',
-    iconTextColor: '#FFFFFF',
-    percentage: 95,
-    change: 10,
-    direction: 'up',
-  },
-  {
-    id: 'todd-blanche-confirmed',
-    title: 'When will Todd Blanche be confirmed?',
-    subtitle: 'Before Sep 1, 2026',
-    href: '/markets/todd-blanche-confirmed',
-    iconLabel: '🇺🇸',
-    iconBg: '#E5E7EB',
-    percentage: 76,
-    change: 57,
-    direction: 'up',
-  },
-  {
-    id: 'fed-decision-sep-2026',
-    title: 'Fed decision in Sep 2026?',
-    subtitle: 'Hike 25bps',
-    href: '/markets/fed-decision-sep-2026',
-    iconLabel: '🏦',
-    iconBg: '#2563EB',
-    percentage: 56,
-    change: null,
-    direction: 'neutral',
-  },
+  { label: 'Browse all', href: '/browse' },
+  { label: 'Leaderboard', href: '/leaderboard' },
+  { label: 'Rewards', href: '/rewards' },
+  { label: 'Help center', href: '/help-center' },
 ]
 
 export type DepositOption = {
@@ -213,6 +131,16 @@ export const profileMenuItems: ProfileAction[] = [
     },
   },
   {
+    id: 'orders',
+    label: 'Orders',
+    icon: FilesFreeIcons,
+    path: '/orders',
+    action: (navigate, close) => {
+      navigate('/orders')
+      close()
+    },
+  },
+  {
     id: 'profile-settings',
     label: 'Profile & Settings',
     icon: User02FreeIcons,
@@ -228,7 +156,7 @@ export const profileMenuItems: ProfileAction[] = [
     icon: Award01FreeIcons,
     path: '/leaderboard',
     action: (navigate, close) => {
-      // navigate('/leaderboard');
+      navigate('/leaderboard')
       close()
     },
   },
@@ -238,7 +166,7 @@ export const profileMenuItems: ProfileAction[] = [
     icon: GiftFreeIcons,
     path: '/rewards',
     action: (navigate, close) => {
-      // navigate('/rewards');
+      navigate('/rewards')
       close()
     },
   },
@@ -248,7 +176,7 @@ export const profileMenuItems: ProfileAction[] = [
     icon: MoneyReceiveFlow02Icon,
     path: '/refer-earn',
     action: (navigate, close) => {
-      // navigate('/refer-earn');
+      navigate('/refer-earn')
       close()
     },
   },
@@ -258,7 +186,7 @@ export const profileMenuItems: ProfileAction[] = [
     icon: HelpSquareFreeIcons,
     path: '/help-center',
     action: (navigate, close) => {
-      // navigate('/help-center');
+      navigate('/help-center')
       close()
     },
   },
@@ -268,7 +196,7 @@ export const profileMenuItems: ProfileAction[] = [
     icon: FilesFreeIcons,
     path: '/terms',
     action: (navigate, close) => {
-      // navigate('/terms');
+      navigate('/terms-of-service')
       close()
     },
   },

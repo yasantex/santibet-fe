@@ -17,6 +17,7 @@ export interface UserData {
   mfaEnabled: boolean
   hasPassword: boolean
   createdAt: string
+  cashBalance?: number
 }
 
 export type AuthResponse = {

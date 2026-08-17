@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
-import { mockSearchResults, type SearchResult } from '../utils/constants'
+import { type SearchResult } from '../utils/constants'
 import SearchResultsList from '../data_layer/SearchResultsList'
+import { useMarketSearch } from '../data_layer/markets'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons'
 import type { ModalProps } from '../components/globals/ModalComponent'
@@ -22,13 +23,9 @@ const MobileSearchOverlay = ({
     if (open) setSearchTerm('')
   }, [open])
 
-  if (!open) return null
+  const { results } = useMarketSearch(searchTerm)
 
-  const results = searchTerm
-    ? mockSearchResults.filter((r) =>
-        r.title.toLowerCase().includes(searchTerm.toLowerCase()),
-      )
-    : mockSearchResults
+  if (!open) return null
 
   return ReactDOM.createPortal(
     <div className='fixed inset-0 z-999 flex flex-col bg-white lg:hidden'>
