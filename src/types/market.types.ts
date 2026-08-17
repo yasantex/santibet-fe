@@ -1,117 +1,65 @@
-// ── Raw API shapes (GET /api/market/*) ───────────────────────────────
-
-export type MarketStatus = 'open' | 'closed' | 'settled' | 'paused' | 'unknown'
-export type MarketProvider = 'polymarket' | 'kalshi'
-
-export interface ApiOutcome {
+export interface Market {
   id: string
-  label: string
-  price: number // probability in [0, 1]
-}
-
-export interface ApiMarket {
-  id: string
-  provider: MarketProvider
-  eventId: string
-  title: string
-  subtitle: string
-  status: MarketStatus
-  outcomes: ApiOutcome[]
-  volume: number
-  liquidity: number
-  openTime: string
-  closeTime: string
-  resolvedOutcomeId?: string | null
-  rules?: string | null
-}
-
-export interface ApiMarketListResponse {
-  data: ApiMarket[]
-  cursor: string | null
-}
-
-export interface ApiEvent {
-  id: string
-  provider: MarketProvider
-  title: string
+  question: string
   category: string
-  closeTime: string
-  markets: ApiMarket[]
+  yesPercent: number
+  noPercent: number
+  volume: string
 }
-
-export interface ApiEventListResponse {
-  data: ApiEvent[]
-  cursor: string | null
-}
-
-export interface Quote {
-  marketId: string
-  outcomeId: string
-  bid: number
-  ask: number
-  mid: number
-  last: number
-  ts: string
-}
-
-export interface OrderBookLevel {
-  price: number
-  size: number
-}
-
-export interface OrderBook {
-  marketId: string
-  outcomeId: string
-  bids: OrderBookLevel[]
-  asks: OrderBookLevel[]
-  ts: string
-}
-
-export interface MarketTrade {
+//
+export interface MarketCardVM {
   id: string
-  marketId: string
-  outcomeId: string
-  price: number
-  size: number
-  side: 'buy' | 'sell'
-  ts: string
+  question: string
+  outcomes: OutcomeVM[]
+  yesPercent: number
+  noPercent: number
+  volume: string
+  openTime?: string
+  closeTime?: string
 }
 
-// ── Normalized UI shapes (what components render) ─────────────────────
-
-export interface UiOutcome {
+export interface OutcomeVM {
   id: string
   label: string
-  price: number
-  cents: number
   percent: number
 }
 
-export interface UiMarket {
+export interface MarketOutcome {
   id: string
+  label: string
+  price: number
+}
+export interface RawMarket {
+  id: string
+  provider: string
   eventId: string
-  provider: MarketProvider
   title: string
   subtitle: string
-  category: string
-  status: MarketStatus
-  openTime: string
-  closeTime: string
+  status: 'open' | 'closed' | string
+  outcomes: MarketOutcome[]
   volume: number
   liquidity: number
-  resolvedOutcomeId?: string | null
-  rules?: string | null
-  outcomes: UiOutcome[]
-  /** Binary-market convenience accessors (derived from outcomes). */
-  yes?: UiOutcome
-  no?: UiOutcome
+  openTime: string
+  closeTime: string
+}
+export interface MarketResponse {
+  data: RawMarket[]
 }
 
-export interface UiEvent {
+//
+export interface FeaturedMarket extends Market {
+  changePercent: number
+  chartData: { value: number }[]
+}
+
+export interface HotTopic {
   id: string
-  provider: MarketProvider
-  title: string
-  category: string
-  closeTime: string
-  markets: UiMarket[]
+  question: string
+  percent: number
+}
+
+export type DashboardData = {
+  featured: FeaturedMarket
+  hotTopics: HotTopic[]
+  markets: Market[]
 }

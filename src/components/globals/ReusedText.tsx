@@ -2,6 +2,7 @@ import type { FC } from 'react'
 import { getInitials } from '../../utils/functions'
 import type { StatusConfig } from '../../types/types'
 import { statusBadgeClass } from '../../utils/constants'
+import { useCountdown } from '../../hooks/useCountdown'
 
 export const ErrorText = ({
   text,
@@ -94,4 +95,11 @@ export const StatusBadge: React.FC<{
       {config.label}
     </span>
   )
+}
+
+
+export const MarketCountdown = ({ openTime, closeTime }: { openTime?: string; closeTime?: string }) => {
+  const { label, display } = useCountdown(openTime, closeTime)
+  if (label === 'Closed' || !display) return null
+  return <span className='text-xs text-neutral-10'>{label} · {display}</span>
 }
