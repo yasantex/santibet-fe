@@ -1,14 +1,51 @@
-import { useState } from 'react'
-import { useMockPortfolioData } from '../../mockData/portfolioMockData'
-import type { PositionStatus } from '../../types/portfolio.types'
-import { formatNaira } from '../../utils/functions'
+import { useMemo, useState } from 'react'
+import PositionCard from '../../components/markets/PositionCard'
+import { Button } from '../../components/globals/Button'
+import { useBetPositions } from '../../data_layer/bets'
+import { formatCurrency } from '../../utils/functions'
+import type { BetPosition } from '../../types/bet.types'
+
+type PortfolioTab = 'open' | 'settled'
 
 const AccountPortfolio = () => {
-  const [activeStatus, setActiveStatus] = useState<PositionStatus>('open')
-  const { data, isLoading } = useMockPortfolioData()
+  const [activeTab, setActiveTab] = useState<PortfolioTab>('open')
 
-  const filteredPositions = data?.positions.filter(
-    (p) => p.status === activeStatus,
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useBetPositions()
+
+  const positions = useMemo<BetPosition[]>(
+    () => (data?.pages ?? []).flatMap((p) => p.data),
+    [data],
+  )
+
+  const currency = positions[0]?.currentValue.currency ?? 'NGN'
+
+  const stats = useMemo(() => {
+    let value = 0
+    let staked = 0
+    let open = 0
+    positions.forEach((p) => {
+      const v = Number(p.currentValue.amount) || 0
+      const s = (Number(p.shares) || 0) * (Number(p.avgPrice) || 0)
+      value += v
+      staked += s
+      if (p.status === 'OPEN') open += 1
+    })
+    return { value, pnl: value - staked, open }
+  }, [positions])
+
+  const filtered = useMemo(
+    () =>
+      positions.filter((p) =>
+        activeTab === 'open' ? p.status === 'OPEN' : p.status !== 'OPEN',
+      ),
+    [positions, activeTab],
   )
 
   return (
@@ -17,35 +54,37 @@ const AccountPortfolio = () => {
         Portfolio
       </h1>
 
-      {isLoading || !data ? (
-        <div className='flex flex-col lg:flex-row gap-4'>
+      {isLoading ? (
+        <div className='flex flex-col gap-4 lg:flex-row'>
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className='h-20 animate-pulse rounded-lg bg-card' />
+            <div
+              key={i}
+              className='h-20 min-w-60 flex-1 animate-pulse rounded-lg bg-card'
+            />
           ))}
         </div>
       ) : (
-        <div className='flex flex-col lg:flex-row gap-4'>
-          <div className='flex flex-col gap-1 min-w-60 max-w-100 rounded-lg bg-card p-4'>
+        <div className='flex flex-col gap-4 lg:flex-row'>
+          <div className='flex min-w-60 max-w-100 flex-col gap-1 rounded-lg bg-card p-4'>
             <span className='text-sm text-placeholder'>Portfolio Value</span>
             <span className='text-lg font-bold text-black'>
-              {formatNaira(data?.stats.portfolioValue).replace('+', '')}
+              {formatCurrency(String(stats.value), currency)}
             </span>
           </div>
-          <div className='flex flex-col gap-1 min-w-60 max-w-100 rounded-lg bg-card p-4'>
+          <div className='flex min-w-60 max-w-100 flex-col gap-1 rounded-lg bg-card p-4'>
             <span className='text-sm text-placeholder'>Total P&L</span>
             <span
               className={`text-lg font-bold ${
-                data?.stats.totalPnl >= 0 ? 'text-success' : 'text-error'
+                stats.pnl >= 0 ? 'text-success' : 'text-error'
               }`}
             >
-              {formatNaira(data?.stats.totalPnl)}
+              {stats.pnl >= 0 ? '+' : '-'}
+              {formatCurrency(String(Math.abs(stats.pnl)), currency)}
             </span>
           </div>
-          <div className='flex flex-col gap-1 min-w-60 max-w-100 rounded-lg bg-card p-4'>
+          <div className='flex min-w-60 max-w-100 flex-col gap-1 rounded-lg bg-card p-4'>
             <span className='text-sm text-placeholder'>Open Positions</span>
-            <span className='text-lg font-bold text-black'>
-              {data?.stats.openPositionsCount}
-            </span>
+            <span className='text-lg font-bold text-black'>{stats.open}</span>
           </div>
         </div>
       )}
@@ -55,9 +94,9 @@ const AccountPortfolio = () => {
           <button
             key={status}
             type='button'
-            onClick={() => setActiveStatus(status)}
+            onClick={() => setActiveTab(status)}
             className={`rounded-full px-5 py-1.5 text-sm font-semibold capitalize transition-colors ${
-              activeStatus === status
+              activeTab === status
                 ? 'bg-text-black text-white'
                 : 'text-placeholder'
             }`}
@@ -67,77 +106,43 @@ const AccountPortfolio = () => {
         ))}
       </div>
 
-      <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-        {isLoading || !data ? (
-          Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className='h-52 animate-pulse rounded-lg bg-card' />
-          ))
-        ) : filteredPositions && filteredPositions.length > 0 ? (
-          filteredPositions.map((position) => {
-            const isProfit = position.value >= position.staked
-            const winColor = isProfit ? 'bg-success' : 'bg-error'
-            const winTextColor = isProfit ? 'text-success' : 'text-error'
-            return (
-              <div
-                key={position.id}
-                className='flex flex-col gap-4 rounded-lg bg-card p-4'
-              >
-                <span className='w-fit rounded-full bg-surface-hover px-2.5 py-0.5 text-xs font-semibold capitalize text-black'>
-                  {position.status}
-                </span>
+      {isError ? (
+        <p className='py-8 text-center text-sm text-placeholder'>
+          We couldn’t load your positions right now.
+        </p>
+      ) : (
+        <>
+          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+            {isLoading ? (
+              Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className='h-52 animate-pulse rounded-lg bg-card' />
+              ))
+            ) : filtered.length ? (
+              filtered.map((position) => (
+                <PositionCard key={position.id} position={position} />
+              ))
+            ) : (
+              <p className='col-span-full py-8 text-center text-sm text-placeholder'>
+                No {activeTab} positions yet.
+              </p>
+            )}
+          </div>
 
-                <p className='text-sm font-semibold h-12 text-black'>
-                  {position.question}
-                </p>
-
-                <div className='grid grid-cols-2 gap-2'>
-                  <div
-                    className={`rounded-md flex flex-col gap-1 py-2.5 text-center text-sm font-bold ${
-                      position.side === 'yes'
-                        ? `${winColor} text-black`
-                        : 'bg-surface-hover text-black'
-                    }`}
-                  >
-                    <span
-                      className={position.side === 'yes' ? '' : winTextColor}
-                    >
-                      YES
-                    </span>{' '}
-                    <span>{position.yesPercent}%</span>
-                  </div>
-                  <div
-                    className={`rounded-md flex flex-col gap-1 py-2.5 text-center text-sm font-bold ${
-                      position.side === 'no'
-                        ? `${winColor} text-black`
-                        : 'bg-surface-hover text-black'
-                    }`}
-                  >
-                    <span
-                      className={position.side === 'no' ? '' : winTextColor}
-                    >
-                      NO
-                    </span>{' '}
-                    <span>{position.noPercent}%</span>
-                  </div>
-                </div>
-
-                <div className='flex items-center justify-between text-xs text-placeholder'>
-                  <span>
-                    Staked {formatNaira(position.staked).replace('+', '')}
-                  </span>
-                  <span>
-                    Value {formatNaira(position.value).replace('+', '')}
-                  </span>
-                </div>
-              </div>
-            )
-          })
-        ) : (
-          <p className='col-span-full py-8 text-center text-sm text-placeholder'>
-            No {activeStatus} positions yet.
-          </p>
-        )}
-      </div>
+          {hasNextPage && (
+            <div className='flex justify-center'>
+              <Button
+                type='button'
+                text={isFetchingNextPage ? 'Loading…' : 'Load more'}
+                variation='plain'
+                size='medium'
+                className='w-fit!'
+                loading={isFetchingNextPage}
+                onClick={() => fetchNextPage()}
+              />
+            </div>
+          )}
+        </>
+      )}
     </main>
   )
 }
