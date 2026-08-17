@@ -8,7 +8,37 @@ export interface ApiOutcome {
   label: string
   price: number // probability in [0, 1]
 }
+//
+export interface MarketCardVM {
+  id: string
+  question: string
+  outcomes: OutcomeVM[]
+  yesPercent: number
+  noPercent: number
+  volume: string
+  openTime?: string
+  closeTime?: string
+}
 
+export interface OutcomeVM {
+  id: string
+  label: string
+  percent: number
+}
+
+export interface MarketOutcome {
+  id: string
+  label: string
+  price: number
+}
+export interface RawMarket {
+  id: string
+  provider: string
+  eventId: string
+  title: string
+  subtitle: string
+  status: 'open' | 'closed' | string
+  outcomes: MarketOutcome[]
 export interface ApiMarket {
   id: string
   provider: MarketProvider
@@ -21,6 +51,15 @@ export interface ApiMarket {
   liquidity: number
   openTime: string
   closeTime: string
+}
+export interface MarketResponse {
+  data: RawMarket[]
+}
+
+//
+export interface FeaturedMarket extends Market {
+  changePercent: number
+  chartData: { value: number }[]
   resolvedOutcomeId?: string | null
   rules?: string | null
 }

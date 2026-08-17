@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import logo from '../assets/Santibet Logo (white).svg'
+import logo from '../assets/santibet_logo.svg'
 import logoDark from '../assets/Santibet Logo.svg'
 
 import { Link, useNavigate } from 'react-router'
@@ -54,7 +54,7 @@ const Header = () => {
 
   const [searchTerm, setSearchTerm] = useState('')
   const [activeMobileTab, setActiveMobileTab] = useState<
-    'browse' | 'trending' | 'search' | 'social'
+    'browse' | 'markets' | 'trending' | 'search' | 'social'
   >('browse')
 
   const { results: filteredResults } = useMarketSearch(searchTerm)
@@ -68,7 +68,7 @@ const Header = () => {
       <div className='flex items-center justify-between! gap-5 w-full mb-2.5'>
         <div className='flex items-center gap-5 w-full'>
           <Link to='/'>
-            <img src={isDark ? logoDark : logo} alt='Santibet' />
+            <img src={isDark ? logoDark : logo} alt='Santibet' className='w-40 h-12' />
           </Link>
           <nav className='lg:flex items-center gap-5 text-sm font-semibold hidden'>
             {primaryNavLinks.map((link) => (
@@ -191,14 +191,14 @@ const Header = () => {
             </div>
           ) : (
             <div className='flex items-center gap-2.5'>
-              <FormSwitch
+              {/* <FormSwitch
                 checked={isDark}
                 onChange={toggleTheme}
                 onLabel='Dark'
                 offLabel='Light'
                 className='md:flex! hidden!'
                 labelClassName='font-semibold text-neutral-10'
-              />
+              /> */}
               <Button
                 type='button'
                 text='Login'

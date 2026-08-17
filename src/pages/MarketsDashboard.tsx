@@ -1,6 +1,21 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import FeaturedMarketCard from '../components/markets/FeaturedMarketCard'
+import { useMockDashboardData } from '../mockData/marketsMockData'
+import {
+  MarketCardSkeleton,
+  MarketCountdown,
+} from '../components/globals/ReusedText'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  FilterIcon,
+  Bookmark02Icon,
+  ArrowRight01Icon,
+} from '@hugeicons/core-free-icons'
+import { useSantiBetQuery } from '../data_layer/utils'
+import type { MarketResponse } from '../types/market.types'
+import { mapMarketToCard } from '../utils/functions'
+import { useNavigate } from 'react-router'
 import MarketCard from '../components/markets/MarketCard'
 import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
