@@ -191,14 +191,14 @@ const Header = () => {
             </div>
           ) : (
             <div className='flex items-center gap-2.5'>
-              {/* <FormSwitch
+              <FormSwitch
                 checked={isDark}
                 onChange={toggleTheme}
                 onLabel='Dark'
                 offLabel='Light'
                 className='md:flex! hidden!'
                 labelClassName='font-semibold text-neutral-10'
-              /> */}
+              />
               <Button
                 type='button'
                 text='Login'
