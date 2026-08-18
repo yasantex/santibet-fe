@@ -42,7 +42,8 @@ const MarketDetail = () => {
   const [period, setPeriod] = useState<ChartPeriod>('Live')
   const [infoTab, setInfoTab] = useState<'rules' | 'trades'>('rules')
 
-  const { data: market, isLoading, isError } = useMarket(id)
+  const eventId = searchParams.get('event') ?? undefined
+  const { data: market, isLoading, isError } = useMarket(id, eventId)
   const { data: trades } = useMarketTrades(id, 50)
 
   const selectedOutcome: UiOutcome | undefined = useMemo(() => {
