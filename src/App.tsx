@@ -10,13 +10,21 @@ import AccountProfile from './pages/account/AccountProfile'
 import AuthRoute from './routes/AuthRoute'
 import ProtectedRoute from './routes/ProtectedRoute'
 import MarketsDashboard from './pages/MarketsDashboard'
+import MarketDetail from './pages/markets/MarketDetail'
+import EventDetail from './pages/markets/EventDetail'
+import CategoryPage from './pages/markets/CategoryPage'
 import AccountWallet from './pages/account/AccountWallet'
 import AccountPortfolio from './pages/account/AccountPortfolio'
 import TermsOfService from './pages/TermsOfService'
 import PrivacyPolicy from './pages/PrivacyPolicy'
+import Leaderboard from './pages/Leaderboard'
+import Rewards from './pages/Rewards'
+import ReferEarn from './pages/ReferEarn'
+import HelpCenter from './pages/HelpCenter'
 import TwoFaPage from './pages/auth/TwoFaPage'
-import MarketDetail from './pages/MarketDetail'
 import Orders from './pages/Orders'
+import ResponsibleGambling from './pages/ResponsibleGambling'
+import ContactSupport from './pages/ContactSupport'
 
 function App() {
   return (
@@ -26,8 +34,23 @@ function App() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route path='/' element={<MarketsDashboard />} />
+          <Route path='/markets/:id' element={<MarketDetail />} />
+          <Route path='/events/:id' element={<EventDetail />} />
+          <Route path='/browse' element={<CategoryPage />} />
+          <Route path='/category/:category' element={<CategoryPage />} />
           <Route path='/terms-of-service' element={<TermsOfService />} />
           <Route path='/privacy-policy' element={<PrivacyPolicy />} />
+          <Route
+            path='/responsible-gambling'
+            element={<ResponsibleGambling />}
+          />
+            <Route
+            path='/contact-us'
+            element={<ContactSupport />}
+          />
+          <Route path='/leaderboard' element={<Leaderboard />} />
+          <Route path='/rewards' element={<Rewards />} />
+          <Route path='/help-center' element={<HelpCenter />} />
 
           <Route element={<AuthRoute />}>
             <Route path='/signin' element={<LoginPage />} />
@@ -45,8 +68,7 @@ function App() {
             <Route path='/account-wallet' element={<AccountWallet />} />
             <Route path='/account-portfolio' element={<AccountPortfolio />} />
             <Route path='/orders' element={<Orders />} />
-            <Route path='/sports/:id' element={<MarketDetail />} />
-            <Route path='/crypto/:id' element={<MarketDetail />} />
+            <Route path='/refer-earn' element={<ReferEarn />} />
           </Route>
         </Route>
       </Routes>

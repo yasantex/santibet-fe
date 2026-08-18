@@ -11,7 +11,11 @@ import {
   ArrowRight01Icon,
 } from '@hugeicons/core-free-icons'
 import { useAppSelector } from '../../utils/hooks'
-import type { BaseApiResponse, UserData } from '../../types/types'
+import type {
+  BaseApiResponse,
+  KycStatusResponse,
+  UserData,
+} from '../../types/types'
 import { useSantiBetMutation, useSantiBetQuery } from '../../data_layer/utils'
 import useLogout from '../../hooks/useLogout'
 import { ProfileAvatar } from '../../components/globals/ReusedText'
@@ -21,6 +25,8 @@ import { useModalControl } from '../../hooks/useModalControl'
 import VerifyEmail from '../../components/appModals/auth/VerifyEmail'
 import { Button } from '../../components/globals/Button'
 import Security from '../../components/appModals/auth/Security'
+import VerifyKyc from '../../components/appModals/auth/VerifyKyc'
+import { useEffect } from 'react'
 
 type ProfileRow = {
   icon: typeof UserIcon
@@ -64,11 +70,20 @@ const AccountProfile = () => {
   const { data: userProfile, isLoading } = useSantiBetQuery<UserData>({
     path: '/auth/me',
   })
+  const { data: kycStatus } = useSantiBetQuery<KycStatusResponse>({
+    path: 'kyc',
+  })
 
   const { user } = useAppSelector((state) => state.user)
   const { logout } = useLogout()
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
+
+  useEffect(() => {
+    if (kycStatus?.status === 'NOT_STARTED') {
+      handleModalOpen('verifyKyc')
+    }
+  }, [kycStatus])
   const profile = userProfile ?? user
 
   const sections: ProfileSectionData[] = [
@@ -288,6 +303,12 @@ const AccountProfile = () => {
       />
       <Security
         open={modalOpen && modal === 'security'}
+        handleClose={() => {
+          handleModalClose()
+        }}
+      />
+      <VerifyKyc
+        open={modalOpen && modal === 'verifyKyc'}
         handleClose={() => {
           handleModalClose()
         }}

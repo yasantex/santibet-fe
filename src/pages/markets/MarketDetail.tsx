@@ -14,12 +14,12 @@ import {
   Link01Icon,
   Bookmark02Icon,
 } from '@hugeicons/core-free-icons'
-import { useMarket, useMarketTrades } from '../data_layer/markets'
-import TradePanel from '../components/markets/TradePanel'
-import { categoryIcon } from '../utils/marketDisplay'
-import { formatCloseTimer, formatCompact } from '../utils/functions'
-import { showSuccessToast } from '../utils/toastUtils'
-import type { UiOutcome } from '../types/market.types'
+import { useMarket, useMarketTrades } from '../../data_layer/markets'
+import TradePanel from '../../components/markets/TradePanel'
+import { categoryIcon } from '../../utils/marketDisplay'
+import { formatCloseTimer, formatCompact } from '../../utils/functions'
+import { showSuccessToast } from '../../utils/toastUtils'
+import type { UiOutcome } from '../../types/market.types'
 
 const CHART_PERIODS = ['Live', '1h', '1d', '1w', '1m'] as const
 type ChartPeriod = (typeof CHART_PERIODS)[number]
@@ -42,8 +42,7 @@ const MarketDetail = () => {
   const [period, setPeriod] = useState<ChartPeriod>('Live')
   const [infoTab, setInfoTab] = useState<'rules' | 'trades'>('rules')
 
-  const eventId = searchParams.get('event') ?? undefined
-  const { data: market, isLoading, isError } = useMarket(id, eventId)
+  const { data: market, isLoading, isError } = useMarket(id)
   const { data: trades } = useMarketTrades(id, 50)
 
   const selectedOutcome: UiOutcome | undefined = useMemo(() => {

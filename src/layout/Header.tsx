@@ -8,11 +8,11 @@ import SearchInput from '../components/globals/SearchInput'
 import Deposit from '../components/appModals/Deposit'
 import { useModalControl } from '../hooks/useModalControl'
 import {
-  mockSearchResults,
   primaryNavLinks,
   profileMenuItems,
   type SearchResult,
 } from '../utils/constants'
+import { useMarketSearch } from '../data_layer/markets'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Award01Icon,
@@ -32,13 +32,13 @@ import { ProfileAvatar } from '../components/globals/ReusedText'
 const CategoryRow = () => (
   <div className='hide-scroll-bar  lg:hidden flex items-center gap-6 overflow-x-auto px-4  text-sm font-medium text-neutral-10 md:px-6'>
     {primaryNavLinks.map((link) => (
-      <a
+      <Link
         key={link.label}
-        href={link.href}
+        to={link.href}
         className='flex items-center gap-1.5'
       >
         {link.label}
-      </a>
+      </Link>
     ))}
   </div>
 )
@@ -57,15 +57,9 @@ const Header = () => {
     'browse' | 'markets' | 'trending' | 'search' | 'social'
   >('browse')
 
-  const filteredResults: SearchResult[] = searchTerm
-    ? mockSearchResults.filter((r) =>
-        r.title.toLowerCase().includes(searchTerm.toLowerCase()),
-      )
-    : mockSearchResults
+  const { results: filteredResults } = useMarketSearch(searchTerm)
 
   const handleSelectResult = (result: SearchResult) => {
-    handleModalOpen('mobileSearch')
-
     navigate(result.href)
   }
 
@@ -74,17 +68,21 @@ const Header = () => {
       <div className='flex items-center justify-between! gap-5 w-full mb-2.5'>
         <div className='flex items-center gap-5 w-full'>
           <Link to='/'>
-            <img src={isDark ? logoDark : logo} alt='Santibet' className='w-40 h-12' />
+            <img
+              src={isDark ? logoDark : logo}
+              alt='Santibet'
+              className='w-40 h-12'
+            />
           </Link>
           <nav className='lg:flex items-center gap-5 text-sm font-semibold hidden'>
             {primaryNavLinks.map((link) => (
-              <a
+              <Link
                 key={link.label}
-                href={link.href}
-                className='flex items-center gap-1.5 text-neutral-10'
+                to={link.href}
+                className='flex items-center gap-1.5 text-neutral-10 hover:text-black'
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </nav>
         </div>
@@ -113,13 +111,6 @@ const Header = () => {
 
           {user ? (
             <div className='flex items-center gap-2.5'>
-              <FormSwitch
-                checked={isDark}
-                onChange={toggleTheme}
-                onLabel='Dark'
-                offLabel='Light'
-                labelClassName='font-semibold text-neutral-10'
-              />
               <Button
                 type='button'
                 text='Deposit cash'
@@ -185,6 +176,15 @@ const Header = () => {
                     >
                       Log Out
                     </p>
+                    <div className='flex items-center mt-2.5 gap-2.5'>
+                      <p className='text-sm text-black font-medium'>Theme</p>
+                      <FormSwitch
+                        checked={isDark}
+                        onChange={toggleTheme}
+                        showLabel={false}
+                        labelClassName='font-semibold text-neutral-10'
+                      />
+                    </div>
                   </div>
                 )}
               >

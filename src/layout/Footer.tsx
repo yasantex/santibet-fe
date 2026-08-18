@@ -7,6 +7,7 @@ import {
   TiktokIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { Link } from 'react-router'
 
 const socialLinks = [
   { name: 'X', href: 'https://x.com', icon: NewTwitterIcon },
@@ -22,7 +23,8 @@ const footerLinks = [
   { label: 'Cookie Policy', href: '#' },
   { label: 'Privacy Policy', href: '/privacy-policy' },
   { label: 'Terms & Conditions', href: '/terms-of-service' },
-  { label: 'Contact Support', href: '#' },
+  { label: 'Responsible Gambling', href: '/responsible-gambling' },
+  { label: 'Contact Support', href: '/contact-us' },
   { label: 'FAQs', href: '#' },
 ]
 const Footer = () => {
@@ -51,12 +53,12 @@ const Footer = () => {
           <ul className='space-y-4 text-sm'>
             {footerLinks.map((link) => (
               <li key={link.label}>
-                <a
-                  href={link.href}
+                <Link
+                  to={link.href}
                   className='text-neutral-10 hover:underline hover:underline-offset-2 hover:text-black'
                 >
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
