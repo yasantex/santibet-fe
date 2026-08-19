@@ -74,9 +74,17 @@ const MarketCard = ({
     >
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2'>
-          <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-border/30 text-base'>
-            {categoryIcon(market.category)}
-          </div>
+          {market.imageUrl ? (
+            <img
+              src={market.imageUrl}
+              alt=''
+              className='h-8 w-8 shrink-0 rounded-full object-cover'
+            />
+          ) : (
+            <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-border/30 text-base'>
+              {categoryIcon(market.category)}
+            </div>
+          )}
           <span className='text-xs font-medium text-neutral-10'>
             {market.category}
           </span>
