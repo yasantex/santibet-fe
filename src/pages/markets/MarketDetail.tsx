@@ -17,7 +17,12 @@ import {
 import { useMarket, useMarketTrades } from '../../data_layer/markets'
 import TradePanel from '../../components/markets/TradePanel'
 import { categoryIcon } from '../../utils/marketDisplay'
-import { formatCloseTimer, formatCompact } from '../../utils/functions'
+import {
+  formatCloseTimer,
+  formatCompact,
+  formatNairaCompact,
+  formatSharePrice,
+} from '../../utils/functions'
 import { showSuccessToast } from '../../utils/toastUtils'
 import type { UiOutcome } from '../../types/market.types'
 
@@ -175,8 +180,8 @@ const MarketDetail = () => {
               >
                 {market.status}
               </span>
-              <span>Volume: ${formatCompact(market.volume)}</span>
-              <span>Liquidity: ${formatCompact(market.liquidity)}</span>
+              <span>Volume: {formatNairaCompact(market.volume)}</span>
+              <span>Liquidity: {formatNairaCompact(market.liquidity)}</span>
               {market.closeTime && (
                 <span>{formatCloseTimer(market.closeTime)}</span>
               )}
@@ -285,7 +290,7 @@ const MarketDetail = () => {
                     } ${active ? 'ring-2 ring-brand-green' : ''}`}
                   >
                     <span className='uppercase'>{o.label}</span>
-                    <span>{o.cents}¢</span>
+                    <span>{formatSharePrice(o.cents)}</span>
                   </button>
                 )
               })}
@@ -339,7 +344,7 @@ const MarketDetail = () => {
                           {t.side}
                         </span>
                         <span className='text-right text-black'>
-                          {Math.round(t.price * 100)}¢
+                          {formatSharePrice(t.price)}
                         </span>
                         <span className='text-right text-neutral-10'>
                           {formatCompact(t.size)}

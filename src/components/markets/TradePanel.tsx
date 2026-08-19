@@ -7,7 +7,7 @@ import { useSantiBetQuery } from '../../data_layer/utils'
 import { usePlaceBet } from '../../data_layer/bets'
 import SellPanel from './SellPanel'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
-import { currencySymbols } from '../../utils/constants'
+import { NAIRA, formatSharePrice } from '../../utils/functions'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { BetType } from '../../types/bet.types'
@@ -42,8 +42,7 @@ const TradePanel = ({
 
   const { mutateAsync: placeBet, isPending } = usePlaceBet()
 
-  const currency = wallet?.currency ?? 'NGN'
-  const symbol = currencySymbols[currency] ?? '₦'
+  const symbol = NAIRA
   const cash = Number(wallet?.trading ?? 0)
 
   const outcome = selectedOutcome ?? market.yes ?? market.outcomes[0]
@@ -82,7 +81,7 @@ const TradePanel = ({
     if (type === 'limit') {
       const c = Number(limitCents)
       if (!(c > 0 && c < 100)) {
-        showWarningToast('Enter a limit price between 1¢ and 99¢')
+        showWarningToast('Enter a limit price between ₦1 and ₦99')
         return
       }
     }
@@ -191,7 +190,7 @@ const TradePanel = ({
                   }`}
                 >
                   <span className='uppercase'>{o.label}</span>
-                  <span>{o.cents}¢</span>
+                  <span>{formatSharePrice(o.cents)}</span>
                 </button>
               )
             })}
@@ -200,7 +199,7 @@ const TradePanel = ({
           {/* Limit price */}
           {type === 'limit' && (
             <label className='flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm'>
-              <span className='text-neutral-10'>Limit price (¢)</span>
+              <span className='text-neutral-10'>Limit price (₦)</span>
               <input
                 type='text'
                 inputMode='numeric'
@@ -267,7 +266,7 @@ const TradePanel = ({
             <div className='flex justify-between'>
               <span className='text-neutral-10'>Average price</span>
               <span className='font-semibold text-black'>
-                {Math.round(price * 100)}¢
+                {formatSharePrice(price)}
               </span>
             </div>
             <div className='flex justify-between'>

@@ -1,6 +1,5 @@
 import type { MarketCardVM, OutcomeVM, RawMarket } from '../types/market.types'
 import type { FormatDateTimeOptions } from '../types/types'
-import { currencySymbols } from './constants'
 
 export function getInitials(first: string, last: string): string {
   return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase()
@@ -16,17 +15,24 @@ export const formatNaira = (amount: number) => {
   return `${sign}₦${formatted}`
 }
 
-export const formatCurrency = (amount: string, currency?: string) => {
-  const numericAmount = parseFloat(amount) || 0
-  const currencyCode = (currency || 'NGN').toUpperCase()
-  const symbol = currencySymbols[currencyCode] ?? currencyCode
+/** The platform is Naira-denominated end to end. */
+export const NAIRA = '₦'
+
+/**
+ * Format a money amount in Naira. The optional currency arg is accepted for
+ * call-site compatibility but ignored — every balance and amount renders in ₦.
+ */
+export const formatCurrency = (amount: string | number, currency?: string) => {
+  void currency // accepted for call-site compatibility; always rendered in ₦
+  const numericAmount =
+    (typeof amount === 'number' ? amount : parseFloat(amount)) || 0
 
   const formattedNumber = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(numericAmount)
 
-  return `${symbol}${formattedNumber}`
+  return `${NAIRA}${formattedNumber}`
 }
 
 const formatVolume = (n: number): string => {
@@ -87,7 +93,7 @@ export function formatDate(
 
 /**
  * Market pricing helpers. Outcome `price` is a probability in [0, 1].
- * cents = price * 100 rounded (e.g. 0.63 -> "63¢"), percent = same integer.
+ * A share settles at ₦100, so price 0.63 -> ₦63. `percent` is the same integer.
  */
 export const toCents = (price: number): number =>
   Math.round((Number(price) || 0) * 100)
@@ -95,7 +101,16 @@ export const toCents = (price: number): number =>
 export const toPercent = (price: number): number => toCents(price)
 
 /**
- * Compact money/number formatting, e.g. 45321 -> "45.3K", 2400000 -> "2.4M".
+ * Share price in Naira (out of ₦100), e.g. price 0.63 -> "₦63".
+ * Pass either a probability (0..1) or an already-computed ₦-out-of-100 value.
+ */
+export const formatSharePrice = (priceOrCents: number): string => {
+  const naira = priceOrCents <= 1 ? toCents(priceOrCents) : Math.round(priceOrCents)
+  return `${NAIRA}${naira}`
+}
+
+/**
+ * Compact number formatting, e.g. 45321 -> "45.3K", 2400000 -> "2.4M".
  */
 export const formatCompact = (value: number | string): string => {
   const n = Number(value) || 0
@@ -104,6 +119,10 @@ export const formatCompact = (value: number | string): string => {
     maximumFractionDigits: 1,
   }).format(n)
 }
+
+/** Compact amount in Naira, e.g. 45321 -> "₦45.3K". */
+export const formatNairaCompact = (value: number | string): string =>
+  `${NAIRA}${formatCompact(value)}`
 
 /**
  * Human "closes in" timer for a market close time.
