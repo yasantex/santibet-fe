@@ -26,7 +26,10 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
   const isYes = outcomeLabel
     ? YES_LABELS.includes(outcomeLabel.toLowerCase())
     : market?.yes?.id === position.outcomeId
-  const shares = Number(position.shares) || 0
+  const shares = Number(position.shares) || 0 // ₦1-unit count (money math)
+  // ₦100-contract count for display; backend `contracts` preferred, else ÷100.
+  const contracts =
+    position.contracts != null ? Number(position.contracts) : shares / 100
   const avgPrice = Number(position.avgPrice) || 0
   const staked = shares * avgPrice
   const value = Number(position.currentValue.amount) || 0
@@ -81,7 +84,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
         <div className='flex flex-col rounded-md bg-surface-hover px-3 py-2'>
           <span className='text-xs text-black/60'>Shares</span>
           <span className='font-bold text-black'>
-            {shares.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {contracts.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </span>
         </div>
       </div>

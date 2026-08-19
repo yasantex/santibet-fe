@@ -60,7 +60,10 @@ export interface BetPosition {
   marketId: string
   outcomeId: string
   status: PositionStatusApi
+  /** ₦1-unit share count (API ledger unit). Use for money math only. */
   shares: string
+  /** ₦100-settling contract count (= shares ÷ 100). Preferred for display. */
+  contracts?: string | number | null
   avgPrice: string
   currentValue: Money
   market?: MarketSummary | null
