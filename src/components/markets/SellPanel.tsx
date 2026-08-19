@@ -20,7 +20,9 @@ const SellPositionRow = ({
 
   const outcome = market.outcomes.find((o) => o.id === position.outcomeId)
   const isYes = market.yes?.id === position.outcomeId
-  const shares = Number(position.shares) || 0
+  const shares = Number(position.shares) || 0 // ₦1-unit count (money math)
+  const contracts =
+    position.contracts != null ? Number(position.contracts) : shares / 100
   const avgPrice = Number(position.avgPrice) || 0
   const staked = shares * avgPrice
   const value = Number(position.currentValue.amount) || 0
@@ -52,8 +54,8 @@ const SellPositionRow = ({
           {outcome?.label ?? (isYes ? 'YES' : 'NO')}
         </span>
         <span className='text-xs text-neutral-10'>
-          {shares.toLocaleString(undefined, { maximumFractionDigits: 2 })} shares
-          @ {formatSharePrice(avgPrice)}
+          {contracts.toLocaleString(undefined, { maximumFractionDigits: 2 })}{' '}
+          shares @ {formatSharePrice(avgPrice)}
         </span>
       </div>
 
