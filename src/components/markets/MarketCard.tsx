@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Bookmark02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
-import { formatCompact } from '../../utils/functions'
+import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
 import { categoryIcon } from '../../utils/marketDisplay'
 
 const OutcomeRow = ({
@@ -43,7 +43,7 @@ const OutcomeRow = ({
             : 'bg-market-error text-error'
         }`}
       >
-        {outcome.cents}¢
+        {formatSharePrice(outcome.cents)}
       </button>
     </div>
   )
@@ -123,7 +123,7 @@ const MarketCard = ({
 
       <div className='flex items-center justify-between pt-1'>
         <span className='text-xs text-placeholder'>
-          Volume: ${formatCompact(market.volume)}
+          Volume: {formatNairaCompact(market.volume)}
         </span>
         <span className='flex items-center gap-0.5 text-xs font-semibold text-neutral-10'>
           Explore

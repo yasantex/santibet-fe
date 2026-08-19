@@ -10,11 +10,11 @@ import { Link } from 'react-router'
 const faqs = [
   {
     q: 'What is a prediction market?',
-    a: 'A prediction market lets you trade on the outcome of real-world events. Each market has outcomes (for example YES and NO) priced between 1¢ and 99¢. The price reflects the market’s estimated probability of that outcome.',
+    a: 'A prediction market lets you trade on the outcome of real-world events. Each market has outcomes (for example YES and NO) priced between ₦1 and ₦99. The price reflects the market’s estimated probability of that outcome.',
   },
   {
     q: 'How do I place a prediction?',
-    a: 'Open a market, choose an outcome, enter an amount, and place your prediction. Your potential return is shown before you confirm. If your outcome wins, each share settles at 100¢.',
+    a: 'Open a market, choose an outcome, enter an amount, and place your prediction. Your potential return is shown before you confirm. If your outcome wins, each share settles at ₦100.',
   },
   {
     q: 'How do deposits work?',

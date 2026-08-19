@@ -1,7 +1,7 @@
 // src/components/markets/FeaturedMarketCard.tsx
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
-import { formatCompact } from '../../utils/functions'
+import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
 import { categoryIcon } from '../../utils/marketDisplay'
 
 interface FeaturedMarketCardProps {
@@ -76,7 +76,7 @@ const FeaturedMarketCard = ({
           }}
           className='rounded-lg bg-market-success py-3 text-sm font-bold text-success'
         >
-          {yes?.label ?? 'YES'} {yes?.cents ?? 0}¢
+          {yes?.label ?? 'YES'} {formatSharePrice(yes?.cents ?? 0)}
         </button>
         <button
           type='button'
@@ -86,13 +86,13 @@ const FeaturedMarketCard = ({
           }}
           className='rounded-lg bg-market-error py-3 text-sm font-bold text-error'
         >
-          {no?.label ?? 'NO'} {no?.cents ?? 0}¢
+          {no?.label ?? 'NO'} {formatSharePrice(no?.cents ?? 0)}
         </button>
       </div>
 
       <div className='flex items-center justify-between text-xs text-placeholder'>
-        <span>Volume: ${formatCompact(market.volume)}</span>
-        <span>Liquidity: ${formatCompact(market.liquidity)}</span>
+        <span>Volume: {formatNairaCompact(market.volume)}</span>
+        <span>Liquidity: {formatNairaCompact(market.liquidity)}</span>
       </div>
     </div>
   )

@@ -4,7 +4,7 @@ import { Button } from '../globals/Button'
 import ConfirmationModal from '../globals/ConfirmationModal'
 import { useBetPositions, useCashOut } from '../../data_layer/bets'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
-import { formatCurrency } from '../../utils/functions'
+import { formatCurrency, formatSharePrice } from '../../utils/functions'
 import type { UiMarket } from '../../types/market.types'
 import type { BetPosition } from '../../types/bet.types'
 
@@ -53,7 +53,7 @@ const SellPositionRow = ({
         </span>
         <span className='text-xs text-neutral-10'>
           {shares.toLocaleString(undefined, { maximumFractionDigits: 2 })} shares
-          @ {Math.round(avgPrice * 100)}¢
+          @ {formatSharePrice(avgPrice)}
         </span>
       </div>
 

@@ -8,7 +8,7 @@ import FilterComponent, {
   type FilterCategory,
 } from '../components/globals/FilterComponent'
 import { useBets, useCancelBet } from '../data_layer/bets'
-import { formatCurrency, formatDate } from '../utils/functions'
+import { formatCurrency, formatDate, formatSharePrice } from '../utils/functions'
 import { showSuccessToast, showWarningToast } from '../utils/toastUtils'
 import type { Bet } from '../types/bet.types'
 
@@ -148,7 +148,7 @@ const Orders = () => {
                       {formatCurrency(bet.stake.amount, bet.stake.currency)}
                     </p>
                     <p className='text-xs text-neutral-10'>
-                      {Math.round(Number(bet.price) * 100)}¢ ·{' '}
+                      {formatSharePrice(Number(bet.price))} ·{' '}
                       {formatCurrency(
                         bet.potentialReturn.amount,
                         bet.potentialReturn.currency,
