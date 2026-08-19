@@ -16,6 +16,14 @@ export interface Money {
   currency: string
 }
 
+/** Compact market summary embedded on bet/position payloads (removes N+1 lookups). */
+export interface MarketSummary {
+  id: string
+  title: string
+  slug: string
+  imageUrl: string | null
+}
+
 export interface PlaceBetPayload {
   marketId: string
   outcomeId: string
@@ -37,6 +45,8 @@ export interface Bet {
   stake: Money
   potentialReturn: Money
   filledShares: string
+  market?: MarketSummary | null
+  outcomeLabel?: string | null
   createdAt: string
 }
 
@@ -53,6 +63,8 @@ export interface BetPosition {
   shares: string
   avgPrice: string
   currentValue: Money
+  market?: MarketSummary | null
+  outcomeLabel?: string | null
   openedAt: string
 }
 

@@ -6,6 +6,7 @@ import {
   FilesFreeIcons,
   GiftFreeIcons,
   HelpSquareFreeIcons,
+  Invoice01Icon,
   MoneyReceiveFlow02Icon,
   User02FreeIcons,
   Wallet01FreeIcons,
@@ -127,6 +128,16 @@ export const profileMenuItems: ProfileAction[] = [
     path: '/portfolio',
     action: (navigate, close) => {
       navigate('/account-portfolio')
+      close()
+    },
+  },
+  {
+    id: 'orders',
+    label: 'Orders',
+    icon: Invoice01Icon,
+    path: '/orders',
+    action: (navigate, close) => {
+      navigate('/orders')
       close()
     },
   },
