@@ -9,14 +9,23 @@ import { formatCurrency } from '../../utils/functions'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import type { BetPosition } from '../../types/bet.types'
 
+const YES_LABELS = ['yes', 'up', 'over', 'win', 'true']
+
 const PositionCard = ({ position }: { position: BetPosition }) => {
   const navigate = useNavigate()
-  const { data: market } = useMarket(position.marketId)
+  // The API now embeds a market summary; only fetch when it's absent.
+  const { data: market } = useMarket(
+    position.market ? undefined : position.marketId,
+  )
   const { mutateAsync: cashOut, isPending } = useCashOut(position.id)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
+  const title = position.market?.title ?? market?.title ?? 'Loading market…'
   const outcome = market?.outcomes.find((o) => o.id === position.outcomeId)
-  const isYes = market?.yes?.id === position.outcomeId
+  const outcomeLabel = position.outcomeLabel ?? outcome?.label ?? ''
+  const isYes = outcomeLabel
+    ? YES_LABELS.includes(outcomeLabel.toLowerCase())
+    : market?.yes?.id === position.outcomeId
   const shares = Number(position.shares) || 0
   const avgPrice = Number(position.avgPrice) || 0
   const staked = shares * avgPrice
@@ -50,7 +59,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
             isYes ? 'text-success' : 'text-error'
           }`}
         >
-          {outcome?.label ?? (isYes ? 'YES' : 'NO')}
+          {outcomeLabel || (isYes ? 'YES' : 'NO')}
         </span>
       </div>
 
@@ -59,7 +68,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
         onClick={() => navigate(`/markets/${position.marketId}`)}
         className='h-12 text-left text-sm font-semibold text-black hover:underline'
       >
-        {market?.title ?? 'Loading market…'}
+        {title}
       </button>
 
       <div className='grid grid-cols-2 gap-2 text-sm'>
@@ -122,8 +131,8 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
         <div className='flex flex-col gap-4'>
           <p className='text-sm text-neutral-10'>
             Cash out your position in{' '}
-            <span className='font-semibold text-black'>{market?.title}</span> at
-            its current value of{' '}
+            <span className='font-semibold text-black'>{title}</span> at its
+            current value of{' '}
             <span className='font-semibold text-black'>
               {formatCurrency(
                 position.currentValue.amount,

@@ -1,47 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
-import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router'
 import { Cancel01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import ConfirmationModal from '../components/globals/ConfirmationModal'
 import FilterComponent, {
   type FilterCategory,
 } from '../components/globals/FilterComponent'
-import {
-  useSantiBetInfiniteQuery,
-  useSantiBetMutation,
-} from '../data_layer/utils'
-import { formatDate } from '../utils/functions'
+import { useBets, useCancelBet } from '../data_layer/bets'
+import { formatCurrency, formatDate } from '../utils/functions'
 import { showSuccessToast, showWarningToast } from '../utils/toastUtils'
-
-type OrderStatus =
-  | 'open'
-  | 'partially_filled'
-  | 'filled'
-  | 'canceled'
-  | 'rejected'
-  | 'expired'
-
-interface MarketOrder {
-  id: string
-  clientOrderId: string
-  provider: string
-  marketId: string
-  outcomeId: string
-  action: 'buy' | 'sell'
-  type: 'limit' | 'market'
-  status: OrderStatus
-  price: number
-  size: number
-  filledSize: number
-  remainingSize: number
-  createdAt: string
-}
-
-interface OrdersResponse {
-  data: MarketOrder[]
-  cursor?: string
-}
+import type { Bet } from '../types/bet.types'
 
 type OrderFilters = Record<'status', string[]>
 
@@ -51,59 +20,44 @@ const orderFilterCategories: FilterCategory[] = [
     label: 'Status',
     multiple: false,
     options: [
-      { label: 'Open', value: 'open' },
-      { label: 'Partially filled', value: 'partially_filled' },
-      { label: 'Filled', value: 'filled' },
-      { label: 'Canceled', value: 'canceled' },
-      { label: 'Rejected', value: 'rejected' },
-      { label: 'Expired', value: 'expired' },
+      { label: 'Open', value: 'OPEN' },
+      { label: 'Pending', value: 'PENDING' },
+      { label: 'Partially filled', value: 'PARTIALLY_FILLED' },
+      { label: 'Filled', value: 'FILLED' },
+      { label: 'Canceled', value: 'CANCELED' },
+      { label: 'Rejected', value: 'REJECTED' },
+      { label: 'Expired', value: 'EXPIRED' },
     ],
   },
 ]
 
-const formatNaira = (value: number) =>
-  `₦${value.toLocaleString('en-NG', { maximumFractionDigits: 4 })}`
+// Resting bets that can still be cancelled.
+const CANCELABLE = new Set(['OPEN', 'PENDING', 'PARTIALLY_FILLED'])
+
+const statusBadge = (status: Bet['status']) => {
+  if (status === 'FILLED') return 'bg-success-bg text-success'
+  if (status === 'REJECTED' || status === 'EXPIRED') return 'bg-error-bg text-error'
+  if (status === 'CANCELED') return 'bg-hover/60 text-neutral-10'
+  return 'bg-warning/20 text-warning'
+}
 
 const Orders = () => {
-  const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [filters, setFilters] = useState<OrderFilters>({ status: [] })
-  const [orderToCancel, setOrderToCancel] = useState<MarketOrder | null>(null)
+  const [betToCancel, setBetToCancel] = useState<Bet | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const {
-    data,
-    isLoading,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-  } = useSantiBetInfiniteQuery<OrdersResponse>({
-    path: '/market/orders',
-    params: { status: filters.status[0] },
-    queryKey: ['market-orders', filters],
-    enabled: true,
-    getNextPageParam: (page) => page.cursor || undefined,
-  })
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useBets(filters.status[0])
 
-  const { mutateAsync: cancelOrder, isPending: isCancelling } =
-    useSantiBetMutation<unknown, void>({
-      path: `/market/orders/${orderToCancel?.id ?? ''}`,
-      method: 'DELETE',
-      mutationOptions: {
-        onSuccess: () => {
-          void queryClient.invalidateQueries({ queryKey: ['market-orders'] })
-          showSuccessToast('Order cancelled')
-          setOrderToCancel(null)
-        },
-        onError: (error) => {
-          const message = isAxiosError(error)
-            ? error.response?.data?.message
-            : error.message
-          showWarningToast(message || 'Unable to cancel order')
-        },
-      },
-    })
+  const { mutateAsync: cancelBet, isPending: isCancelling } = useCancelBet(
+    betToCancel?.id ?? '',
+  )
 
-  const orders = data?.pages.flatMap((page) => page.data) ?? []
+  const bets = useMemo<Bet[]>(
+    () => (data?.pages ?? []).flatMap((page) => page.data),
+    [data],
+  )
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -119,14 +73,30 @@ const Orders = () => {
     return () => observer.disconnect()
   }, [fetchNextPage, hasNextPage, isFetchingNextPage])
 
+  const handleCancel = async () => {
+    try {
+      await cancelBet()
+      showSuccessToast('Bet cancelled')
+      setBetToCancel(null)
+    } catch (error) {
+      showWarningToast(
+        isAxiosError(error)
+          ? (error.response?.data?.message ?? 'Unable to cancel bet')
+          : 'Unable to cancel bet',
+      )
+    }
+  }
+
   return (
     <main className='mx-auto flex w-full flex-col gap-6 px-3 pt-4 pb-20 md:px-8'>
       <div className='flex items-center justify-between gap-4'>
-        <h1 className='text-[18px] font-bold text-black md:text-[28px]'>Orders</h1>
+        <h1 className='text-[18px] font-bold text-black md:text-[28px]'>
+          Orders
+        </h1>
         <FilterComponent
           categories={orderFilterCategories}
           initialFilters={filters}
-          onApply={(nextFilters) => setFilters({ status: nextFilters.status ?? [] })}
+          onApply={(next) => setFilters({ status: next.status ?? [] })}
           onReset={() => setFilters({ status: [] })}
         />
       </div>
@@ -138,32 +108,58 @@ const Orders = () => {
               <div key={index} className='h-16 animate-pulse rounded-lg bg-hover' />
             ))}
           </div>
-        ) : orders.length === 0 ? (
-          <p className='py-12 text-center text-sm text-neutral-10'>No orders found.</p>
+        ) : bets.length === 0 ? (
+          <p className='py-12 text-center text-sm text-neutral-10'>
+            No orders found.
+          </p>
         ) : (
           <div className='divide-y divide-border/40'>
-            {orders.map((order) => (
-              <article key={order.id} className='flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between'>
+            {bets.map((bet) => (
+              <article
+                key={bet.id}
+                className='flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between'
+              >
                 <div className='min-w-0'>
                   <div className='flex items-center gap-2'>
-                    <span className='text-sm font-semibold capitalize text-black'>{order.action} · {order.type}</span>
-                    <span className='rounded-full bg-border/40 px-2 py-0.5 text-xs font-medium capitalize text-neutral-10'>
-                      {order.status.replace('_', ' ')}
+                    <span className='text-sm font-semibold capitalize text-black'>
+                      {bet.outcomeLabel ?? 'Outcome'} · {bet.type}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusBadge(bet.status)}`}
+                    >
+                      {bet.status.replace('_', ' ').toLowerCase()}
                     </span>
                   </div>
-                  <p className='mt-1 truncate text-xs text-neutral-10'>Market: {order.marketId}</p>
-                  <p className='mt-1 text-xs text-placeholder'>{formatDate(order.createdAt)}</p>
+                  <button
+                    type='button'
+                    onClick={() => navigate(`/markets/${bet.marketId}`)}
+                    className='mt-1 block max-w-md truncate text-left text-xs text-neutral-10 hover:text-black hover:underline'
+                  >
+                    {bet.market?.title ?? bet.marketId}
+                  </button>
+                  <p className='mt-1 text-xs text-placeholder'>
+                    {formatDate(bet.createdAt)}
+                  </p>
                 </div>
 
                 <div className='flex items-center justify-between gap-5 sm:justify-end'>
                   <div className='text-right text-sm'>
-                    <p className='font-semibold text-black'>{formatNaira(order.price)}</p>
-                    <p className='text-xs text-neutral-10'>Filled {order.filledSize} / {order.size}</p>
+                    <p className='font-semibold text-black'>
+                      {formatCurrency(bet.stake.amount, bet.stake.currency)}
+                    </p>
+                    <p className='text-xs text-neutral-10'>
+                      {Math.round(Number(bet.price) * 100)}¢ ·{' '}
+                      {formatCurrency(
+                        bet.potentialReturn.amount,
+                        bet.potentialReturn.currency,
+                      )}{' '}
+                      to win
+                    </p>
                   </div>
-                  {order.status === 'open' && (
+                  {CANCELABLE.has(bet.status) && (
                     <button
                       type='button'
-                      onClick={() => setOrderToCancel(order)}
+                      onClick={() => setBetToCancel(bet)}
                       className='flex items-center gap-1 rounded-full border border-error px-3 py-1.5 text-xs font-semibold text-error hover:bg-market-error'
                     >
                       <HugeiconsIcon icon={Cancel01Icon} size={14} />
@@ -175,7 +171,9 @@ const Orders = () => {
             ))}
             {hasNextPage && (
               <div ref={sentinelRef} className='flex justify-center py-3'>
-                {isFetchingNextPage && <span className='text-xs text-neutral-10'>Loading more…</span>}
+                {isFetchingNextPage && (
+                  <span className='text-xs text-neutral-10'>Loading more…</span>
+                )}
               </div>
             )}
           </div>
@@ -183,19 +181,13 @@ const Orders = () => {
       </div>
 
       <ConfirmationModal
-        open={Boolean(orderToCancel)}
-        title='Cancel order?'
-        description='This will cancel the open order. Any unfilled quantity will no longer be available for execution.'
-        confirmText='Cancel order'
+        open={Boolean(betToCancel)}
+        title='Cancel bet?'
+        description='This cancels the resting bet. Any unfilled amount is returned to your trading balance.'
+        confirmText='Cancel bet'
         isConfirming={isCancelling}
-        onClose={() => setOrderToCancel(null)}
-        onConfirm={async () => {
-          try {
-            await cancelOrder()
-          } catch {
-            // The mutation's onError handler already shows the API error.
-          }
-        }}
+        onClose={() => setBetToCancel(null)}
+        onConfirm={handleCancel}
       />
     </main>
   )

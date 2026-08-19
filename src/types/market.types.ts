@@ -140,6 +140,8 @@ export interface UiMarket {
   closeTime: string
   volume: number
   liquidity: number
+  slug?: string
+  imageUrl?: string | null
   resolvedOutcomeId?: string | null
   rules?: string | null
   outcomes: UiOutcome[]
@@ -154,5 +156,86 @@ export interface UiEvent {
   title: string
   category: string
   closeTime: string
+  slug?: string
+  imageUrl?: string | null
   markets: UiMarket[]
+}
+
+// ── Lobby feed shapes (GET /api/lobby/*) — curated player feed ─────────
+
+export type LobbyStatus =
+  | 'OPEN'
+  | 'CLOSED'
+  | 'PAUSED'
+  | 'SETTLED'
+  | 'VOIDED'
+  | 'DISPUTED'
+  | 'UNKNOWN'
+
+export interface LobbyOutcome {
+  id: string
+  label: string
+  sortOrder: number
+  price: number
+  decimalOdds: number
+  impliedPercent: number
+  bid: number
+  ask: number
+  source: 'live' | 'stored' | 'none'
+  stale: boolean
+  at: string
+}
+
+export interface LobbyCategoryRef {
+  slug: string
+  name: string
+  iconUrl: string | null
+}
+
+export interface LobbyCategory extends LobbyCategoryRef {
+  eventCount: number
+}
+
+export interface LobbyMarket {
+  id: string
+  slug: string
+  title: string
+  subtitle: string
+  rules: string | null
+  status: LobbyStatus
+  imageUrl: string | null
+  feeBps: number
+  volume: string
+  liquidity: string
+  openTime: string
+  closeTime: string
+  resolvedOutcomeId: string | null
+  outcomes: LobbyOutcome[]
+}
+
+export interface LobbyEvent {
+  id: string
+  slug: string
+  title: string
+  subtitle: string
+  imageUrl: string | null
+  source: string
+  provider: 'KALSHI' | 'POLYMARKET'
+  category: LobbyCategoryRef | null
+  closeTime: string
+  featured: boolean
+  marketCount: number
+  markets: LobbyMarket[]
+}
+
+export interface LobbyEventListResponse {
+  data: LobbyEvent[]
+  cursor: string | null
+}
+
+export interface LobbyHome {
+  featured: LobbyEvent[]
+  trending: LobbyEvent[]
+  closingSoon: LobbyEvent[]
+  categories: LobbyCategory[]
 }

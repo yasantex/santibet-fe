@@ -5,6 +5,7 @@ import { isAxiosError } from 'axios'
 import { Button } from '../globals/Button'
 import { useSantiBetQuery } from '../../data_layer/utils'
 import { usePlaceBet } from '../../data_layer/bets'
+import SellPanel from './SellPanel'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import { currencySymbols } from '../../utils/constants'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
@@ -137,17 +138,23 @@ const TradePanel = ({
       </div>
 
       {side === 'sell' ? (
-        <p className='rounded-lg bg-hover/40 p-3 text-xs text-neutral-10'>
-          To sell out of a prediction, cash out the position from your{' '}
-          <button
-            type='button'
-            className='font-semibold text-black underline'
-            onClick={() => navigate('/account-portfolio')}
-          >
-            Portfolio
-          </button>
-          .
-        </p>
+        !isSignedIn ? (
+          <div className='flex flex-col gap-3'>
+            <p className='rounded-lg bg-hover/40 p-3 text-xs text-neutral-10'>
+              Sign in to view and cash out your open positions.
+            </p>
+            <Button
+              type='button'
+              text='Sign in'
+              variation='primary'
+              size='large'
+              className='w-full'
+              onClick={() => navigate('/signin')}
+            />
+          </div>
+        ) : (
+          <SellPanel market={market} />
+        )
       ) : (
         <>
           {/* Order type */}

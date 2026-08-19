@@ -14,6 +14,12 @@ import type {
   ApiEventListResponse,
   ApiMarket,
   ApiMarketListResponse,
+  LobbyCategory,
+  LobbyEvent,
+  LobbyEventListResponse,
+  LobbyMarket,
+  LobbyStatus,
+  MarketStatus,
   MarketTrade,
   OrderBook,
   Quote,
@@ -100,6 +106,93 @@ export const normalizeEvent = (e: ApiEvent): UiEvent => ({
   ),
 })
 
+// ── Lobby normalizers ─────────────────────────────────────────────────
+
+const LOBBY_STATUS: Record<LobbyStatus, MarketStatus> = {
+  OPEN: 'open',
+  CLOSED: 'closed',
+  PAUSED: 'paused',
+  SETTLED: 'settled',
+  VOIDED: 'unknown',
+  DISPUTED: 'unknown',
+  UNKNOWN: 'unknown',
+}
+
+export const normalizeLobbyMarket = (
+  m: LobbyMarket,
+  category = 'General',
+  eventId = '',
+  imageUrl: string | null = null,
+): UiMarket => {
+  const outcomes = (m.outcomes ?? []).map((o) => ({
+    id: o.id,
+    label: o.label,
+    price: o.price,
+    cents: toCents(o.price),
+    percent: toPercent(o.price),
+  }))
+  const yes =
+    outcomes.find((o) => YES_LABELS.includes(o.label.toLowerCase())) ??
+    outcomes[0]
+  const no = outcomes.find((o) => o.id !== yes?.id) ?? outcomes[1]
+
+  return {
+    id: m.id,
+    eventId,
+    provider: 'polymarket',
+    title: m.title,
+    subtitle: m.subtitle ?? '',
+    category,
+    status: LOBBY_STATUS[m.status] ?? 'unknown',
+    openTime: m.openTime,
+    closeTime: m.closeTime,
+    volume: Number(m.volume) || 0,
+    liquidity: Number(m.liquidity) || 0,
+    slug: m.slug,
+    imageUrl: m.imageUrl ?? imageUrl,
+    resolvedOutcomeId: m.resolvedOutcomeId,
+    rules: m.rules,
+    outcomes,
+    yes,
+    no,
+  }
+}
+
+export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
+  const category = e.category?.name ?? 'General'
+  return {
+    id: e.id,
+    provider: e.provider === 'KALSHI' ? 'kalshi' : 'polymarket',
+    title: e.title,
+    category,
+    closeTime: e.closeTime,
+    slug: e.slug,
+    imageUrl: e.imageUrl,
+    markets: (e.markets ?? []).map((m) =>
+      normalizeLobbyMarket(m, category, e.id, e.imageUrl),
+    ),
+  }
+}
+
+// ── Feed resolution ───────────────────────────────────────────────────
+// Prefer the curated lobby feed; fall back to the raw provider catalogue
+// while the lobby has no published markets. Resolved once per session.
+
+type Feed = 'lobby' | 'market'
+let feedPromise: Promise<Feed> | undefined
+
+const resolveFeed = (): Promise<Feed> => {
+  if (!feedPromise) {
+    feedPromise = apiClient
+      .get<LobbyCategory[]>(`${LOBBY_BASE}/categories`)
+      .then((res) =>
+        Array.isArray(res.data) && res.data.length > 0 ? 'lobby' : 'market',
+      )
+      .catch(() => 'market' as Feed)
+  }
+  return feedPromise
+}
+
 // ── Fetchers (public — no auth gating) ────────────────────────────────
 
 const buildQuery = (params?: QueryParams) => {
@@ -170,6 +263,22 @@ export const useMarket = (id?: string, eventId?: string) =>
     enabled: !!id,
     retry: false,
     queryFn: async () => {
+      const feed = await resolveFeed()
+      // Lobby detail accepts a stable DB id or slug and never 404s across id
+      // spaces; only fall through to the raw catalogue if it genuinely 404s
+      // (e.g. an old bookmark pointing at a raw provider id).
+      if (feed === 'lobby') {
+        try {
+          return normalizeLobbyMarket(
+            await get<LobbyMarket>(`${LOBBY_BASE}/markets/${id}`),
+            'General',
+            eventId ?? '',
+          )
+        } catch (err) {
+          if (!(isAxiosError(err) && err.response?.status === 404)) throw err
+        }
+      }
+
       try {
         const m = await get<ApiMarket>(`${MARKET_BASE}/markets/${id}`)
         return normalizeMarket(m)
@@ -211,20 +320,30 @@ export interface EventQueryParams extends QueryParams {
   limit?: number
 }
 
+const fetchEvents = async (
+  params: EventQueryParams,
+  cursor?: string,
+): Promise<{ events: UiEvent[]; cursor: string | null }> => {
+  const feed = await resolveFeed()
+  if (feed === 'lobby') {
+    const res = await get<LobbyEventListResponse>(`${LOBBY_BASE}/events`, {
+      ...params,
+      cursor,
+    })
+    return { events: (res.data ?? []).map(normalizeLobbyEvent), cursor: res.cursor }
+  }
+  const res = await get<ApiEventListResponse>(`${MARKET_BASE}/events`, {
+    ...params,
+    cursor,
+  })
+  return { events: (res.data ?? []).map(normalizeEvent), cursor: res.cursor }
+}
+
 export const useEvents = (params: EventQueryParams = {}, enabled = true) =>
   useQuery({
     queryKey: ['events', params],
     enabled,
-    queryFn: async () => {
-      const res = await get<ApiEventListResponse>(
-        `${MARKET_BASE}/events`,
-        params,
-      )
-      return {
-        events: (res.data ?? []).map(normalizeEvent),
-        cursor: res.cursor,
-      }
-    },
+    queryFn: () => fetchEvents(params),
   })
 
 export const useEventsInfinite = (params: EventQueryParams = {}) =>
@@ -237,13 +356,7 @@ export const useEventsInfinite = (params: EventQueryParams = {}) =>
   >({
     queryKey: ['events-infinite', params],
     initialPageParam: undefined,
-    queryFn: async ({ pageParam }) => {
-      const res = await get<ApiEventListResponse>(`${MARKET_BASE}/events`, {
-        ...params,
-        cursor: pageParam,
-      })
-      return { events: (res.data ?? []).map(normalizeEvent), cursor: res.cursor }
-    },
+    queryFn: ({ pageParam }) => fetchEvents(params, pageParam),
     getNextPageParam: (last) => last.cursor ?? undefined,
   })
 
@@ -251,7 +364,15 @@ export const useEvent = (id?: string) =>
   useQuery({
     queryKey: ['event', id],
     enabled: !!id,
-    queryFn: async () => normalizeEvent(await get<ApiEvent>(`${MARKET_BASE}/events/${id}`)),
+    queryFn: async () => {
+      const feed = await resolveFeed()
+      if (feed === 'lobby') {
+        return normalizeLobbyEvent(
+          await get<LobbyEvent>(`${LOBBY_BASE}/events/${id}`),
+        )
+      }
+      return normalizeEvent(await get<ApiEvent>(`${MARKET_BASE}/events/${id}`))
+    },
   })
 
 export const useMarketQuote = (
