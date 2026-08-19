@@ -60,7 +60,6 @@ export const FormInput = ({
   autoFocus = false,
   autoFocusOnMobile = true,
   subTitle = '',
-  customChild,
   ...inputProps
 }: FormInputProps) => {
   const [viewPassword, setViewPassword] = useState(false)

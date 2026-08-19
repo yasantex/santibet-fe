@@ -89,7 +89,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           `soft-shrink relative flex w-full items-center rounded-full justify-center gap-2.5 cursor-pointer  font-semibold`,
           getColors(),
           {
-            'text-transparent opacity-70 cursor-not-allowed!':
+            'opacity-70 cursor-not-allowed!':
               loading || disabled,
             group: hover,
             'disabled:cursor-not-allowed disabled:opacity-70 ': loading,

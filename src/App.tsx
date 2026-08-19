@@ -23,6 +23,8 @@ import ReferEarn from './pages/ReferEarn'
 import HelpCenter from './pages/HelpCenter'
 import TwoFaPage from './pages/auth/TwoFaPage'
 import Orders from './pages/Orders'
+import ResponsibleGambling from './pages/ResponsibleGambling'
+import ContactSupport from './pages/ContactSupport'
 
 function App() {
   return (
@@ -38,6 +40,14 @@ function App() {
           <Route path='/category/:category' element={<CategoryPage />} />
           <Route path='/terms-of-service' element={<TermsOfService />} />
           <Route path='/privacy-policy' element={<PrivacyPolicy />} />
+          <Route
+            path='/responsible-gambling'
+            element={<ResponsibleGambling />}
+          />
+            <Route
+            path='/contact-us'
+            element={<ContactSupport />}
+          />
           <Route path='/leaderboard' element={<Leaderboard />} />
           <Route path='/rewards' element={<Rewards />} />
           <Route path='/help-center' element={<HelpCenter />} />
@@ -58,8 +68,6 @@ function App() {
             <Route path='/account-wallet' element={<AccountWallet />} />
             <Route path='/account-portfolio' element={<AccountPortfolio />} />
             <Route path='/orders' element={<Orders />} />
-            <Route path='/sports/:id' element={<MarketDetail />} />
-            <Route path='/crypto/:id' element={<MarketDetail />} />
             <Route path='/refer-earn' element={<ReferEarn />} />
           </Route>
         </Route>

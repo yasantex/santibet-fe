@@ -68,7 +68,11 @@ const Header = () => {
       <div className='flex items-center justify-between! gap-5 w-full mb-2.5'>
         <div className='flex items-center gap-5 w-full'>
           <Link to='/'>
-            <img src={isDark ? logoDark : logo} alt='Santibet' className='w-40 h-12' />
+            <img
+              src={isDark ? logoDark : logo}
+              alt='Santibet'
+              className='w-40 h-12'
+            />
           </Link>
           <nav className='lg:flex items-center gap-5 text-sm font-semibold hidden'>
             {primaryNavLinks.map((link) => (
@@ -107,13 +111,6 @@ const Header = () => {
 
           {user ? (
             <div className='flex items-center gap-2.5'>
-              <FormSwitch
-                checked={isDark}
-                onChange={toggleTheme}
-                onLabel='Dark'
-                offLabel='Light'
-                labelClassName='font-semibold text-neutral-10'
-              />
               <Button
                 type='button'
                 text='Deposit cash'
@@ -179,6 +176,15 @@ const Header = () => {
                     >
                       Log Out
                     </p>
+                    <div className='flex items-center mt-2.5 gap-2.5'>
+                      <p className='text-sm text-black font-medium'>Theme</p>
+                      <FormSwitch
+                        checked={isDark}
+                        onChange={toggleTheme}
+                        showLabel={false}
+                        labelClassName='font-semibold text-neutral-10'
+                      />
+                    </div>
                   </div>
                 )}
               >
@@ -191,14 +197,14 @@ const Header = () => {
             </div>
           ) : (
             <div className='flex items-center gap-2.5'>
-              <FormSwitch
+              {/* <FormSwitch
                 checked={isDark}
                 onChange={toggleTheme}
                 onLabel='Dark'
                 offLabel='Light'
                 className='md:flex! hidden!'
                 labelClassName='font-semibold text-neutral-10'
-              />
+              /> */}
               <Button
                 type='button'
                 text='Login'
