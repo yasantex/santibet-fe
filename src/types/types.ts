@@ -48,3 +48,13 @@ export type FormatDateTimeOptions = {
   timeStyle?: "full" | "long" | "medium" | "short";
   locale?: string;
 };
+
+
+export type KycStatusResponse = {
+  status: string
+  legalName: string
+  provider: string
+  submittedAt: string
+  reviewedAt: string
+  rejectionReason: string
+}
