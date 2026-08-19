@@ -5,7 +5,7 @@ import ModalComponent from '../globals/ModalComponent'
 import { Button } from '../globals/Button'
 import { useMarket } from '../../data_layer/markets'
 import { useCashOut } from '../../data_layer/bets'
-import { formatCurrency } from '../../utils/functions'
+import { formatCurrency, formatSharePrice } from '../../utils/functions'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import type { BetPosition } from '../../types/bet.types'
 
@@ -75,7 +75,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
         <div className='flex flex-col rounded-md bg-surface-hover px-3 py-2'>
           <span className='text-xs text-black/60'>Avg price</span>
           <span className='font-bold text-black'>
-            {Math.round(avgPrice * 100)}¢
+            {formatSharePrice(avgPrice)}
           </span>
         </div>
         <div className='flex flex-col rounded-md bg-surface-hover px-3 py-2'>
