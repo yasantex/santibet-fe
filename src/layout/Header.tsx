@@ -1,33 +1,24 @@
 import { useState } from 'react'
-import logo from '../assets/santibet_logo.svg'
-import logoDark from '../assets/Santibet Logo.svg'
+import logo from '../assets/Santibet Logo (black).svg'
+import logoDark from '../assets/Santibet Logo (white).svg'
 
 import { Link, useNavigate } from 'react-router'
 import Dropdown from '../components/globals/Dropdown'
 import SearchInput from '../components/globals/SearchInput'
 import Deposit from '../components/appModals/Deposit'
 import { useModalControl } from '../hooks/useModalControl'
-import {
-  primaryNavLinks,
-  profileMenuItems,
-  type SearchResult,
-} from '../utils/constants'
+import { primaryNavLinks, type SearchResult } from '../utils/constants'
 import { useMarketSearch } from '../data_layer/markets'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  Award01Icon,
-  Menu01FreeIcons,
-  Notification03Icon,
-} from '@hugeicons/core-free-icons'
+import { Menu01FreeIcons, Notification03Icon } from '@hugeicons/core-free-icons'
 import SearchResultsList from '../data_layer/SearchResultsList'
 import MobileSearchOverlay from '../mobile/MobileSearchOverlay'
 import MobileBottomNav from '../mobile/MobileBottomNav'
 import { Button } from '../components/globals/Button'
 import { useAppSelector } from '../utils/hooks'
-import { FormSwitch } from '../components/globals/FormSwitch'
 import { useTheme } from '../hooks/useTheme'
 import useLogout from '../hooks/useLogout'
-import { ProfileAvatar } from '../components/globals/ReusedText'
+import ProfileDropdownMenu from '../components/globals/ProfileDropdownMenu'
 
 const CategoryRow = () => (
   <div className='hide-scroll-bar  lg:hidden flex items-center gap-6 overflow-x-auto px-4  text-sm font-medium text-neutral-10 md:px-6'>
@@ -53,9 +44,6 @@ const Header = () => {
   const { user } = useAppSelector((state) => state.user)
 
   const [searchTerm, setSearchTerm] = useState('')
-  const [activeMobileTab, setActiveMobileTab] = useState<
-    'browse' | 'markets' | 'trending' | 'search' | 'social'
-  >('browse')
 
   const { results: filteredResults } = useMarketSearch(searchTerm)
 
@@ -119,13 +107,6 @@ const Header = () => {
               />
               <button
                 type='button'
-                aria-label='Rewards'
-                className='shrink-0 text-black'
-              >
-                <HugeiconsIcon icon={Award01Icon} size={22} />
-              </button>
-              <button
-                type='button'
                 aria-label='Notifications'
                 className='shrink-0 text-black'
               >
@@ -134,58 +115,16 @@ const Header = () => {
               <Dropdown
                 align='end'
                 className='w-full'
-                menuClassName='shadow-sm w-[300px] mt-2.5! px-2 rounded-lg!'
+                menuClassName='shadow-sm w-[300px] max-h-100 overflow-y-auto mt-2.5! px-2 rounded-lg!'
                 menu={({ close }) => (
-                  <div className='flex text-sm flex-col gap-1 p-2'>
-                    <div className='flex items-center gap-2.5'>
-                      <ProfileAvatar
-                        firstName={user?.name ?? ''}
-                        lastName={user?.name ?? ''}
-                        imageUrl={null}
-                        className='dark:bg-[#e4e5e3]!'
-                      />
-                      <div className='flex flex-col gap-1'>
-                        <p className='font-semibold text-xs text-black'>
-                          {user?.name ?? '--'}
-                        </p>
-                        <p className='text-neutral-10 text-xs font-medium'>
-                          {user?.phone ?? '--'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {profileMenuItems.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => item.action(navigate, close)}
-                        className='flex gap-2.5 text-black items-center hover:bg-hover p-2 cursor-pointer'
-                      >
-                        <HugeiconsIcon icon={item.icon} size={20} />
-                        <p className='text-sm text-black font-medium'>
-                          {item.label}
-                        </p>
-                      </div>
-                    ))}
-
-                    <p
-                      onClick={() => {
-                        close()
-                        logout()
-                      }}
-                      className='text-sm text-error font-medium mt-2 cursor-pointer'
-                    >
-                      Log Out
-                    </p>
-                    <div className='flex items-center mt-2.5 gap-2.5'>
-                      <p className='text-sm text-black font-medium'>Theme</p>
-                      <FormSwitch
-                        checked={isDark}
-                        onChange={toggleTheme}
-                        showLabel={false}
-                        labelClassName='font-semibold text-neutral-10'
-                      />
-                    </div>
-                  </div>
+                  <ProfileDropdownMenu
+                    user={user}
+                    navigate={navigate}
+                    close={close}
+                    isDark={isDark}
+                    toggleTheme={toggleTheme}
+                    onLogout={logout}
+                  />
                 )}
               >
                 <HugeiconsIcon
@@ -197,14 +136,6 @@ const Header = () => {
             </div>
           ) : (
             <div className='flex items-center gap-2.5'>
-              {/* <FormSwitch
-                checked={isDark}
-                onChange={toggleTheme}
-                onLabel='Dark'
-                offLabel='Light'
-                className='md:flex! hidden!'
-                labelClassName='font-semibold text-neutral-10'
-              /> */}
               <Button
                 type='button'
                 text='Login'
@@ -216,13 +147,27 @@ const Header = () => {
                 variation='plain'
                 onClick={() => navigate('/signup')}
               />
-              <button
-                type='button'
-                aria-label='Rewards'
-                className='shrink-0 text-black md:block hidden'
+              <Dropdown
+                align='end'
+                className='w-full'
+                menuClassName='shadow-sm w-[300px] max-h-100 overflow-y-auto mt-2.5! px-2 rounded-lg!'
+                menu={({ close }) => (
+                  <ProfileDropdownMenu
+                    user={user}
+                    navigate={navigate}
+                    close={close}
+                    isDark={isDark}
+                    toggleTheme={toggleTheme}
+                    onLogout={logout}
+                  />
+                )}
               >
-                <HugeiconsIcon icon={Award01Icon} size={22} />
-              </button>
+                <HugeiconsIcon
+                  icon={Menu01FreeIcons}
+                  size={20}
+                  className='text-black'
+                />
+              </Dropdown>
             </div>
           )}
         </div>
@@ -230,11 +175,8 @@ const Header = () => {
       <CategoryRow />
 
       <MobileBottomNav
-        activeTab={activeMobileTab}
-        onNavigate={(tab) => setActiveMobileTab(tab)}
         onOpenDeposit={() => handleModalOpen('deposit')}
         onOpenSearch={() => {
-          setActiveMobileTab('search')
           handleModalOpen('mobileSearch')
         }}
       />

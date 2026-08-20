@@ -110,7 +110,7 @@ export type ProfileAction = {
   action: (navigate: NavigateFunction, close: () => void) => void
 }
 
-export const profileMenuItems: ProfileAction[] = [
+export const accountMenuItems: ProfileAction[] = [
   {
     id: 'wallet',
     label: 'Wallet',
@@ -125,7 +125,7 @@ export const profileMenuItems: ProfileAction[] = [
     id: 'portfolio',
     label: 'Portfolio',
     icon: Wallet03FreeIcons,
-    path: '/portfolio',
+    path: '/account-portfolio',
     action: (navigate, close) => {
       navigate('/account-portfolio')
       close()
@@ -142,16 +142,6 @@ export const profileMenuItems: ProfileAction[] = [
     },
   },
   {
-    id: 'orders',
-    label: 'Orders',
-    icon: FilesFreeIcons,
-    path: '/orders',
-    action: (navigate, close) => {
-      navigate('/orders')
-      close()
-    },
-  },
-  {
     id: 'profile-settings',
     label: 'Profile & Settings',
     icon: User02FreeIcons,
@@ -161,6 +151,19 @@ export const profileMenuItems: ProfileAction[] = [
       close()
     },
   },
+    {
+    id: 'refer-earn',
+    label: 'Refer & Earn',
+    icon: MoneyReceiveFlow02Icon,
+    path: '/refer-earn',
+    action: (navigate, close) => {
+      navigate('/refer-earn')
+      close()
+    },
+  },
+]
+
+export const generalMenuItems: ProfileAction[] = [
   {
     id: 'leaderboard',
     label: 'Leaderboard',
@@ -181,16 +184,7 @@ export const profileMenuItems: ProfileAction[] = [
       close()
     },
   },
-  {
-    id: 'refer-earn',
-    label: 'Refer & Earn',
-    icon: MoneyReceiveFlow02Icon,
-    path: '/refer-earn',
-    action: (navigate, close) => {
-      navigate('/refer-earn')
-      close()
-    },
-  },
+
   {
     id: 'help-center',
     label: 'Help Center',
@@ -201,6 +195,9 @@ export const profileMenuItems: ProfileAction[] = [
       close()
     },
   },
+]
+
+export const legalMenuItems: ProfileAction[] = [
   {
     id: 'terms',
     label: 'Terms of Service',
@@ -211,6 +208,24 @@ export const profileMenuItems: ProfileAction[] = [
       close()
     },
   },
+  {
+    id: 'privacy',
+    label: 'Privacy policy',
+    icon: FilesFreeIcons,
+    path: '/privacy-policy',
+    action: (navigate, close) => {
+      navigate('/privacy-policy')
+      close()
+    },
+  },
+]
+
+export type AppearanceOption = 'system' | 'light' | 'dark'
+
+export const appearanceOptions: { value: AppearanceOption; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
 ]
 
 export const currencySymbols: Record<string, string> = {
