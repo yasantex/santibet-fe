@@ -19,13 +19,13 @@ const socialLinks = [
 ]
 
 const footerLinks = [
-  { label: 'About', href: '#' },
+  { label: 'About', href: '/about-us' },
   { label: 'Cookie Policy', href: '#' },
   { label: 'Privacy Policy', href: '/privacy-policy' },
   { label: 'Terms & Conditions', href: '/terms-of-service' },
   { label: 'Responsible Gambling', href: '/responsible-gambling' },
   { label: 'Contact Support', href: '/contact-us' },
-  { label: 'FAQs', href: '#' },
+  { label: 'FAQs', href: '/faqs' },
 ]
 const Footer = () => {
   return (
@@ -37,17 +37,20 @@ const Footer = () => {
               We use cookies and third-party cookies. You can modify the
               settings and obtain further information in our{' '}
               <a
-                href='#'
-                className='text-neutral-50 underline underline-offset-2 hover:text-white'
+                href='/cookie-policy'
+                className='text-neutral-10 underline underline-offset-2 hover:text-black'
               >
                 Cookie Policy
               </a>
               . You accept its use by continuing the navigation.
             </p>
             <p>
-              SantiBet is operated by SantiBet Limited (Office 226, 1st Floor,
-              World Trade Center, 6 Bayside Road, Gibraltar) which is licensed
-              by the Government of Gibraltar with{' '}
+              SantiBet is operated by AWA LAWA LIMITED, a company registered in
+              Nigeria, with its registered office at Adegite House, Adegite
+              Close, Off Iyin-Ado Road, Iyin-Ekiti, Ekiti State, Nigeria. AWA
+              LAWA LIMITED operates under an Operational Accord with the Ekiti
+              State Lotteries and Gaming Commission. SantiBet is for use by
+              persons aged 18 and above only.
             </p>
           </div>
           <ul className='space-y-4 text-sm'>

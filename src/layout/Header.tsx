@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import logo from '../assets/Santibet Logo (black).svg'
+import logo from '../assets/Santibet Logo.svg'
 import logoDark from '../assets/Santibet Logo (white).svg'
 
 import { Link, useNavigate } from 'react-router'
@@ -59,7 +59,7 @@ const Header = () => {
             <img
               src={isDark ? logoDark : logo}
               alt='Santibet'
-              className='w-40 h-12'
+              className='w-25 h-10'
             />
           </Link>
           <nav className='lg:flex items-center gap-5 text-sm font-semibold hidden'>
