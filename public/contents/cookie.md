@@ -1,4 +1,4 @@
-This page explains how santibet.ng and the SantiBet app use cookies, and what choices you have.
+This page explains how santibet.com and the SantiBet app use cookies, and what choices you have.
 
 ## What is a cookie?
 
@@ -18,7 +18,7 @@ We do not use cookies to build advertising profiles of you, and we do not sell c
 
 ## Managing your cookie preferences
 
-When you first visit santibet.ng, a cookie banner lets you accept or adjust which non-essential cookies you allow. You can also change cookie settings at any time through your browser or device settings. Turning off strictly necessary cookies will prevent core parts of SantiBet, such as staying logged in, from working correctly.
+When you first visit santibet.com, a cookie banner lets you accept or adjust which non-essential cookies you allow. You can also change cookie settings at any time through your browser or device settings. Turning off strictly necessary cookies will prevent core parts of SantiBet, such as staying logged in, from working correctly.
 
 ## Updates to this policy
 
@@ -26,4 +26,4 @@ We may update this Cookie Policy as SantiBet grows. Significant changes will be 
 
 ## Questions
 
-Email [info@santibet.ng](mailto:info@santibet.ng) if anything on this page is unclear.
+Email [info@santibet.com](mailto:info@santibet.com) if anything on this page is unclear.

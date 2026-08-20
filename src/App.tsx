@@ -33,8 +33,6 @@ const TwoFaPage = lazy(() => import('./pages/auth/TwoFaPage'))
 const AboutUs = lazy(() => import('./pages/AboutUs'))
 const Cookie = lazy(() => import('./pages/Cookie'))
 
-
-
 const RouteFallback = () => (
   <div className='flex min-h-[60vh] w-full items-center justify-center'>
     <span className='h-8 w-8 animate-spin rounded-full border-2 border-brand-green border-t-transparent' />
@@ -66,7 +64,6 @@ function App() {
             />
             <Route path='/contact-us' element={<ContactSupport />} />
             <Route path='/leaderboard' element={<Leaderboard />} />
-            <Route path='/rewards' element={<Rewards />} />
             <Route path='/help-center' element={<HelpCenter />} />
 
             <Route element={<AuthRoute />}>
@@ -82,6 +79,7 @@ function App() {
             </Route>
             <Route element={<ProtectedRoute />}>
               <Route path='/account-profile' element={<AccountProfile />} />
+              <Route path='/rewards' element={<Rewards />} />
               <Route path='/account-wallet' element={<AccountWallet />} />
               <Route path='/account-portfolio' element={<AccountPortfolio />} />
               <Route path='/orders' element={<Orders />} />

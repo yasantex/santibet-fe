@@ -35,7 +35,7 @@ We use industry standard security measures, including encryption of sensitive da
 - The right to request deletion of your data, subject to our legal record keeping obligations under Nigerian financial and gaming regulations.
 - The right to object to certain uses of your data.
 
-To exercise any of these rights, email info@santibet.ng. We will respond within a reasonable time and in line with applicable law.
+To exercise any of these rights, email info@santibet.com. We will respond within a reasonable time and in line with applicable law.
 
 ## How long we keep your information
 

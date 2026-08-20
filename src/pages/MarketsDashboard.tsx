@@ -8,6 +8,7 @@ import { FilterIcon } from '@hugeicons/core-free-icons'
 import { useEvents } from '../data_layer/markets'
 import { marketHref } from '../utils/marketDisplay'
 import type { UiMarket, UiOutcome } from '../types/market.types'
+import { formatNairaCompact } from '../utils/functions'
 
 const MarketsDashboard = () => {
   const navigate = useNavigate()
@@ -69,13 +70,13 @@ const MarketsDashboard = () => {
                   key={topic.id}
                   type='button'
                   onClick={() => goToMarket(topic)}
-                  className='flex items-center justify-between gap-4 py-3 text-left hover:opacity-80'
+                  className='flex items-center justify-between gap-4 py-3 text-left hover:bg-hover cursor-pointer p-2.5'
                 >
                   <span className='line-clamp-2 text-sm text-black'>
                     {topic.title}
                   </span>
                   <span className='shrink-0 text-sm font-semibold text-neutral-10'>
-                    {topic.yes?.percent ?? 0}%
+                    {formatNairaCompact(topic.volume)}
                   </span>
                 </button>
               ))}

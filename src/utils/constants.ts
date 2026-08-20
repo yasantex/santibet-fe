@@ -46,13 +46,6 @@ export const primaryNavLinks: NavLink[] = [
   { label: 'Business', href: '/category/Business' },
 ]
 
-export const moreNavLinks: NavLink[] = [
-  { label: 'Browse all', href: '/browse' },
-  { label: 'Leaderboard', href: '/leaderboard' },
-  { label: 'Rewards', href: '/rewards' },
-  { label: 'Help center', href: '/help-center' },
-]
-
 export type DepositOption = {
   id: string
   label: string
@@ -151,7 +144,17 @@ export const accountMenuItems: ProfileAction[] = [
       close()
     },
   },
-    {
+  {
+    id: 'rewards',
+    label: 'Rewards',
+    icon: GiftFreeIcons,
+    path: '/rewards',
+    action: (navigate, close) => {
+      navigate('/rewards')
+      close()
+    },
+  },
+  {
     id: 'refer-earn',
     label: 'Refer & Earn',
     icon: MoneyReceiveFlow02Icon,
@@ -171,16 +174,6 @@ export const generalMenuItems: ProfileAction[] = [
     path: '/leaderboard',
     action: (navigate, close) => {
       navigate('/leaderboard')
-      close()
-    },
-  },
-  {
-    id: 'rewards',
-    label: 'Rewards',
-    icon: GiftFreeIcons,
-    path: '/rewards',
-    action: (navigate, close) => {
-      navigate('/rewards')
       close()
     },
   },

@@ -2,7 +2,7 @@ Our support team is here to help with anything related to your SantiBet account,
 
 ## How to reach us
 
-- Email: info@santibet.ng
+- Email: info@santibet.com
 - Phone: 0909 880 0662
 - Support hours: Monday to Sunday, 8am to 10pm WAT
 
@@ -25,4 +25,4 @@ Ekiti State, Nigeria
 
 ## Before you contact us
 
-Many common questions about deposits, withdrawals, and how predictions are resolved are already answered on our FAQs page at [santibet.ng/faqs](/faqs).
+Many common questions about deposits, withdrawals, and how predictions are resolved are already answered on our FAQs page at [santibet.com/faqs](/faqs).

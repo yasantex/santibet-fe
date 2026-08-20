@@ -15,8 +15,8 @@ SantiBet is operated by AWA LAWA LIMITED, a company registered in Nigeria, with 
 We built SantiBet to be transparent about how a market resolves, honest about the fees we charge, and serious about age verification and responsible play. You must be 18 years of age or older to open a SantiBet account.
 
 ## Where we are today
-SantiBet is currently in [pre launch / early access]. Thank you for being here early. Join the waitlist at santibet.ng to be notified the moment predictions go live.
+SantiBet is currently in [pre launch / early access]. Thank you for being here early. Join the waitlist at santibet.com to be notified the moment predictions go live.
 
 ## Contact
 
-Questions about who we are or how SantiBet works? Reach us at info@santibet.ng or 0909 880 0662.
+Questions about who we are or how SantiBet works? Reach us at info@santibet.com or 0909 880 0662.
