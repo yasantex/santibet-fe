@@ -24,11 +24,14 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService'))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const ResponsibleGambling = lazy(() => import('./pages/ResponsibleGambling'))
 const ContactSupport = lazy(() => import('./pages/ContactSupport'))
+const Faqs = lazy(() => import('./pages/Faqs'))
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
 const SignupPage = lazy(() => import('./pages/auth/SignupPage'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const RecoverPassword = lazy(() => import('./pages/auth/RecoverPassword'))
 const TwoFaPage = lazy(() => import('./pages/auth/TwoFaPage'))
+const AboutUs = lazy(() => import('./pages/AboutUs'))
+const Cookie = lazy(() => import('./pages/Cookie'))
 
 const RouteFallback = () => (
   <div className='flex min-h-[60vh] w-full items-center justify-center'>
@@ -51,13 +54,16 @@ function App() {
             <Route path='/category/:category' element={<CategoryPage />} />
             <Route path='/terms-of-service' element={<TermsOfService />} />
             <Route path='/privacy-policy' element={<PrivacyPolicy />} />
+            <Route path='/about-us' element={<AboutUs />} />
+            <Route path='/faqs' element={<Faqs />} />
+            <Route path='/cookie-policy' element={<Cookie />} />
+
             <Route
               path='/responsible-gambling'
               element={<ResponsibleGambling />}
             />
             <Route path='/contact-us' element={<ContactSupport />} />
             <Route path='/leaderboard' element={<Leaderboard />} />
-            <Route path='/rewards' element={<Rewards />} />
             <Route path='/help-center' element={<HelpCenter />} />
 
             <Route element={<AuthRoute />}>
@@ -73,6 +79,7 @@ function App() {
             </Route>
             <Route element={<ProtectedRoute />}>
               <Route path='/account-profile' element={<AccountProfile />} />
+              <Route path='/rewards' element={<Rewards />} />
               <Route path='/account-wallet' element={<AccountWallet />} />
               <Route path='/account-portfolio' element={<AccountPortfolio />} />
               <Route path='/orders' element={<Orders />} />

@@ -19,7 +19,7 @@ const showToast = (message: string, type: ToastType) => {
           maxWidth: '350px',
           gap: '15px',
           padding: '10px',
-          fontFamily: 'Sora',
+          fontFamily: 'Outfit',
           zIndex: 9999,
         }}
       >
