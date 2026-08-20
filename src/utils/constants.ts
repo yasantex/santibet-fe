@@ -46,13 +46,6 @@ export const primaryNavLinks: NavLink[] = [
   { label: 'Business', href: '/category/Business' },
 ]
 
-export const moreNavLinks: NavLink[] = [
-  { label: 'Browse all', href: '/browse' },
-  { label: 'Leaderboard', href: '/leaderboard' },
-  { label: 'Rewards', href: '/rewards' },
-  { label: 'Help center', href: '/help-center' },
-]
-
 export type DepositOption = {
   id: string
   label: string
@@ -110,7 +103,7 @@ export type ProfileAction = {
   action: (navigate: NavigateFunction, close: () => void) => void
 }
 
-export const profileMenuItems: ProfileAction[] = [
+export const accountMenuItems: ProfileAction[] = [
   {
     id: 'wallet',
     label: 'Wallet',
@@ -125,7 +118,7 @@ export const profileMenuItems: ProfileAction[] = [
     id: 'portfolio',
     label: 'Portfolio',
     icon: Wallet03FreeIcons,
-    path: '/portfolio',
+    path: '/account-portfolio',
     action: (navigate, close) => {
       navigate('/account-portfolio')
       close()
@@ -142,32 +135,12 @@ export const profileMenuItems: ProfileAction[] = [
     },
   },
   {
-    id: 'orders',
-    label: 'Orders',
-    icon: FilesFreeIcons,
-    path: '/orders',
-    action: (navigate, close) => {
-      navigate('/orders')
-      close()
-    },
-  },
-  {
     id: 'profile-settings',
     label: 'Profile & Settings',
     icon: User02FreeIcons,
     path: '/account-profile',
     action: (navigate, close) => {
       navigate('/account-profile')
-      close()
-    },
-  },
-  {
-    id: 'leaderboard',
-    label: 'Leaderboard',
-    icon: Award01FreeIcons,
-    path: '/leaderboard',
-    action: (navigate, close) => {
-      navigate('/leaderboard')
       close()
     },
   },
@@ -191,6 +164,20 @@ export const profileMenuItems: ProfileAction[] = [
       close()
     },
   },
+]
+
+export const generalMenuItems: ProfileAction[] = [
+  {
+    id: 'leaderboard',
+    label: 'Leaderboard',
+    icon: Award01FreeIcons,
+    path: '/leaderboard',
+    action: (navigate, close) => {
+      navigate('/leaderboard')
+      close()
+    },
+  },
+
   {
     id: 'help-center',
     label: 'Help Center',
@@ -201,6 +188,9 @@ export const profileMenuItems: ProfileAction[] = [
       close()
     },
   },
+]
+
+export const legalMenuItems: ProfileAction[] = [
   {
     id: 'terms',
     label: 'Terms of Service',
@@ -211,6 +201,24 @@ export const profileMenuItems: ProfileAction[] = [
       close()
     },
   },
+  {
+    id: 'privacy',
+    label: 'Privacy policy',
+    icon: FilesFreeIcons,
+    path: '/privacy-policy',
+    action: (navigate, close) => {
+      navigate('/privacy-policy')
+      close()
+    },
+  },
+]
+
+export type AppearanceOption = 'system' | 'light' | 'dark'
+
+export const appearanceOptions: { value: AppearanceOption; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
 ]
 
 export const currencySymbols: Record<string, string> = {

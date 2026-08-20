@@ -8,6 +8,7 @@ import { isAxiosError } from 'axios'
 import { showSuccessToast, showWarningToast } from '../../../utils/toastUtils'
 import { FormInput } from '../../globals/FormInput'
 import CustomSelector from '../../globals/CustomSelector'
+import DateInput from '../../globals/DateInput'
 
 type KycPayload = {
   idType: string
@@ -140,19 +141,15 @@ const VerifyKyc = ({ open, handleClose }: ModalProps) => {
           onBlur={handleBlur}
           errors={errors.lastName && touched.lastName ? errors.lastName : ''}
         />
-
-        <FormInput
-          type='date'
-          name='dateOfBirth'
+        <DateInput
           value={values.dateOfBirth}
-          hasTitle
-          title='Date of Birth'
-          placeholder='Date of birth'
-          onChange={handleChange}
-          onBlur={handleBlur}
+          onChange={(date) => setFieldValue('dateOfBirth', date)}
+          placeholder='select date'
+          label='Date of Birth'
           errors={
             errors.dateOfBirth && touched.dateOfBirth ? errors.dateOfBirth : ''
           }
+          containerClassName='w-full'
         />
 
         <Button

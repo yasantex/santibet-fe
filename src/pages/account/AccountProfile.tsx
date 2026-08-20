@@ -27,6 +27,7 @@ import { Button } from '../../components/globals/Button'
 import Security from '../../components/appModals/auth/Security'
 import VerifyKyc from '../../components/appModals/auth/VerifyKyc'
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router'
 
 type ProfileRow = {
   icon: typeof UserIcon
@@ -50,7 +51,7 @@ const ProfileSection = ({ title, rows }: ProfileSectionData) => (
           key={row.label}
           type='button'
           onClick={row.onClick}
-          className={`flex w-full items-center text-black gap-3 px-4 py-4 text-left border-b border-border hover:bg-hover dark:hover:bg-white/5 
+          className={`flex w-full items-center text-black gap-3 px-4 py-4 text-left border-b border-border hover:bg-hover cursor-pointer
            `}
         >
           <HugeiconsIcon icon={row.icon} size={20} />
@@ -78,6 +79,7 @@ const AccountProfile = () => {
   const { logout } = useLogout()
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (kycStatus?.status === 'NOT_STARTED') {
@@ -118,7 +120,7 @@ const AccountProfile = () => {
         {
           icon: ShieldEnergyIcon,
           label: 'Responsible Gambling',
-          // onClick: () => navigate('/profile/responsible-gambling'),
+          onClick: () => navigate('/responsible-gambling'),
         },
       ],
     },
@@ -128,12 +130,12 @@ const AccountProfile = () => {
         {
           icon: InformationCircleIcon,
           label: 'Help Center',
-          // onClick: () => navigate('/support/help-center'),
+          onClick: () => navigate('/contact-us'),
         },
         {
           icon: Message01Icon,
           label: 'Contact Us',
-          // onClick: () => handleModalOpen('contactUs'),
+          onClick: () => navigate('/contact-us'),
         },
       ],
     },
@@ -143,12 +145,12 @@ const AccountProfile = () => {
         {
           icon: PencilEdit02Icon,
           label: 'Terms of Service',
-          // onClick: () => navigate('/legal/terms-of-service'),
+          onClick: () => navigate('/terms-of-service'),
         },
         {
           icon: Shield01Icon,
           label: 'Privacy Policy',
-          // onClick: () => navigate('/legal/privacy-policy'),
+          onClick: () => navigate('/privacy-policy'),
         },
       ],
     },
