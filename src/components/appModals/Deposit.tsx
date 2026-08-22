@@ -228,7 +228,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
               onClick={() => handleSelectMethod(m.id)}
               className='flex w-full items-center gap-3 rounded-lg border border-border px-4 py-3 text-left hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
             >
-              <HugeiconsIcon icon={m.icon} size={20} />
+              <HugeiconsIcon icon={m.icon} size={20} className='text-black' />
               <div className='flex-1'>
                 <p className='text-sm font-semibold text-black'>{m.label}</p>
                 <p className='text-xs text-neutral-10'>{m.subtitle}</p>
