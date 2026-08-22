@@ -30,6 +30,7 @@ const SignupPage = lazy(() => import('./pages/auth/SignupPage'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const RecoverPassword = lazy(() => import('./pages/auth/RecoverPassword'))
 const TwoFaPage = lazy(() => import('./pages/auth/TwoFaPage'))
+const VerifyAccount = lazy(() => import('./pages/auth/VerifyAccount'))
 const AboutUs = lazy(() => import('./pages/AboutUs'))
 const Cookie = lazy(() => import('./pages/Cookie'))
 
@@ -65,6 +66,7 @@ function App() {
             <Route path='/contact-us' element={<ContactSupport />} />
             <Route path='/leaderboard' element={<Leaderboard />} />
             <Route path='/help-center' element={<HelpCenter />} />
+            <Route path='/verify-account' element={<VerifyAccount />} />
 
             <Route element={<AuthRoute />}>
               <Route path='/signin' element={<LoginPage />} />
@@ -77,6 +79,7 @@ function App() {
                 element={<RecoverPassword />}
               />
             </Route>
+
             <Route element={<ProtectedRoute />}>
               <Route path='/account-profile' element={<AccountProfile />} />
               <Route path='/rewards' element={<Rewards />} />

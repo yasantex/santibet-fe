@@ -16,6 +16,7 @@ import {
   getGoogleOAuthCodeVerifier,
   removeGoogleOAuthCodeVerifier,
 } from '../../utils/googleAuth'
+import * as Yup from 'yup'
 
 const LoginPage = () => {
   const updateToken = useUpdateToken()
@@ -24,14 +25,17 @@ const LoginPage = () => {
   const { values, handleChange, handleBlur, errors, touched, handleSubmit } =
     useFormik({
       initialValues: {
-        email: '',
+        identifier: '',
         password: '',
       },
       validationSchema: SignInSchema,
       onSubmit: async (vals) => {
         try {
+          const isEmail = Yup.string().email().isValidSync(vals.identifier)
           await postLogin({
-            email: vals.email,
+            ...(isEmail
+              ? { email: vals.identifier }
+              : { phone: vals.identifier }),
             password: vals.password,
           })
         } catch (error) {
@@ -42,7 +46,7 @@ const LoginPage = () => {
 
   const { mutateAsync: postLogin, isPending } = useSantiBetMutation<
     AuthResponse,
-    { email: string; password: string }
+    { email?: string; phone?: string; password: string }
   >({
     path: `/auth/login`,
     mutationOptions: {
@@ -56,9 +60,7 @@ const LoginPage = () => {
       },
       onSuccess: (data) => {
         if (data?.mfaRequired) {
-          navigate(
-            `/two-fa?authToken=${data?.challengeId}`,
-          )
+          navigate(`/two-fa?authToken=${data?.challengeId}`)
           return
         }
         updateToken({
@@ -79,9 +81,7 @@ const LoginPage = () => {
     mutationOptions: {
       onSuccess: (data) => {
         if (data?.mfaRequired) {
-          navigate(
-            `/two-fa?authToken=${data?.challengeId}`,
-          )
+          navigate(`/two-fa?authToken=${data?.challengeId}`)
           return
         }
         updateToken({
@@ -151,22 +151,20 @@ const LoginPage = () => {
       >
         <FormInput
           type='text'
-          name='email'
-          value={values.email}
-          hasTitle
-          title='Email address'
-          placeholder='email address'
+          name='identifier'
+          value={values.identifier}
+          placeholder='Email address or Phone number'
           onChange={handleChange}
           onBlur={handleBlur}
-          errors={errors.email && touched.email ? errors.email : ''}
+          errors={
+            errors.identifier && touched.identifier ? errors.identifier : ''
+          }
         />
 
         <FormInput
           type='password'
           name='password'
           value={values.password}
-          hasTitle
-          title='Password'
           placeholder='must be at least 8 characters'
           onChange={handleChange}
           onBlur={handleBlur}
