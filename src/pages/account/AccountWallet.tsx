@@ -17,7 +17,6 @@ import {
 } from '../../data_layer/utils'
 import { TransactionStatusConfig } from '../../utils/status'
 import { StatusBadge } from '../../components/globals/ReusedText'
-import TransferToTrading from '../../components/appModals/TransferToTrading'
 import FilterComponent from '../../components/globals/FilterComponent'
 import { filterCategories } from '../../utils/filters'
 import WithdrawalAccounts from '../../components/account/WithdrawalAccounts'
@@ -144,7 +143,7 @@ const AccountWallet = () => {
                 >
                   Deposit
                 </button>
-                <button
+                {/* <button
                   type='button'
                   onClick={() => {
                     setActiveAction('transfer')
@@ -156,9 +155,8 @@ const AccountWallet = () => {
                       : 'text-black'
                   }`}
                 >
-                  {/* Move winnings to trading */}
                   Transfer
-                </button>
+                </button> */}
                 <button
                   type='button'
                   onClick={() => {
@@ -280,12 +278,12 @@ const AccountWallet = () => {
           handleModalClose()
         }}
       />
-      <TransferToTrading
+      {/* <TransferToTrading
         open={modalOpen && modal === 'transfer'}
         handleClose={handleModalClose}
         winningsBalance={wallet?.winnings}
         currency={wallet?.currency}
-      />
+      /> */}
     </main>
   )
 }

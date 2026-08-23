@@ -26,7 +26,6 @@ import VerifyEmail from '../../components/appModals/auth/VerifyEmail'
 import { Button } from '../../components/globals/Button'
 import Security from '../../components/appModals/auth/Security'
 import VerifyKyc from '../../components/appModals/auth/VerifyKyc'
-import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
 type ProfileRow = {
@@ -81,11 +80,6 @@ const AccountProfile = () => {
     useModalControl()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (kycStatus?.status === 'NOT_STARTED') {
-      handleModalOpen('verifyKyc')
-    }
-  }, [kycStatus])
   const profile = userProfile ?? user
 
   const sections: ProfileSectionData[] = [
@@ -212,69 +206,92 @@ const AccountProfile = () => {
         Profile
       </h1>
 
-      <div className='flex items-center gap-4 rounded-lg bg-card p-4'>
-        <ProfileAvatar
-          firstName={profile?.name ?? ''}
-          lastName={profile?.name ?? ''}
-          imageUrl={profile?.avatarUrl}
-          isLoading={isLoading}
-          className='bg-[#16191a]! dark:bg-[#e4e5e3]! dark:text-[#000000]!'
-        />
-        <div className='flex flex-col gap-1'>
-          {isLoading ? (
-            <>
-              <div className='h-4 w-32 animate-pulse rounded bg-neutral-10/20' />
-              <div className='h-3.5 w-24 animate-pulse rounded bg-neutral-10/20' />
-            </>
-          ) : (
-            <>
-              <p className='text-base font-semibold text-nlack'>
-                {profile?.name ?? '—'}
-              </p>
-              <div className='flex items-center gap-2.5'>
-                <p className='text-sm text-placeholder'>
-                  {profile?.phone ?? '—'}
+      <section className='flex flex-col gap-5 rounded-lg bg-card p-4'>
+        <div className='flex items-center gap-4 '>
+          <ProfileAvatar
+            firstName={profile?.name ?? ''}
+            lastName={profile?.name ?? ''}
+            imageUrl={profile?.avatarUrl}
+            isLoading={isLoading}
+            className='bg-[#16191a]! dark:bg-[#e4e5e3]! dark:text-[#000000]!'
+          />
+          <div className='flex flex-col gap-1'>
+            {isLoading ? (
+              <>
+                <div className='h-4 w-32 animate-pulse rounded bg-neutral-10/20' />
+                <div className='h-3.5 w-24 animate-pulse rounded bg-neutral-10/20' />
+              </>
+            ) : (
+              <>
+                <p className='text-base font-semibold text-nlack'>
+                  {profile?.name ?? '—'}
                 </p>
-                {profile?.phone ? (
-                  profile?.phoneVerified ? (
+                <div className='flex items-center gap-2.5'>
+                  <p className='text-sm text-placeholder'>
+                    {profile?.phone ?? '—'}
+                  </p>
+                  {profile?.phone ? (
+                    profile?.phoneVerified ? (
+                      <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
+                        Verified
+                      </span>
+                    ) : (
+                      <Button
+                        onClick={handlePhoneRequest}
+                        type='button'
+                        size='small'
+                        text='Verify phone'
+                        variation='error'
+                        disabled={phonePending}
+                      />
+                    )
+                  ) : null}
+                </div>
+                <div className='flex items-center gap-2.5'>
+                  <p className='text-sm text-placeholder'>
+                    {profile?.email ?? '—'}
+                  </p>
+                  {profile?.emailVerified ? (
                     <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
                       Verified
                     </span>
                   ) : (
                     <Button
-                      onClick={handlePhoneRequest}
+                      onClick={handleRequest}
                       type='button'
                       size='small'
-                      text='Verify phone'
+                      text='Verify email'
                       variation='error'
-                      disabled={phonePending}
+                      disabled={isPending}
                     />
-                  )
-                ) : null}
-              </div>
-              <div className='flex items-center gap-2.5'>
-                <p className='text-sm text-placeholder'>
-                  {profile?.email ?? '—'}
-                </p>
-                {profile?.emailVerified ? (
-                  <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
-                    Verified
-                  </span>
-                ) : (
-                  <Button
-                    onClick={handleRequest}
-                    type='button'
-                    size='small'
-                    text='Verify email'
-                    variation='error'
-                    disabled={isPending}
-                  />
-                )}
-              </div>
-            </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        <div className='flex items-center gap-2.5'>
+          <span className=' text-sm text-black font-medium'>
+            KYC Verification
+          </span>
+
+          {kycStatus?.status === 'NOT_STARTED' ? (
+            <Button
+              onClick={() => handleModalOpen('verifyKyc')}
+              type='button'
+              size='small'
+              text='Verify KYC'
+              variation='error'
+              className='w-fit!'
+              disabled={isPending}
+            />
+          ) : (
+            <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
+              Verified
+            </span>
           )}
         </div>
-      </div>
+      </section>
 
       {sections.map((section) => (
         <ProfileSection key={section.title} {...section} />
