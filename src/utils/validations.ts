@@ -1,9 +1,17 @@
 import * as Yup from 'yup'
 
+const E164_REGEX = /^\+[1-9]\d{1,14}$/
+
 export const SignInSchema = Yup.object({
-  email: Yup.string()
-    .email('Email is not a valid email')
-    .required('Email is required'),
+  identifier: Yup.string()
+    .required('Email or phone number is required')
+    .test(
+      'is-email-or-phone',
+      'Enter a valid email address or phone number',
+      (value) =>
+        !!value &&
+        (Yup.string().email().isValidSync(value) || E164_REGEX.test(value)),
+    ),
   password: Yup.string().required('Password is required'),
 })
 

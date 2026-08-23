@@ -122,3 +122,10 @@ export interface RequestWithdrawalRequest {
   amount: string
   paymentMethodId: string
 }
+
+export interface CryptoAddressResponse {
+  address: string
+  currency: string
+  network: string
+  destinationTag: string | null
+}

@@ -73,7 +73,7 @@ const ModalComponent: React.FC<ModalProps> = ({
         )}
 
         <div
-          className={`hide-scroll-bar mb-2.5 flex-1 overflow-y-scroll ${dialogClassName} `}
+          className={`hide-scroll-bar mb-2.5 flex-1 overflow-y-auto ${dialogClassName} `}
         >
           {children}
         </div>

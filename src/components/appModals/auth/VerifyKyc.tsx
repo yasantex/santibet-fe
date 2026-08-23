@@ -102,16 +102,12 @@ const VerifyKyc = ({ open, handleClose }: ModalProps) => {
           }}
           placeholder='Select ID type'
           containerClassName='w-full'
-          hasLabel
-          label='ID Type'
         />
 
         <FormInput
           type='text'
           name='idNumber'
           value={values.idNumber}
-          hasTitle
-          title='ID Number'
           placeholder='Enter ID number'
           onChange={handleChange}
           onBlur={handleBlur}
@@ -122,8 +118,6 @@ const VerifyKyc = ({ open, handleClose }: ModalProps) => {
           type='text'
           name='firstName'
           value={values.firstName}
-          hasTitle
-          title='First Name'
           placeholder='Enter first name'
           onChange={handleChange}
           onBlur={handleBlur}
@@ -134,8 +128,6 @@ const VerifyKyc = ({ open, handleClose }: ModalProps) => {
           type='text'
           name='lastName'
           value={values.lastName}
-          hasTitle
-          title='Last Name'
           placeholder='Enter last name'
           onChange={handleChange}
           onBlur={handleBlur}
@@ -145,7 +137,6 @@ const VerifyKyc = ({ open, handleClose }: ModalProps) => {
           value={values.dateOfBirth}
           onChange={(date) => setFieldValue('dateOfBirth', date)}
           placeholder='select date'
-          label='Date of Birth'
           errors={
             errors.dateOfBirth && touched.dateOfBirth ? errors.dateOfBirth : ''
           }

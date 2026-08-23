@@ -11,9 +11,21 @@ import { isAxiosError } from 'axios'
 import { showWarningToast, showSuccessToast } from '../../utils/toastUtils'
 import { useQueryClient } from '@tanstack/react-query'
 import { AddWithdrawalAccountSchema } from '../../utils/validations'
+import { useBankOptions } from '../../hooks/useBankOptions'
+import CustomSelector from '../globals/CustomSelector'
+import { useEffect } from 'react'
+import { useDebounce } from 'use-debounce'
+import type { BaseApiResponse } from '../../types/types'
+
+type ResolveResponse = BaseApiResponse & {
+  data: {
+    accountName: string
+  }
+}
 
 const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
   const queryClient = useQueryClient()
+  const { banksData, setSearchBanks } = useBankOptions()
 
   const { mutateAsync: addAccount, isPending } = useSantiBetMutation<
     WithdrawalAccount,
@@ -51,21 +63,72 @@ const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
       accountNumber: '',
       bankCode: '',
       label: '',
+      accountName: '',
     },
     validationSchema: AddWithdrawalAccountSchema,
     onSubmit: async (vals) => {
       try {
-        await addAccount(vals)
+        await addAccount({
+          accountNumber: vals.accountNumber,
+          bankCode: vals.bankCode,
+          label: vals.label,
+        })
       } catch (error) {
         console.error(error)
       }
     },
   })
 
+  const { mutateAsync: postResolveAccount, isPending: isResolving } =
+    useSantiBetMutation<
+      ResolveResponse,
+      { bank_code: string; account_number: string }
+    >({
+      path: `/banking/resolve-account`,
+      mutationOptions: {
+        onSuccess: (data) => {
+          setFieldValue('accountName', data.data.accountName)
+        },
+        onError: () => {
+          setFieldValue('accountName', '')
+        },
+      },
+    })
+
+  const [debouncedAccountNumber] = useDebounce(values.accountNumber, 1000)
+
+  const resolveAccount = async () => {
+    if (
+      values.bankCode &&
+      debouncedAccountNumber &&
+      debouncedAccountNumber.length >= 10
+    ) {
+      try {
+        await postResolveAccount({
+          bank_code: values.bankCode,
+          account_number: debouncedAccountNumber,
+        })
+      } catch (error) {}
+    } else if (!debouncedAccountNumber || debouncedAccountNumber.length < 10) {
+      setFieldValue('accountName', '')
+    }
+  }
+
+  useEffect(() => {
+    resolveAccount()
+  }, [debouncedAccountNumber, values.bankCode])
+
   const handleClosed = () => {
     resetForm()
     handleClose()
   }
+
+  const bankOptions = Array.isArray(banksData)
+    ? banksData?.map((bank) => ({
+        label: bank?.name,
+        value: bank?.code,
+      })) || []
+    : []
 
   return (
     <ModalComponent
@@ -79,8 +142,6 @@ const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
           type='text'
           name='accountNumber'
           value={values.accountNumber}
-          hasTitle
-          title='Account Number'
           placeholder='Enter account number'
           onChange={(e) => {
             const val = e.target.value.replace(/\D/g, '')
@@ -94,25 +155,32 @@ const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
           }
         />
 
-        {/* TODO: replace with a bank picker once a list-banks endpoint exists */}
-        <FormInput
-          type='text'
-          name='bankCode'
-          value={values.bankCode}
-          hasTitle
-          title='Bank Code'
-          placeholder='Enter bank code'
-          onChange={handleChange}
-          onBlur={handleBlur}
-          errors={errors.bankCode && touched.bankCode ? errors.bankCode : ''}
-        />
+        <div className='flex flex-col gap-1.5'>
+          <CustomSelector
+            options={bankOptions}
+            value={values.bankCode}
+            onChange={(selected) => setFieldValue('bankCode', selected)}
+            placeholder='select bank'
+            containerClassName='w-full'
+            onSearchChange={(searchTerm) => setSearchBanks(searchTerm)}
+            searchByLabel={true}
+          />
+
+          {isResolving && (
+            <p className='text-sm text-neutral-10'>Resolving account…</p>
+          )}
+
+          {!isResolving && values.accountName && (
+            <p className='text-sm font-semibold text-black'>
+              {values.accountName}
+            </p>
+          )}
+        </div>
 
         <FormInput
           type='text'
           name='label'
           value={values.label}
-          hasTitle
-          title='Label'
           placeholder='e.g. my bank account'
           onChange={handleChange}
           onBlur={handleBlur}

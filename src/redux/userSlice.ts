@@ -3,9 +3,11 @@ import type { UserData } from '../types/types'
 
 export interface UserState {
   user: UserData | null
+  signupType: 'email' | 'phone' | null
 }
 const initialState: UserState = {
   user: null,
+  signupType: null,
 }
 
 const userSlice = createSlice({
@@ -17,6 +19,7 @@ const userSlice = createSlice({
     },
     clearUser: (state) => {
       state.user = null
+      state.signupType = null
     },
 
     setEnableTwoFA: (state, action: PayloadAction<boolean>) => {
@@ -24,10 +27,22 @@ const userSlice = createSlice({
         state.user.mfaEnabled = action.payload
       }
     },
+    setSignupType: (state, action: PayloadAction<'email' | 'phone'>) => {
+      state.signupType = action.payload
+    },
+    clearSignupType: (state) => {
+      state.signupType = null
+    },
   },
 })
 
 // Actions
-export const { setUser, clearUser, setEnableTwoFA } = userSlice.actions
+export const {
+  setUser,
+  clearUser,
+  setEnableTwoFA,
+  setSignupType,
+  clearSignupType,
+} = userSlice.actions
 
 export default userSlice.reducer

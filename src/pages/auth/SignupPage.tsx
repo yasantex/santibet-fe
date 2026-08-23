@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
 import useUpdateToken from '../../hooks/useUpdateToken'
-import { useAppDispatch } from '../../utils/hooks'
+import { useAppDispatch, useAppSelector } from '../../utils/hooks'
 import { useFormik } from 'formik'
 import { useSantiBetMutation } from '../../data_layer/utils'
 import type { AuthResponse } from '../../types/types'
 import { SignInSchema } from '../../utils/validations'
 import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
-import { setUser } from '../../redux/userSlice'
+import { setSignupType, setUser } from '../../redux/userSlice'
 import { Button } from '../../components/globals/Button'
 import { FormInput } from '../../components/globals/FormInput'
 import {
@@ -16,25 +16,29 @@ import {
   getGoogleOAuthCodeVerifier,
   removeGoogleOAuthCodeVerifier,
 } from '../../utils/googleAuth'
+import * as Yup from 'yup'
 
 const SignupPage = () => {
   const updateToken = useUpdateToken()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const signupType = useAppSelector((state) => state.user.signupType)
   const { values, handleChange, handleBlur, errors, touched, handleSubmit } =
     useFormik({
       initialValues: {
-        name: '',
-
-        email: '',
+        identifier: '',
         password: '',
       },
       validationSchema: SignInSchema,
       onSubmit: async (vals) => {
         try {
-          await postLogin({
-            name: vals.name,
-            email: vals.email,
+          const isEmail = Yup.string().email().isValidSync(vals.identifier)
+          dispatch(setSignupType(isEmail ? 'email' : 'phone'))
+
+          await postSignup({
+            ...(isEmail
+              ? { email: vals.identifier }
+              : { phone: vals.identifier }),
             password: vals.password,
           })
         } catch (error) {
@@ -43,9 +47,9 @@ const SignupPage = () => {
       },
     })
 
-  const { mutateAsync: postLogin, isPending } = useSantiBetMutation<
+  const { mutateAsync: postSignup, isPending } = useSantiBetMutation<
     AuthResponse,
-    { email: string; password: string; name: string }
+    { email?: string; phone?: string; password: string }
   >({
     path: `/auth/signup`,
     mutationOptions: {
@@ -64,7 +68,7 @@ const SignupPage = () => {
           refreshToken: data.refreshToken,
         })
         dispatch(setUser(userData))
-        navigate('/')
+        navigate(`/verify-account?type=${signupType}`)
       },
     },
   })
@@ -142,33 +146,20 @@ const SignupPage = () => {
       >
         <FormInput
           type='text'
-          name='name'
-          value={values.name}
-          hasTitle
-          title='Full name'
-          placeholder='Full name'
+          name='identifier'
+          value={values.identifier}
+          placeholder='Email address or Phone number'
           onChange={handleChange}
           onBlur={handleBlur}
-          errors={errors.name && touched.name ? errors.name : ''}
-        />
-        <FormInput
-          type='text'
-          name='email'
-          value={values.email}
-          hasTitle
-          title='Email address'
-          placeholder='email address'
-          onChange={handleChange}
-          onBlur={handleBlur}
-          errors={errors.email && touched.email ? errors.email : ''}
+          errors={
+            errors.identifier && touched.identifier ? errors.identifier : ''
+          }
         />
 
         <FormInput
           type='password'
           name='password'
           value={values.password}
-          hasTitle
-          title='Password'
           placeholder='must be at least 8 characters'
           onChange={handleChange}
           onBlur={handleBlur}
