@@ -172,28 +172,27 @@ const AccountProfile = () => {
               </>
             ) : (
               <div className='flex flex-col gap-5'>
-                <p className='text-base font-semibold text-nlack'>
+                <p className='text-base font-semibold text-black'>
                   {profile?.name ?? '—'}
                 </p>
                 <div className='flex items-center gap-2.5'>
                   <p className='text-sm text-placeholder'>
                     {profile?.phone ?? '—'}
                   </p>
-                  {profile?.phone ? (
-                    profile?.phoneVerified ? (
-                      <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
-                        Verified
-                      </span>
-                    ) : (
-                      <Button
-                        onClick={() => handleModalOpen('verifyPhone')}
-                        type='button'
-                        size='small'
-                        text='Verify phone'
-                        variation='error'
-                      />
-                    )
-                  ) : null}
+                  {profile?.phoneVerified ? (
+                    <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
+                      Verified
+                    </span>
+                  ) : (
+                    <Button
+                      onClick={() => handleModalOpen('verifyPhone')}
+                      type='button'
+                      size='small'
+                      text='Verify phone'
+                      variation='error'
+                      className='w-fit!'
+                    />
+                  )}
                 </div>
                 <div className='flex items-center gap-2.5'>
                   <p className='text-sm text-placeholder'>
@@ -210,6 +209,7 @@ const AccountProfile = () => {
                       size='small'
                       text='Verify email'
                       variation='error'
+                      className='w-fit!'
                     />
                   )}
                 </div>
