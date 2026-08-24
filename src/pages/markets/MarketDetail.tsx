@@ -14,7 +14,7 @@ import {
   Link01Icon,
   Bookmark02Icon,
 } from '@hugeicons/core-free-icons'
-import { useMarket, useMarketTrades } from '../../data_layer/markets'
+import { useMarket, useMarketChart } from '../../data_layer/markets'
 import TradePanel from '../../components/markets/TradePanel'
 import { categoryIcon } from '../../utils/marketDisplay'
 import {
@@ -24,18 +24,13 @@ import {
   formatSharePrice,
 } from '../../utils/functions'
 import { showSuccessToast } from '../../utils/toastUtils'
-import type { UiOutcome } from '../../types/market.types'
+import type { ChartInterval, UiOutcome } from '../../types/market.types'
 
-const CHART_PERIODS = ['Live', '1h', '1d', '1w', '1m'] as const
-type ChartPeriod = (typeof CHART_PERIODS)[number]
-
-const PERIOD_MS: Record<ChartPeriod, number> = {
-  Live: Number.POSITIVE_INFINITY,
-  '1h': 60 * 60 * 1000,
-  '1d': 24 * 60 * 60 * 1000,
-  '1w': 7 * 24 * 60 * 60 * 1000,
-  '1m': 30 * 24 * 60 * 60 * 1000,
-}
+const CHART_PERIODS: { label: string; interval: ChartInterval }[] = [
+  { label: '1H', interval: '1h' },
+  { label: '6H', interval: '6h' },
+  { label: '1D', interval: '1d' },
+]
 
 const MarketDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -44,12 +39,11 @@ const MarketDetail = () => {
   const [selectedId, setSelectedId] = useState<string | undefined>(
     searchParams.get('outcome') ?? undefined,
   )
-  const [period, setPeriod] = useState<ChartPeriod>('Live')
+  const [interval, setInterval] = useState<ChartInterval>('1h')
   const [infoTab, setInfoTab] = useState<'rules' | 'trades'>('rules')
 
   const eventId = searchParams.get('event') ?? undefined
   const { data: market, isLoading, isError } = useMarket(id, eventId)
-  const { data: trades } = useMarketTrades(id, 50)
 
   const selectedOutcome: UiOutcome | undefined = useMemo(() => {
     if (!market) return undefined
@@ -60,26 +54,9 @@ const MarketDetail = () => {
     )
   }, [market, selectedId])
 
-  const chartData = useMemo(() => {
-    if (!trades?.length || !selectedOutcome) return []
-    const forOutcome = trades.filter(
-      (t) => t.outcomeId === selectedOutcome.id,
-    )
-    if (!forOutcome.length) return []
-    // Window relative to the latest trade so historical markets still chart.
-    const latest = Math.max(...forOutcome.map((t) => new Date(t.ts).getTime()))
-    const cutoff = latest - PERIOD_MS[period]
-    return forOutcome
-      .filter((t) => new Date(t.ts).getTime() >= cutoff)
-      .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
-      .map((t) => ({
-        time: new Date(t.ts).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        value: Math.round(t.price * 100),
-      }))
-  }, [trades, selectedOutcome, period])
+  const { data: chart } = useMarketChart(id, selectedOutcome?.id, interval)
+  const chartData = chart?.points ?? []
+  const trades = chart?.trades
 
   const copyLink = () => {
     void navigator.clipboard?.writeText(window.location.href)
@@ -202,16 +179,16 @@ const MarketDetail = () => {
               <div className='flex items-center gap-1'>
                 {CHART_PERIODS.map((p) => (
                   <button
-                    key={p}
+                    key={p.interval}
                     type='button'
-                    onClick={() => setPeriod(p)}
+                    onClick={() => setInterval(p.interval)}
                     className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
-                      period === p
+                      interval === p.interval
                         ? 'bg-brand-green text-black dark:text-text-black!'
                         : 'text-neutral-10 hover:text-black'
                     }`}
                   >
-                    {p}
+                    {p.label}
                   </button>
                 ))}
               </div>

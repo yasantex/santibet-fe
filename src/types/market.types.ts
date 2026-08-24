@@ -118,6 +118,42 @@ export interface MarketTrade {
   ts: string
 }
 
+// GET /api/lobby/markets/{idOrSlug}/history — OHLC candles + recent trades.
+export interface MarketCandle {
+  at: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+export interface MarketHistoryTick {
+  outcomeId: string
+  price: number
+  size: number
+  at: string
+}
+
+export interface MarketHistoryResponse {
+  marketId: string
+  source: string
+  candles: MarketCandle[]
+  trades: MarketHistoryTick[]
+}
+
+export type ChartInterval = '1h' | '6h' | '1d'
+
+export interface ChartPoint {
+  time: string
+  value: number // 0..100 (probability / ₦-out-of-100)
+}
+
+export interface MarketChart {
+  points: ChartPoint[]
+  trades: MarketTrade[]
+}
+
 // ── Normalized UI shapes (what components render) ─────────────────────
 
 export interface UiOutcome {

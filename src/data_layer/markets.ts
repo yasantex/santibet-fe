@@ -14,11 +14,14 @@ import type {
   ApiEventListResponse,
   ApiMarket,
   ApiMarketListResponse,
+  ChartInterval,
   LobbyCategory,
   LobbyEvent,
   LobbyEventListResponse,
   LobbyMarket,
   LobbyStatus,
+  MarketChart,
+  MarketHistoryResponse,
   MarketStatus,
   MarketTrade,
   OrderBook,
@@ -417,6 +420,69 @@ export const useMarketTrades = (id?: string, limit = 30, provider?: string) =>
         limit,
         provider,
       }),
+  })
+
+const chartTimeLabel = (iso: string, interval: ChartInterval): string => {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return interval === '1d'
+    ? d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+/**
+ * Price chart for the market detail page. On the lobby feed it uses the real
+ * candle history (Polymarket candles for imported markets, internal trades for
+ * native ones); on the raw fallback feed it derives points from recent trades.
+ */
+export const useMarketChart = (
+  id?: string,
+  outcomeId?: string,
+  interval: ChartInterval = '1h',
+) =>
+  useQuery<MarketChart>({
+    queryKey: ['market-chart', id, outcomeId, interval],
+    enabled: !!id,
+    retry: false,
+    refetchInterval: 30000,
+    queryFn: async () => {
+      const feed = await resolveFeed()
+      if (feed === 'lobby') {
+        const h = await get<MarketHistoryResponse>(
+          `${LOBBY_BASE}/markets/${id}/history`,
+          { outcomeId, interval },
+        )
+        const points = (h.candles ?? []).map((c) => ({
+          time: chartTimeLabel(c.at, interval),
+          value: toCents(c.close),
+        }))
+        const trades: MarketTrade[] = (h.trades ?? []).map((t, i) => ({
+          id: `${t.at}-${i}`,
+          marketId: h.marketId,
+          outcomeId: t.outcomeId,
+          price: t.price,
+          size: t.size,
+          side: 'buy',
+          ts: t.at,
+        }))
+        return { points, trades }
+      }
+
+      // Raw fallback feed: build points from recent trades.
+      const raw = await get<MarketTrade[]>(`${MARKET_BASE}/markets/${id}/trades`, {
+        limit: 60,
+      })
+      const forOutcome = outcomeId
+        ? raw.filter((t) => t.outcomeId === outcomeId)
+        : raw
+      const points = [...forOutcome]
+        .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
+        .map((t) => ({
+          time: chartTimeLabel(t.ts, interval),
+          value: toCents(t.price),
+        }))
+      return { points, trades: raw }
+    },
   })
 
 // ── Search ────────────────────────────────────────────────────────────
