@@ -26,7 +26,7 @@ const CategoryRow = () => (
       <Link
         key={link.label}
         to={link.href}
-        className='flex items-center gap-1.5'
+        className='flex items-center gap-1.5 text-neutral-10 hover:text-black'
       >
         {link.label}
       </Link>
@@ -105,13 +105,13 @@ const Header = () => {
                 onClick={() => handleModalOpen('deposit')}
                 className='shrink-0 w-fit! lg:flex! hidden!'
               />
-              <button
-                type='button'
-                aria-label='Notifications'
-                className='shrink-0 text-black'
-              >
-                <HugeiconsIcon icon={Notification03Icon} size={22} />
-              </button>
+              <div className='p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'>
+                <HugeiconsIcon
+                  icon={Notification03Icon}
+                  size={22}
+                  className='shrink-0 text-black'
+                />
+              </div>
               <Dropdown
                 align='end'
                 className='w-full'
@@ -127,11 +127,13 @@ const Header = () => {
                   />
                 )}
               >
-                <HugeiconsIcon
-                  icon={Menu01FreeIcons}
-                  size={20}
-                  className='text-black'
-                />
+                <div className='p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'>
+                  <HugeiconsIcon
+                    icon={Menu01FreeIcons}
+                    size={20}
+                    className='text-black'
+                  />
+                </div>
               </Dropdown>
             </div>
           ) : (
@@ -162,11 +164,13 @@ const Header = () => {
                   />
                 )}
               >
-                <HugeiconsIcon
-                  icon={Menu01FreeIcons}
-                  size={20}
-                  className='text-black'
-                />
+                <div className='p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'>
+                  <HugeiconsIcon
+                    icon={Menu01FreeIcons}
+                    size={20}
+                    className='text-black'
+                  />
+                </div>
               </Dropdown>
             </div>
           )}

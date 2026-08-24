@@ -17,7 +17,7 @@ export const useBankOptions = () => {
   const [debouncedSearch] = useDebounce(search, 1000)
 
   const { data, isLoading, refetch } = useSantiBetQuery<BanksResponse>({
-    path: '/banking/bank-list',
+    path: '/wallet/banks',
     params: {
       search: debouncedSearch,
     },

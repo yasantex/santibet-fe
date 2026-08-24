@@ -19,8 +19,21 @@ export const formatNaira = (amount: number) => {
 export const NAIRA = '₦'
 
 /**
+ * The backend stores and transacts money in minor units (kobo): ₦100 is
+ * represented as 10000. Convert at the API boundary — minor units in
+ * requests/responses, major (Naira) units everywhere in the UI.
+ */
+export const toMinorUnits = (amount: string | number): number =>
+  Math.round(((typeof amount === 'number' ? amount : parseFloat(amount)) || 0) * 100)
+
+export const toMajorUnits = (amount: string | number): number =>
+  ((typeof amount === 'number' ? amount : parseFloat(amount)) || 0) / 100
+
+/**
  * Format a money amount in Naira. The optional currency arg is accepted for
  * call-site compatibility but ignored — every balance and amount renders in ₦.
+ * Expects an amount already in major (Naira) units — convert minor-unit
+ * backend values with `toMajorUnits` before calling this.
  */
 export const formatCurrency = (amount: string | number, currency?: string) => {
   void currency // accepted for call-site compatibility; always rendered in ₦
