@@ -7,7 +7,7 @@ import { useSantiBetQuery } from '../../data_layer/utils'
 import { usePlaceBet } from '../../data_layer/bets'
 import SellPanel from './SellPanel'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
-import { NAIRA, formatSharePrice } from '../../utils/functions'
+import { NAIRA, formatSharePrice, toMajorUnits, toMinorUnits } from '../../utils/functions'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { BetType } from '../../types/bet.types'
@@ -43,7 +43,7 @@ const TradePanel = ({
   const { mutateAsync: placeBet, isPending } = usePlaceBet()
 
   const symbol = NAIRA
-  const cash = Number(wallet?.trading ?? 0)
+  const cash = toMajorUnits(wallet?.total ?? 0)
 
   const outcome = selectedOutcome ?? market.yes ?? market.outcomes[0]
   const isOpen = market.status === 'open'
@@ -75,7 +75,7 @@ const TradePanel = ({
       return
     }
     if (isSignedIn && stakeNum > cash) {
-      showWarningToast('Amount exceeds your trading balance')
+      showWarningToast('Amount exceeds your total balance')
       return
     }
     if (type === 'limit') {
@@ -90,13 +90,14 @@ const TradePanel = ({
       const bet = await placeBet({
         marketId: market.id,
         outcomeId: outcome.id,
-        stake: String(stakeNum),
+        stake: String(toMinorUnits(stakeNum)),
         type,
         ...(type === 'limit' ? { limitPrice: Number(limitCents) / 100 } : {}),
       })
-      showSuccessToast(
-        `Prediction placed · ${symbol}${bet.potentialReturn?.amount ?? potentialReturn.toFixed(0)} to win`,
-      )
+      const toWinDisplay = bet.potentialReturn
+        ? toMajorUnits(bet.potentialReturn.amount).toFixed(0)
+        : potentialReturn.toFixed(0)
+      showSuccessToast(`Prediction placed · ${symbol}${toWinDisplay} to win`)
       setAmount('')
     } catch (error) {
       if (isAxiosError(error)) {

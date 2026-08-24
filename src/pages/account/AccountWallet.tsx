@@ -1,14 +1,16 @@
 import { useModalControl } from '../../hooks/useModalControl'
-import { formatCurrency, formatDate } from '../../utils/functions'
+import { formatCurrency, formatDate, toMajorUnits } from '../../utils/functions'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons'
 import { useEffect, useRef, useState } from 'react'
 import Deposit from '../../components/appModals/Deposit'
 import type {
+  DepositRecord,
   TransactionResponse,
   TransactionStatus,
   TransactionType,
   WalletBalance,
+  WithdrawalRecord,
 } from '../../types/wallet.types'
 import Withdraw from '../../components/appModals/Withdraw'
 import {
@@ -20,16 +22,61 @@ import { StatusBadge } from '../../components/globals/ReusedText'
 import FilterComponent from '../../components/globals/FilterComponent'
 import { filterCategories } from '../../utils/filters'
 import WithdrawalAccounts from '../../components/account/WithdrawalAccounts'
+import { Button } from '../../components/globals/Button'
+import { useQueryClient } from '@tanstack/react-query'
 
 type TransactionFilterValues = Record<'type' | 'status', string[]>
+
+const transactionStatus: Partial<Record<TransactionType, string>> = {
+  DEPOSIT: '/wallet/deposits',
+  WITHDRAWAL: '/wallet/withdrawals',
+}
+
+const CheckTransactionStatus = ({
+  id,
+  type,
+}: {
+  id: string
+  type: TransactionType
+}) => {
+  const [checking, setChecking] = useState(false)
+  const wasFetching = useRef(false)
+  const queryClient = useQueryClient()
+
+  const basePath = transactionStatus[type]
+
+  const { isFetching } = useSantiBetQuery<WithdrawalRecord | DepositRecord>({
+    path: `${basePath}/${id}`,
+    queryKey: ['transaction-status', type, id],
+    enabled: checking && !!basePath,
+  })
+
+  useEffect(() => {
+    if (wasFetching.current && !isFetching) {
+      queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] })
+      setChecking(false)
+    }
+    wasFetching.current = isFetching
+  }, [isFetching, queryClient])
+
+  if (!basePath) return null
+
+  return (
+    <button
+      type='button'
+      onClick={() => setChecking(true)}
+      disabled={checking}
+      className='text-xs mt-2.5 cursor-pointer font-semibold text-neutral-10 underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+    >
+      {checking ? 'Checking…' : 'Check status'}
+    </button>
+  )
+}
 
 const AccountWallet = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
   const [visible, setVisible] = useState(true)
-  const [activeAction, setActiveAction] = useState<
-    'deposit' | 'withdraw' | 'transfer'
-  >('deposit')
   const [filters, setFilters] = useState<TransactionFilterValues>({
     type: [],
     status: [],
@@ -106,7 +153,7 @@ const AccountWallet = () => {
 
               <span className='md:text-3xl text-2xl font-bold text-black'>
                 {visible
-                  ? formatCurrency(wallet?.total, wallet?.currency)
+                  ? formatCurrency(toMajorUnits(wallet?.total ?? 0), wallet?.currency)
                   : '••••••'}
               </span>
 
@@ -115,62 +162,36 @@ const AccountWallet = () => {
                   <p className='text-sm font-semibold text-neutral-10'>
                     Trading Balance:{' '}
                     <span className=' text-black'>
-                      {formatCurrency(wallet?.trading, wallet?.currency)}{' '}
+                      {formatCurrency(toMajorUnits(wallet?.trading ?? 0), wallet?.currency)}{' '}
                     </span>
                   </p>
 
                   <p className='text-sm font-semibold text-neutral-10'>
                     Winning Balance:{' '}
                     <span className=' text-black'>
-                      {formatCurrency(wallet?.winnings, wallet?.currency)}{' '}
+                      {formatCurrency(toMajorUnits(wallet?.winnings ?? 0), wallet?.currency)}{' '}
                     </span>
                   </p>
                 </div>
               )}
 
-              <div className='flex md:flex-row flex-col items-center gap-2.5 rounded-full p-1'>
-                <button
+              <div className='flex md:flex-row flex-col items-center gap-2.5'>
+                <Button
                   type='button'
-                  onClick={() => {
-                    setActiveAction('deposit')
-                    handleModalOpen('deposit')
-                  }}
-                  className={`flex-1 rounded-full py-2 w-full text-sm font-semibold transition-colors ${
-                    activeAction === 'deposit'
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-black'
-                  }`}
-                >
-                  Deposit
-                </button>
-                {/* <button
+                  text='Deposit cash'
+                  variation='primary'
+                  size='medium'
+                  className='w-fit! '
+                  onClick={() => handleModalOpen('deposit')}
+                />
+                <Button
                   type='button'
-                  onClick={() => {
-                    setActiveAction('transfer')
-                    handleModalOpen('transfer')
-                  }}
-                  className={`flex-1 rounded-full py-2 w-full text-sm font-semibold transition-colors ${
-                    activeAction === 'transfer'
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-black'
-                  }`}
-                >
-                  Transfer
-                </button> */}
-                <button
-                  type='button'
-                  onClick={() => {
-                    setActiveAction('withdraw')
-                    handleModalOpen('withdraw')
-                  }}
-                  className={`flex-1 rounded-full w-full py-2 text-sm font-semibold transition-colors ${
-                    activeAction === 'withdraw'
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-black'
-                  }`}
-                >
-                  Withdraw
-                </button>
+                  text='Withdraw'
+                  variation='plain'
+                  size='medium'
+                  className='w-fit! border border-black!'
+                  onClick={() => handleModalOpen('withdraw')}
+                />
               </div>
             </div>
           )}
@@ -241,12 +262,20 @@ const AccountWallet = () => {
                             }`}
                           >
                             {isPositive ? '+' : '-'}
-                            {formatCurrency(item.amount, item.currency)}
+                            {formatCurrency(toMajorUnits(item.amount), item.currency)}
                           </span>
                           <StatusBadge
                             value={item.status}
                             statusConfig={TransactionStatusConfig}
                           />
+                          {(item.type === 'DEPOSIT' ||
+                            item.type === 'WITHDRAWAL') &&
+                            item.status === 'PENDING' && (
+                              <CheckTransactionStatus
+                                id={item.id}
+                                type={item.type}
+                              />
+                            )}
                         </div>
                       </div>
                     )
@@ -277,13 +306,8 @@ const AccountWallet = () => {
         handleClose={() => {
           handleModalClose()
         }}
+        wallet={wallet!}
       />
-      {/* <TransferToTrading
-        open={modalOpen && modal === 'transfer'}
-        handleClose={handleModalClose}
-        winningsBalance={wallet?.winnings}
-        currency={wallet?.currency}
-      /> */}
     </main>
   )
 }

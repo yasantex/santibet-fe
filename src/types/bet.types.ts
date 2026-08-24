@@ -9,7 +9,7 @@ export type BetStatus =
   | 'REJECTED'
   | 'EXPIRED'
 
-export type PositionStatusApi = 'OPEN' | 'CLOSED' | 'SETTLED'
+export type PositionStatusApi = 'open' | 'closed' | 'settled'
 
 export interface Money {
   amount: string

@@ -98,12 +98,6 @@ export interface WithdrawalAccountsListResponse {
   data: WithdrawalAccount[]
 }
 
-export interface AddWithdrawalAccountRequest {
-  accountNumber: string
-  bankCode: string
-  label: string
-}
-
 export interface WithdrawalRecord {
   id: string
   amount: string
@@ -129,3 +123,24 @@ export interface CryptoAddressResponse {
   network: string
   destinationTag: string | null
 }
+
+export interface CryptoWithdrawalAccount {
+  address: string
+  network: string
+  currency: string
+  label: string
+}
+
+export interface CrytpoAddress {
+  id: string;
+  address: string;
+  network: string;
+  currency: string;
+  label: string;
+  verified: boolean;
+  createdAt: string; 
+}
+export interface CryptoWalletResponse {
+  data: CrytpoAddress[];
+}
+
