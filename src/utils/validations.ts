@@ -1,18 +1,39 @@
 import * as Yup from 'yup'
 
-const E164_REGEX = /^\+[1-9]\d{1,14}$/
-
 export const SignInSchema = Yup.object({
+  identifier: Yup.string().required('Email or phone number is required'),
+
+  password: Yup.string().required('Password is required'),
+})
+
+const phoneRegExp = /^\+?[0-9]{7,15}$/
+
+export const IdentifierSchema = Yup.object().shape({
   identifier: Yup.string()
-    .required('Email or phone number is required')
+    .required('Email address or phone number is required')
     .test(
       'is-email-or-phone',
       'Enter a valid email address or phone number',
       (value) =>
         !!value &&
-        (Yup.string().email().isValidSync(value) || E164_REGEX.test(value)),
+        (Yup.string().email().isValidSync(value) || phoneRegExp.test(value)),
     ),
+})
+
+export const PasswordOnlySchema = Yup.object().shape({
   password: Yup.string().required('Password is required'),
+})
+
+export const CodeSchema = Yup.object().shape({
+  code: Yup.string()
+    .required('Enter the code we sent you')
+    .matches(/^\d{6}$/, 'Code must be 6 digits'),
+})
+
+export const SetPasswordSchema = Yup.object().shape({
+  password: Yup.string()
+    .required('Password is required')
+    .min(8, 'Password must be at least 8 characters'),
 })
 
 export const ForgotPasswordSchema = Yup.object({
@@ -70,5 +91,27 @@ export const AddWithdrawalAccountSchema = Yup.object().shape({
     .matches(/^\d{10}$/, 'Enter a valid 10-digit account number')
     .required('Account number is required'),
   bankCode: Yup.string().required('Bank code is required'),
-  label: Yup.string().required('Label is required'),
+})
+
+export const AddCryptoWithdrawalAccountSchema = Yup.object().shape({
+  address: Yup.string()
+    .required('Wallet address is required')
+    .min(20, 'Enter a valid wallet address'),
+  network: Yup.string().required('Select a network'),
+  currency: Yup.string()
+    .required('Select a currency')
+    .oneOf(['USDC', 'USDT'], 'Unsupported currency'),
+  label: Yup.string().optional(),
+})
+
+export const VerifyEmailRequestSchema = Yup.object().shape({
+  value: Yup.string()
+    .required('Email address is required')
+    .email('Enter a valid email address'),
+})
+
+export const VerifyPhoneRequestSchema = Yup.object().shape({
+  value: Yup.string()
+    .required('Phone number is required')
+    .matches(/^\+?[0-9]{7,15}$/, 'Enter a valid phone number'),
 })

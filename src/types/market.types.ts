@@ -143,6 +143,8 @@ export interface MarketHistoryResponse {
 }
 
 export type ChartInterval = '1h' | '6h' | '1d'
+/** Chart selection: "live" plots tick trades, the rest plot OHLC candles. */
+export type ChartMode = 'live' | ChartInterval
 
 export interface ChartPoint {
   time: string

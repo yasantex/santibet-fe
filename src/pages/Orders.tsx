@@ -8,7 +8,7 @@ import FilterComponent, {
   type FilterCategory,
 } from '../components/globals/FilterComponent'
 import { useBets, useCancelBet } from '../data_layer/bets'
-import { formatCurrency, formatDate, formatSharePrice } from '../utils/functions'
+import { formatCurrency, formatDate, formatSharePrice, toMajorUnits } from '../utils/functions'
 import { showSuccessToast, showWarningToast } from '../utils/toastUtils'
 import type { Bet } from '../types/bet.types'
 
@@ -145,12 +145,12 @@ const Orders = () => {
                 <div className='flex items-center justify-between gap-5 sm:justify-end'>
                   <div className='text-right text-sm'>
                     <p className='font-semibold text-black'>
-                      {formatCurrency(bet.stake.amount, bet.stake.currency)}
+                      {formatCurrency(toMajorUnits(bet.stake.amount), bet.stake.currency)}
                     </p>
                     <p className='text-xs text-neutral-10'>
                       {formatSharePrice(Number(bet.price))} ·{' '}
                       {formatCurrency(
-                        bet.potentialReturn.amount,
+                        toMajorUnits(bet.potentialReturn.amount),
                         bet.potentialReturn.currency,
                       )}{' '}
                       to win

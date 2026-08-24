@@ -4,7 +4,7 @@ import { Button } from '../globals/Button'
 import ConfirmationModal from '../globals/ConfirmationModal'
 import { useBetPositions, useCashOut } from '../../data_layer/bets'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
-import { formatCurrency, formatSharePrice } from '../../utils/functions'
+import { formatCurrency, formatSharePrice, toMajorUnits } from '../../utils/functions'
 import type { UiMarket } from '../../types/market.types'
 import type { BetPosition } from '../../types/bet.types'
 
@@ -25,7 +25,7 @@ const SellPositionRow = ({
     position.contracts != null ? Number(position.contracts) : shares / 100
   const avgPrice = Number(position.avgPrice) || 0
   const staked = shares * avgPrice
-  const value = Number(position.currentValue.amount) || 0
+  const value = toMajorUnits(position.currentValue.amount)
   const pnl = value - staked
   const currency = position.currentValue.currency
 
@@ -63,7 +63,7 @@ const SellPositionRow = ({
         <div className='flex flex-col'>
           <span className='text-xs text-neutral-10'>Current value</span>
           <span className='text-lg font-bold text-black'>
-            {formatCurrency(position.currentValue.amount, currency)}
+            {formatCurrency(value, currency)}
           </span>
           <span
             className={`text-xs font-semibold ${
@@ -87,7 +87,7 @@ const SellPositionRow = ({
       <ConfirmationModal
         open={confirmOpen}
         title='Cash out position'
-        description={`Cash out your ${outcome?.label ?? ''} position in "${market.title}" at its current value of ${formatCurrency(position.currentValue.amount, currency)}?`}
+        description={`Cash out your ${outcome?.label ?? ''} position in "${market.title}" at its current value of ${formatCurrency(value, currency)}?`}
         confirmText='Cash out'
         isConfirming={isPending}
         onClose={() => setConfirmOpen(false)}
@@ -98,13 +98,13 @@ const SellPositionRow = ({
 }
 
 const SellPanel = ({ market }: { market: UiMarket }) => {
-  const { data, isLoading } = useBetPositions('OPEN')
+  const { data, isLoading } = useBetPositions('open')
 
   const positions = useMemo<BetPosition[]>(
     () =>
       (data?.pages ?? [])
         .flatMap((p) => p.data)
-        .filter((p) => p.marketId === market.id && p.status === 'OPEN'),
+        .filter((p) => p.marketId === market.id && p.status === 'open'),
     [data, market.id],
   )
 

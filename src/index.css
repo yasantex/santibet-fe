@@ -4,7 +4,35 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 * {
+  scrollbar-width: thin;
   box-sizing: border-box;
+  scrollbar-color: transparent transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+html.is-scrolling * {
+  scrollbar-color: rgb(156 163 175) transparent;
+}
+
+html.is-scrolling *::-webkit-scrollbar-thumb {
+  background: rgb(156 163 175);
+}
+
+html.is-scrolling *::-webkit-scrollbar-thumb:hover {
+  background: rgb(107 114 128);
 }
 
 body {
@@ -37,7 +65,7 @@ body {
   --color-card: #e4e5e3;
   --color-warning: #ff8000;
   --color-success-bg: #eefcf3;
-    --color-error-bg: #ffeded;
+  --color-error-bg: #ffeded;
   --color-glass: #e4e5e3;
   --color-placeholder: #6b706d;
   --color-market-success: #183123;

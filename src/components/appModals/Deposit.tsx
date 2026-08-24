@@ -20,8 +20,9 @@ import type {
 import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
 import { useQueryClient } from '@tanstack/react-query'
-import { formatDate } from '../../utils/functions'
+import { formatCurrency, formatDate, toMajorUnits, toMinorUnits } from '../../utils/functions'
 import { CopyButton } from '../globals/CopyButton'
+import type { UserData } from '../../types/types'
 
 type DepositStep =
   | 'method'
@@ -150,13 +151,9 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
       setAmountError('Enter a valid amount')
       return
     }
-    if (numeric < 10000) {
-      setAmountError('Enter must be greater then 10000')
-      return
-    }
     setAmountError('')
     try {
-      await startDeposit({ amount })
+      await startDeposit({ amount: String(toMinorUnits(numeric)) })
     } catch (error) {
       console.error(error)
     }
@@ -170,6 +167,11 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     }
   }
 
+  // Crypto
+  const { data: userProfile } = useSantiBetQuery<UserData>({
+    path: '/auth/me',
+  })
+
   const {
     data: cryptoAddress,
     isLoading: isLoadingAddress,
@@ -179,10 +181,14 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     enabled: step === 'crypto-address' && !!cryptoCurrency,
   })
 
-  const handleSelectMethod = (id: DepositMethod) => {
-    setMethod(id)
-    setStep(id === 'bank' ? 'amount' : 'crypto-currency')
+const handleSelectMethod = (id: DepositMethod) => {
+  if (id === 'crypto' && !userProfile?.emailVerified) {
+    showWarningToast('Please verify your email to deposit with crypto')
+    return
   }
+  setMethod(id)
+  setStep(id === 'bank' ? 'amount' : 'crypto-currency')
+}
 
   const handleSelectCryptoCurrency = (currency: CryptoCurrency) => {
     setCryptoCurrency(currency)
@@ -282,7 +288,12 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
           <div className='flex flex-col gap-2.5 rounded-lg border border-border p-4'>
             {[
-              { label: 'Amount', value: startResponse?.deposit.amount },
+              {
+                label: 'Amount',
+                value: startResponse
+                  ? formatCurrency(toMajorUnits(startResponse.deposit.amount))
+                  : undefined,
+              },
               { label: 'Bank', value: instructions.bankName },
               { label: 'Account Number', value: instructions.accountNumber },
               { label: 'Account Name', value: instructions.accountName },
@@ -298,7 +309,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
                     {row.value}
                   </span>
                 </div>
-                <CopyButton value={row.value} />
+                <CopyButton value={row.value!} />
               </div>
             ))}
           </div>

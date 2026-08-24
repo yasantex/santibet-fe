@@ -37,7 +37,7 @@ const idTypeOptions = [
   },
 ]
 
-const VerifyKyc = ({ open, handleClose }: ModalProps) => {
+const VerifyKyc = ({ open, handleClose, refetch }: ModalProps & { refetch: () => void }) => {
   const { mutateAsync: postVerify, isPending } = useSantiBetMutation<
     BaseApiResponse,
     KycPayload
@@ -54,6 +54,8 @@ const VerifyKyc = ({ open, handleClose }: ModalProps) => {
       },
       onSuccess: (data) => {
         showSuccessToast(data?.message)
+        refetch()
+        handleClose()
       },
     },
   })

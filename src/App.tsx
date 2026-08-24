@@ -26,7 +26,7 @@ const ResponsibleGambling = lazy(() => import('./pages/ResponsibleGambling'))
 const ContactSupport = lazy(() => import('./pages/ContactSupport'))
 const Faqs = lazy(() => import('./pages/Faqs'))
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
-const SignupPage = lazy(() => import('./pages/auth/SignupPage'))
+// const SignupPage = lazy(() => import('./pages/auth/SignupPage'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const RecoverPassword = lazy(() => import('./pages/auth/RecoverPassword'))
 const TwoFaPage = lazy(() => import('./pages/auth/TwoFaPage'))
@@ -70,7 +70,7 @@ function App() {
 
             <Route element={<AuthRoute />}>
               <Route path='/signin' element={<LoginPage />} />
-              <Route path='/signup' element={<SignupPage />} />
+              <Route path='/signup' element={<LoginPage />} />
               <Route path='/forgot-password' element={<ForgotPassword />} />
               <Route path='/two-fa' element={<TwoFaPage />} />
 
@@ -87,6 +87,7 @@ function App() {
               <Route path='/account-portfolio' element={<AccountPortfolio />} />
               <Route path='/orders' element={<Orders />} />
               <Route path='/refer-earn' element={<ReferEarn />} />
+
             </Route>
           </Route>
         </Routes>
