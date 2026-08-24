@@ -84,9 +84,7 @@ const DisableTwoFactorModal = ({ open, handleClose }: ModalProps) => {
           type='text'
           name='code'
           value={values.code}
-          hasTitle
-          title='Verification code'
-          placeholder='6-digit code'
+          placeholder='enter 6-digit code'
           onChange={(e) => {
             const val = e.target.value.replace(/\D/g, '').slice(0, 6)
             handleChange({ target: { name: 'code', value: val } })
@@ -99,9 +97,7 @@ const DisableTwoFactorModal = ({ open, handleClose }: ModalProps) => {
           type='password'
           name='password'
           value={values.password}
-          hasTitle
-          title='Password'
-          placeholder='Enter your password'
+          placeholder='enter your password'
           onChange={handleChange}
           onBlur={handleBlur}
           errors={errors.password && touched.password ? errors.password : ''}

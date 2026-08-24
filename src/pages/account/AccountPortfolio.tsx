@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import PositionCard from '../../components/markets/PositionCard'
 import { Button } from '../../components/globals/Button'
 import { useBetPositions } from '../../data_layer/bets'
-import { formatCurrency } from '../../utils/functions'
+import { formatCurrency, toMajorUnits } from '../../utils/functions'
 import type { BetPosition } from '../../types/bet.types'
 
 type PortfolioTab = 'open' | 'settled'
@@ -17,7 +17,7 @@ const AccountPortfolio = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useBetPositions()
+  } = useBetPositions(activeTab)
 
   const positions = useMemo<BetPosition[]>(
     () => (data?.pages ?? []).flatMap((p) => p.data),
@@ -31,11 +31,11 @@ const AccountPortfolio = () => {
     let staked = 0
     let open = 0
     positions.forEach((p) => {
-      const v = Number(p.currentValue.amount) || 0
+      const v = toMajorUnits(p.currentValue.amount)
       const s = (Number(p.shares) || 0) * (Number(p.avgPrice) || 0)
       value += v
       staked += s
-      if (p.status === 'OPEN') open += 1
+      if (p.status === 'open') open += 1
     })
     return { value, pnl: value - staked, open }
   }, [positions])
@@ -43,7 +43,7 @@ const AccountPortfolio = () => {
   const filtered = useMemo(
     () =>
       positions.filter((p) =>
-        activeTab === 'open' ? p.status === 'OPEN' : p.status !== 'OPEN',
+        activeTab === 'open' ? p.status === 'open' : p.status !== 'open',
       ),
     [positions, activeTab],
   )
@@ -97,7 +97,7 @@ const AccountPortfolio = () => {
             onClick={() => setActiveTab(status)}
             className={`rounded-full px-5 py-1.5 text-sm font-semibold capitalize transition-colors ${
               activeTab === status
-                ? 'bg-text-black text-white'
+                ? 'bg-text-black text-white dark:text-neutral-10'
                 : 'text-placeholder'
             }`}
           >

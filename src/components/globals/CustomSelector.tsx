@@ -224,7 +224,7 @@ const CustomSelector: React.FC<CustomSelectorProps> = ({
             {enableSearch && (
               <div className='flex items-center justify-center my-2.5 h-12 px-2.5 w-full'>
                 <div className='flex items-center w-full h-10 gap-2.5 px-3 py-2 border-[0.5px] border-border bg-hover!'>
-                  <HugeiconsIcon icon={Search01Icon} size={16} />
+                  <HugeiconsIcon icon={Search01Icon} size={16} className='text-black' />
                   <input
                     type='text'
                     value={searchTerm}

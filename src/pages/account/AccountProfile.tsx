@@ -11,16 +11,10 @@ import {
   ArrowRight01Icon,
 } from '@hugeicons/core-free-icons'
 import { useAppSelector } from '../../utils/hooks'
-import type {
-  BaseApiResponse,
-  KycStatusResponse,
-  UserData,
-} from '../../types/types'
-import { useSantiBetMutation, useSantiBetQuery } from '../../data_layer/utils'
+import type { KycStatusResponse, UserData } from '../../types/types'
+import { useSantiBetQuery } from '../../data_layer/utils'
 import useLogout from '../../hooks/useLogout'
 import { ProfileAvatar } from '../../components/globals/ReusedText'
-import { isAxiosError } from 'axios'
-import { showWarningToast } from '../../utils/toastUtils'
 import { useModalControl } from '../../hooks/useModalControl'
 import VerifyEmail from '../../components/appModals/auth/VerifyEmail'
 import { Button } from '../../components/globals/Button'
@@ -67,12 +61,17 @@ const ProfileSection = ({ title, rows }: ProfileSectionData) => (
 )
 
 const AccountProfile = () => {
-  const { data: userProfile, isLoading } = useSantiBetQuery<UserData>({
+  const {
+    data: userProfile,
+    isLoading,
+    refetch,
+  } = useSantiBetQuery<UserData>({
     path: '/auth/me',
   })
-  const { data: kycStatus } = useSantiBetQuery<KycStatusResponse>({
-    path: 'kyc',
-  })
+  const { data: kycStatus, isLoading: kycLoading } =
+    useSantiBetQuery<KycStatusResponse>({
+      path: 'kyc',
+    })
 
   const { user } = useAppSelector((state) => state.user)
   const { logout } = useLogout()
@@ -150,56 +149,6 @@ const AccountProfile = () => {
     },
   ]
 
-  const { mutateAsync: requestEmailVerification, isPending } =
-    useSantiBetMutation<BaseApiResponse>({
-      path: `/auth/verify/email/request`,
-      mutationOptions: {
-        onError: (error) => {
-          if (isAxiosError(error)) {
-            const errorData = error.response?.data
-            showWarningToast(errorData?.message)
-          } else {
-            showWarningToast(error.message)
-          }
-        },
-        onSuccess: () => {
-          handleModalOpen('verifyEmail')
-        },
-      },
-    })
-
-  const { mutateAsync: requestPhoneVerification, isPending: phonePending } =
-    useSantiBetMutation<BaseApiResponse, { phone: string }>({
-      path: `/auth/verify/phone/request`,
-      mutationOptions: {
-        onError: (error) => {
-          if (isAxiosError(error)) {
-            const errorData = error.response?.data
-            showWarningToast(errorData?.message)
-          } else {
-            showWarningToast(error.message)
-          }
-        },
-        onSuccess: () => {
-          handleModalOpen('verifyPhone')
-        },
-      },
-    })
-
-  const handleRequest = async () => {
-    try {
-      await requestEmailVerification({})
-    } catch {}
-  }
-
-  const handlePhoneRequest = async () => {
-    try {
-      await requestPhoneVerification({
-        phone: profile?.phone ?? '',
-      })
-    } catch {}
-  }
-
   return (
     <main className='mx-auto flex flex-col gap-6 pt-4 pb-20 px-3 md:px-8'>
       <h1 className='text-[18px] not-first:md:text-[28px] font-bold text-black'>
@@ -222,7 +171,7 @@ const AccountProfile = () => {
                 <div className='h-3.5 w-24 animate-pulse rounded bg-neutral-10/20' />
               </>
             ) : (
-              <>
+              <div className='flex flex-col gap-5'>
                 <p className='text-base font-semibold text-nlack'>
                   {profile?.name ?? '—'}
                 </p>
@@ -237,12 +186,11 @@ const AccountProfile = () => {
                       </span>
                     ) : (
                       <Button
-                        onClick={handlePhoneRequest}
+                        onClick={() => handleModalOpen('verifyPhone')}
                         type='button'
                         size='small'
                         text='Verify phone'
                         variation='error'
-                        disabled={phonePending}
                       />
                     )
                   ) : null}
@@ -257,16 +205,15 @@ const AccountProfile = () => {
                     </span>
                   ) : (
                     <Button
-                      onClick={handleRequest}
+                      onClick={() => handleModalOpen('verifyEmail')}
                       type='button'
                       size='small'
                       text='Verify email'
                       variation='error'
-                      disabled={isPending}
                     />
                   )}
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -275,7 +222,9 @@ const AccountProfile = () => {
             KYC Verification
           </span>
 
-          {kycStatus?.status === 'NOT_STARTED' ? (
+          {kycLoading ? (
+            <div className='h-6 w-20 animate-pulse rounded-full bg-neutral-10/20' />
+          ) : kycStatus?.status === 'NOT_STARTED' ? (
             <Button
               onClick={() => handleModalOpen('verifyKyc')}
               type='button'
@@ -283,7 +232,6 @@ const AccountProfile = () => {
               text='Verify KYC'
               variation='error'
               className='w-fit!'
-              disabled={isPending}
             />
           ) : (
             <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
@@ -302,7 +250,7 @@ const AccountProfile = () => {
         onClick={() => {
           logout()
         }}
-        className='rounded-lg cursor-pointer bg-card px-4 py-4 text-sm font-semibold text-error'
+        className='rounded-lg cursor-pointer bg-card hover:bg-hover px-4 py-4 text-sm font-semibold text-error'
       >
         Log Out
       </button>
@@ -312,6 +260,8 @@ const AccountProfile = () => {
           handleModalClose()
         }}
         type='email'
+        defaultValue={profile?.email}
+        refetch={refetch}
       />
       <VerifyEmail
         open={modalOpen && modal === 'verifyPhone'}
@@ -319,6 +269,8 @@ const AccountProfile = () => {
           handleModalClose()
         }}
         type='phone'
+        defaultValue={profile?.phone}
+        refetch={refetch!}
       />
       <Security
         open={modalOpen && modal === 'security'}
@@ -331,6 +283,7 @@ const AccountProfile = () => {
         handleClose={() => {
           handleModalClose()
         }}
+        refetch={refetch!}
       />
     </main>
   )

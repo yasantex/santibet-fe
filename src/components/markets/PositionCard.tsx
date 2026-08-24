@@ -5,7 +5,7 @@ import ModalComponent from '../globals/ModalComponent'
 import { Button } from '../globals/Button'
 import { useMarket } from '../../data_layer/markets'
 import { useCashOut } from '../../data_layer/bets'
-import { formatCurrency, formatSharePrice } from '../../utils/functions'
+import { formatCurrency, formatSharePrice, toMajorUnits } from '../../utils/functions'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import type { BetPosition } from '../../types/bet.types'
 
@@ -32,10 +32,10 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
     position.contracts != null ? Number(position.contracts) : shares / 100
   const avgPrice = Number(position.avgPrice) || 0
   const staked = shares * avgPrice
-  const value = Number(position.currentValue.amount) || 0
+  const value = toMajorUnits(position.currentValue.amount)
   const pnl = value - staked
   const isProfit = pnl >= 0
-  const isOpen = position.status === 'OPEN'
+  const isOpen = position.status === 'open'
 
   const handleCashOut = async () => {
     try {
@@ -97,7 +97,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
         <span>
           Value{' '}
           {formatCurrency(
-            position.currentValue.amount,
+            value,
             position.currentValue.currency,
           )}
         </span>
@@ -137,10 +137,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
             <span className='font-semibold text-black'>{title}</span> at its
             current value of{' '}
             <span className='font-semibold text-black'>
-              {formatCurrency(
-                position.currentValue.amount,
-                position.currentValue.currency,
-              )}
+              {formatCurrency(value, position.currentValue.currency)}
             </span>
             ?
           </p>

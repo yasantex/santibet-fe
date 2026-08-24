@@ -104,7 +104,7 @@ const FilterComponent = ({
       <button
         type='button'
         onClick={() => setIsOpen((prev) => !prev)}
-        className='flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold text-black'
+        className='flex items-center gap-1.5 rounded-full hover:bg-hover cursor-pointer border border-border bg-card px-3.5 py-2 text-xs font-semibold text-black'
       >
         <HugeiconsIcon icon={FilterIcon} size={14} />
         {buttonText}
