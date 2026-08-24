@@ -24,12 +24,13 @@ import {
   formatSharePrice,
 } from '../../utils/functions'
 import { showSuccessToast } from '../../utils/toastUtils'
-import type { ChartInterval, UiOutcome } from '../../types/market.types'
+import type { ChartMode, UiOutcome } from '../../types/market.types'
 
-const CHART_PERIODS: { label: string; interval: ChartInterval }[] = [
-  { label: '1H', interval: '1h' },
-  { label: '6H', interval: '6h' },
-  { label: '1D', interval: '1d' },
+const CHART_PERIODS: { label: string; mode: ChartMode }[] = [
+  { label: 'Live', mode: 'live' },
+  { label: '1H', mode: '1h' },
+  { label: '6H', mode: '6h' },
+  { label: '1D', mode: '1d' },
 ]
 
 const MarketDetail = () => {
@@ -39,7 +40,7 @@ const MarketDetail = () => {
   const [selectedId, setSelectedId] = useState<string | undefined>(
     searchParams.get('outcome') ?? undefined,
   )
-  const [interval, setInterval] = useState<ChartInterval>('1h')
+  const [chartMode, setChartMode] = useState<ChartMode>('live')
   const [infoTab, setInfoTab] = useState<'rules' | 'trades'>('rules')
 
   const eventId = searchParams.get('event') ?? undefined
@@ -54,7 +55,7 @@ const MarketDetail = () => {
     )
   }, [market, selectedId])
 
-  const { data: chart } = useMarketChart(id, selectedOutcome?.id, interval)
+  const { data: chart } = useMarketChart(id, selectedOutcome?.id, chartMode)
   const chartData = chart?.points ?? []
   const trades = chart?.trades
 
@@ -179,15 +180,24 @@ const MarketDetail = () => {
               <div className='flex items-center gap-1'>
                 {CHART_PERIODS.map((p) => (
                   <button
-                    key={p.interval}
+                    key={p.mode}
                     type='button'
-                    onClick={() => setInterval(p.interval)}
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
-                      interval === p.interval
+                    onClick={() => setChartMode(p.mode)}
+                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+                      chartMode === p.mode
                         ? 'bg-brand-green text-black dark:text-text-black!'
                         : 'text-neutral-10 hover:text-black'
                     }`}
                   >
+                    {p.mode === 'live' && (
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          chartMode === 'live'
+                            ? 'animate-pulse bg-black'
+                            : 'bg-error'
+                        }`}
+                      />
+                    )}
                     {p.label}
                   </button>
                 ))}

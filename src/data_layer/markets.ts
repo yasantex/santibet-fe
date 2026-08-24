@@ -15,6 +15,7 @@ import type {
   ApiMarket,
   ApiMarketListResponse,
   ChartInterval,
+  ChartMode,
   LobbyCategory,
   LobbyEvent,
   LobbyEventListResponse,
@@ -435,16 +436,32 @@ const chartTimeLabel = (iso: string, interval: ChartInterval): string => {
  * candle history (Polymarket candles for imported markets, internal trades for
  * native ones); on the raw fallback feed it derives points from recent trades.
  */
+const tradesToPoints = (
+  trades: MarketTrade[],
+  outcomeId?: string,
+): MarketChart['points'] =>
+  [...(outcomeId ? trades.filter((t) => t.outcomeId === outcomeId) : trades)]
+    .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
+    .map((t) => ({
+      time: new Date(t.ts).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      value: toCents(t.price),
+    }))
+
 export const useMarketChart = (
   id?: string,
   outcomeId?: string,
-  interval: ChartInterval = '1h',
-) =>
-  useQuery<MarketChart>({
-    queryKey: ['market-chart', id, outcomeId, interval],
+  mode: ChartMode = 'live',
+) => {
+  const interval: ChartInterval = mode === 'live' ? '1h' : mode
+  return useQuery<MarketChart>({
+    queryKey: ['market-chart', id, outcomeId, mode],
     enabled: !!id,
     retry: false,
-    refetchInterval: 30000,
+    // Live view polls fast; candle intervals refresh more lazily.
+    refetchInterval: mode === 'live' ? 5000 : 30000,
     queryFn: async () => {
       const feed = await resolveFeed()
       if (feed === 'lobby') {
@@ -452,10 +469,6 @@ export const useMarketChart = (
           `${LOBBY_BASE}/markets/${id}/history`,
           { outcomeId, interval },
         )
-        const points = (h.candles ?? []).map((c) => ({
-          time: chartTimeLabel(c.at, interval),
-          value: toCents(c.close),
-        }))
         const trades: MarketTrade[] = (h.trades ?? []).map((t, i) => ({
           id: `${t.at}-${i}`,
           marketId: h.marketId,
@@ -465,25 +478,24 @@ export const useMarketChart = (
           side: 'buy',
           ts: t.at,
         }))
+        const points =
+          mode === 'live'
+            ? tradesToPoints(trades, outcomeId)
+            : (h.candles ?? []).map((c) => ({
+                time: chartTimeLabel(c.at, interval),
+                value: toCents(c.close),
+              }))
         return { points, trades }
       }
 
-      // Raw fallback feed: build points from recent trades.
+      // Raw fallback feed: both live and interval views derive from trades.
       const raw = await get<MarketTrade[]>(`${MARKET_BASE}/markets/${id}/trades`, {
         limit: 60,
       })
-      const forOutcome = outcomeId
-        ? raw.filter((t) => t.outcomeId === outcomeId)
-        : raw
-      const points = [...forOutcome]
-        .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
-        .map((t) => ({
-          time: chartTimeLabel(t.ts, interval),
-          value: toCents(t.price),
-        }))
-      return { points, trades: raw }
+      return { points: tradesToPoints(raw, outcomeId), trades: raw }
     },
   })
+}
 
 // ── Search ────────────────────────────────────────────────────────────
 // The events endpoint ignores `q` server-side, so we fetch a batch once and
