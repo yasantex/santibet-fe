@@ -5,7 +5,7 @@ import MarketCard from '../components/markets/MarketCard'
 import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon } from '@hugeicons/core-free-icons'
-import { useEvents } from '../data_layer/markets'
+import { useEvents, useLobbyHome } from '../data_layer/markets'
 import { marketHref } from '../utils/marketDisplay'
 import type { UiMarket, UiOutcome } from '../types/market.types'
 import { formatNairaCompact } from '../utils/functions'
@@ -15,6 +15,18 @@ const MarketsDashboard = () => {
   const [activeCategory, setActiveCategory] = useState('All')
 
   const { data, isLoading, isError, refetch } = useEvents({ limit: 60 })
+  const { data: home } = useLobbyHome()
+
+  const closingSoon = useMemo<UiMarket[]>(() => {
+    return (home?.closingSoon ?? [])
+      .flatMap((e) => e.markets)
+      .filter((m) => m.yes && m.status !== 'closed')
+      .sort(
+        (a, b) =>
+          new Date(a.closeTime).getTime() - new Date(b.closeTime).getTime(),
+      )
+      .slice(0, 8)
+  }, [home])
 
   const allMarkets = useMemo<UiMarket[]>(() => {
     const markets = (data?.events ?? []).flatMap((e) => e.markets)
@@ -89,6 +101,32 @@ const MarketsDashboard = () => {
           </div>
         )}
       </div>
+
+      {closingSoon.length > 0 && (
+        <section className='flex flex-col gap-3'>
+          <div className='flex items-center gap-2'>
+            <span className='flex items-center gap-1.5 rounded-full bg-error/10 px-2.5 py-0.5 text-xs font-bold text-error'>
+              <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-error' />
+              LIVE
+            </span>
+            <h2 className='text-sm font-semibold text-black uppercase'>
+              Closing soon
+            </h2>
+          </div>
+          <div className='hide-scroll-bar flex gap-4 overflow-x-auto pb-1'>
+            {closingSoon.map((market) => (
+              <div key={market.id} className='w-[260px] shrink-0'>
+                <MarketCard
+                  market={market}
+                  live
+                  onSelect={goToMarket}
+                  onSelectOutcome={goToTrade}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {categories.length > 1 && (
         <div className='hide-scroll-bar flex items-center gap-2 overflow-x-auto'>
