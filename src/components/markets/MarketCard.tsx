@@ -3,6 +3,7 @@ import { Bookmark02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
 import { categoryIcon } from '../../utils/marketDisplay'
+import { MarketCountdown } from '../globals/ReusedText'
 
 const OutcomeRow = ({
   outcome,
@@ -54,6 +55,8 @@ interface MarketCardProps {
   onSelect?: (market: UiMarket) => void
   onSelectOutcome?: (market: UiMarket, outcome: UiOutcome) => void
   onSave?: (market: UiMarket) => void
+  /** Show a LIVE badge + ticking countdown in the header. */
+  live?: boolean
 }
 
 const MarketCard = ({
@@ -61,6 +64,7 @@ const MarketCard = ({
   onSelect,
   onSelectOutcome,
   onSave,
+  live = false,
 }: MarketCardProps) => {
   return (
     <div
@@ -88,6 +92,12 @@ const MarketCard = ({
           <span className='text-xs font-medium text-neutral-10'>
             {market.category}
           </span>
+          {live && (
+            <span className='flex items-center gap-1 rounded-full bg-error/10 px-2 py-0.5 text-[10px] font-bold text-error'>
+              <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-error' />
+              LIVE
+            </span>
+          )}
         </div>
         <button
           type='button'
@@ -122,9 +132,16 @@ const MarketCard = ({
       </div>
 
       <div className='flex items-center justify-between pt-1'>
-        <span className='text-xs text-placeholder'>
-          Volume: {formatNairaCompact(market.volume)}
-        </span>
+        {live ? (
+          <MarketCountdown
+            openTime={market.openTime}
+            closeTime={market.closeTime}
+          />
+        ) : (
+          <span className='text-xs text-placeholder'>
+            Volume: {formatNairaCompact(market.volume)}
+          </span>
+        )}
         <span className='flex items-center gap-0.5 text-xs font-semibold text-neutral-10'>
           Explore
           <HugeiconsIcon icon={ArrowRight01Icon} size={14} />
