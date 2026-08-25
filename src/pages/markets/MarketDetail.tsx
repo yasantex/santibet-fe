@@ -14,8 +14,14 @@ import {
   Link01Icon,
   Bookmark02Icon,
 } from '@hugeicons/core-free-icons'
-import { useMarket, useMarketChart } from '../../data_layer/markets'
+import {
+  useMarket,
+  useMarketChart,
+  useLobbyStream,
+} from '../../data_layer/markets'
 import TradePanel from '../../components/markets/TradePanel'
+import { LiveBadge } from '../../components/markets/LiveBits'
+import { useCountdown } from '../../hooks/useCountdown'
 import { categoryIcon } from '../../utils/marketDisplay'
 import {
   formatCloseTimer,
@@ -56,9 +62,20 @@ const MarketDetail = () => {
     )
   }, [market, selectedId])
 
-  const { data: chart } = useMarketChart(id, selectedOutcome?.id, chartMode)
+  // Drive chart/stream off the *resolved* market id only (a recurring round may
+  // differ from the ephemeral id in the URL after a rollover) — waiting for it
+  // avoids a throwaway 404 against the stale URL id.
+  const marketId = market?.id
+  const { data: chart } = useMarketChart(marketId, selectedOutcome?.id, chartMode)
   const chartData = chart?.points ?? []
   const trades = chart?.trades
+
+  // Live odds via SSE for in-play markets; ticking countdown for the close time.
+  useLobbyStream({
+    marketIds: marketId ? [marketId] : [],
+    enabled: !!market?.live,
+  })
+  const countdown = useCountdown(market?.openTime, market?.closeTime)
 
   // Live shows tick trades; when a market has none yet, fall back to the 1H
   // candle view automatically (unless the user has picked a period themselves).
@@ -166,19 +183,29 @@ const MarketDetail = () => {
               </div>
             </div>
             <div className='flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-10'>
-              <span
-                className={`rounded-full px-2 py-0.5 font-semibold capitalize ${
-                  market.status === 'open'
-                    ? 'bg-success-bg text-success'
-                    : 'bg-hover/60 text-neutral-10'
-                }`}
-              >
-                {market.status}
-              </span>
+              {market.live ? (
+                <LiveBadge />
+              ) : (
+                <span
+                  className={`rounded-full px-2 py-0.5 font-semibold capitalize ${
+                    market.status === 'open'
+                      ? 'bg-success-bg text-success'
+                      : 'bg-hover/60 text-neutral-10'
+                  }`}
+                >
+                  {market.status}
+                </span>
+              )}
               <span>Volume: {formatNairaCompact(market.volume)}</span>
               <span>Liquidity: {formatNairaCompact(market.liquidity)}</span>
-              {market.closeTime && (
-                <span>{formatCloseTimer(market.closeTime)}</span>
+              {market.live && countdown.display ? (
+                <span className='font-semibold text-error'>
+                  {countdown.label} in {countdown.display}
+                </span>
+              ) : (
+                market.closeTime && (
+                  <span>{formatCloseTimer(market.closeTime)}</span>
+                )
               )}
             </div>
           </div>
