@@ -180,6 +180,9 @@ export interface UiMarket {
   liquidity: number
   slug?: string
   imageUrl?: string | null
+  live?: boolean
+  seriesKey?: string | null
+  durationSeconds?: number | null
   resolvedOutcomeId?: string | null
   rules?: string | null
   outcomes: UiOutcome[]
@@ -196,6 +199,8 @@ export interface UiEvent {
   closeTime: string
   slug?: string
   imageUrl?: string | null
+  live?: boolean
+  liveState?: LiveState | null
   markets: UiMarket[]
 }
 
@@ -234,6 +239,14 @@ export interface LobbyCategory extends LobbyCategoryRef {
   eventCount: number
 }
 
+/** In-play state for a live (sports) event. */
+export interface LiveState {
+  status: string
+  period?: string | null
+  clock?: string | null
+  scores: { competitor: string; score: number }[]
+}
+
 export interface LobbyMarket {
   id: string
   slug: string
@@ -247,6 +260,9 @@ export interface LobbyMarket {
   liquidity: string
   openTime: string
   closeTime: string
+  live?: boolean
+  seriesKey?: string | null
+  durationSeconds?: number | null
   resolvedOutcomeId: string | null
   outcomes: LobbyOutcome[]
 }
@@ -262,6 +278,8 @@ export interface LobbyEvent {
   category: LobbyCategoryRef | null
   closeTime: string
   featured: boolean
+  live?: boolean
+  liveState?: LiveState | null
   marketCount: number
   markets: LobbyMarket[]
 }

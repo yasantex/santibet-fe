@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import FeaturedMarketCard from '../components/markets/FeaturedMarketCard'
 import MarketCard from '../components/markets/MarketCard'
+import LiveEventCard from '../components/markets/LiveEventCard'
+import { LiveBadge } from '../components/markets/LiveBits'
 import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon } from '@hugeicons/core-free-icons'
-import { useEvents, useLobbyHome } from '../data_layer/markets'
+import { useEvents, useLiveEvents, useLobbyHome } from '../data_layer/markets'
 import { marketHref } from '../utils/marketDisplay'
-import type { UiMarket, UiOutcome } from '../types/market.types'
+import type { UiEvent, UiMarket, UiOutcome } from '../types/market.types'
 import { formatNairaCompact } from '../utils/functions'
 
 const MarketsDashboard = () => {
@@ -16,6 +19,11 @@ const MarketsDashboard = () => {
 
   const { data, isLoading, isError, refetch } = useEvents({ limit: 60 })
   const { data: home } = useLobbyHome()
+  const { data: liveData } = useLiveEvents({ limit: 8 })
+  const liveEvents = useMemo<UiEvent[]>(
+    () => liveData?.events ?? [],
+    [liveData],
+  )
 
   const closingSoon = useMemo<UiMarket[]>(() => {
     return (home?.closingSoon ?? [])
@@ -101,6 +109,36 @@ const MarketsDashboard = () => {
           </div>
         )}
       </div>
+
+      {liveEvents.length > 0 && (
+        <section className='flex flex-col gap-3'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-2'>
+              <LiveBadge />
+              <h2 className='text-sm font-semibold text-black uppercase'>
+                Live now
+              </h2>
+            </div>
+            <Link
+              to='/live'
+              className='text-xs font-semibold text-neutral-10 hover:text-black'
+            >
+              See all
+            </Link>
+          </div>
+          <div className='hide-scroll-bar flex gap-4 overflow-x-auto pb-1'>
+            {liveEvents.map((event) => (
+              <div key={event.id} className='w-[280px] shrink-0'>
+                <LiveEventCard
+                  event={event}
+                  onSelectMarket={goToMarket}
+                  onSelectOutcome={goToTrade}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {closingSoon.length > 0 && (
         <section className='flex flex-col gap-3'>

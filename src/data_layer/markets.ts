@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   useInfiniteQuery,
   useQuery,
+  useQueryClient,
   type InfiniteData,
 } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
@@ -155,6 +156,9 @@ export const normalizeLobbyMarket = (
     liquidity: Number(m.liquidity) || 0,
     slug: m.slug,
     imageUrl: m.imageUrl ?? imageUrl,
+    live: m.live ?? false,
+    seriesKey: m.seriesKey ?? null,
+    durationSeconds: m.durationSeconds ?? null,
     resolvedOutcomeId: m.resolvedOutcomeId,
     rules: m.rules,
     outcomes,
@@ -173,6 +177,8 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
     closeTime: e.closeTime,
     slug: e.slug,
     imageUrl: e.imageUrl,
+    live: e.live ?? false,
+    liveState: e.liveState ?? null,
     markets: (e.markets ?? []).map((m) =>
       normalizeLobbyMarket(m, category, e.id, e.imageUrl),
     ),
@@ -281,6 +287,19 @@ export const useMarket = (id?: string, eventId?: string) =>
           )
         } catch (err) {
           if (!(isAxiosError(err) && err.response?.status === 404)) throw err
+          // Recurring series (e.g. BTC hourly) roll over: the round id is
+          // ephemeral. Resolve the *current* round via the stable event.
+          if (eventId) {
+            const ev = normalizeLobbyEvent(
+              await get<LobbyEvent>(`${LOBBY_BASE}/events/${eventId}`),
+            )
+            const current =
+              ev.markets.find((m) => m.id === id) ??
+              ev.markets.find((m) => m.live) ??
+              ev.markets[0]
+            if (current) return current
+          }
+          // else fall through to the raw catalogue below
         }
       }
 
@@ -318,10 +337,12 @@ export const useMarket = (id?: string, eventId?: string) =>
 export interface EventQueryParams extends QueryParams {
   provider?: string
   status?: string
+  source?: string
   category?: string
   q?: string
   featured?: boolean
-  sort?: string
+  live?: boolean
+  sort?: 'trending' | 'closing_soon' | 'newest'
   limit?: number
 }
 
@@ -364,6 +385,86 @@ export const useEventsInfinite = (params: EventQueryParams = {}) =>
     queryFn: ({ pageParam }) => fetchEvents(params, pageParam),
     getNextPageParam: (last) => last.cursor ?? undefined,
   })
+
+/**
+ * In-play events (GET /api/lobby/live). Lobby feed only — the raw catalogue has
+ * no live concept, so it resolves to an empty list there.
+ */
+export const useLiveEvents = (params: EventQueryParams = {}, enabled = true) =>
+  useQuery({
+    queryKey: ['lobby-live', params],
+    enabled,
+    refetchInterval: 15000,
+    queryFn: async (): Promise<{ events: UiEvent[]; cursor: string | null }> => {
+      const feed = await resolveFeed()
+      if (feed !== 'lobby') return { events: [], cursor: null }
+      const res = await get<LobbyEventListResponse>(`${LOBBY_BASE}/live`, params)
+      return {
+        events: (res.data ?? []).map(normalizeLobbyEvent),
+        cursor: res.cursor,
+      }
+    },
+  })
+
+/**
+ * Live odds via SSE (GET /api/lobby/stream?markets=&event=). The backend pushes
+ * on every odds change; we use each message as a throttled "refresh" signal and
+ * re-fetch the affected market/chart/event queries so prices stay live.
+ * NOTE: confirm the SSE event name/payload with backend to move to targeted
+ * cache updates instead of refetch-on-tick.
+ */
+export const useLobbyStream = (opts: {
+  marketIds?: string[]
+  eventId?: string
+  enabled?: boolean
+}) => {
+  const qc = useQueryClient()
+  const { marketIds, eventId, enabled = true } = opts
+  const lastRef = useRef(0)
+  const key = (marketIds ?? []).join(',')
+
+  useEffect(() => {
+    if (!enabled || (!key && !eventId)) return
+    if (typeof window === 'undefined' || !('EventSource' in window)) return
+
+    const base = import.meta.env.VITE_APP_API_BASE_URL || ''
+    const params = new URLSearchParams()
+    if (key) params.set('markets', key)
+    if (eventId) params.set('event', eventId)
+
+    let es: EventSource | null = null
+    try {
+      es = new EventSource(`${base}/lobby/stream?${params.toString()}`, {
+        withCredentials: true,
+      })
+    } catch {
+      return
+    }
+
+    const onTick = () => {
+      const now = Date.now()
+      if (now - lastRef.current < 2500) return // throttle bursts
+      lastRef.current = now
+      ;(key ? key.split(',') : []).forEach((mid) => {
+        qc.invalidateQueries({ queryKey: ['market', mid] })
+        qc.invalidateQueries({ queryKey: ['market-chart', mid] })
+      })
+      if (eventId) qc.invalidateQueries({ queryKey: ['event', eventId] })
+      qc.invalidateQueries({ queryKey: ['lobby-live'] })
+    }
+
+    es.onmessage = onTick
+    // Cover named SSE events too (odds/update/tick) in case the default channel isn't used.
+    ;['odds', 'update', 'tick'].forEach((name) =>
+      es?.addEventListener(name, onTick),
+    )
+    es.onerror = () => {
+      /* EventSource auto-reconnects; ignore transient errors */
+    }
+
+    return () => es?.close()
+  }, [qc, enabled, key, eventId])
+}
 
 export interface LobbyHomeNormalized {
   featured: UiEvent[]
