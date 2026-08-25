@@ -273,14 +273,18 @@ const MarketDetail = () => {
                       minTickGap={30}
                     />
                     <YAxis
-                      domain={[0, 100]}
-                      width={30}
+                      domain={['auto', 'auto']}
+                      width={44}
+                      tickFormatter={(v) => formatCompact(Number(v))}
                       tick={{ fontSize: 11, fill: 'var(--color-neutral-10)' }}
                       tickLine={false}
                       axisLine={false}
                     />
                     <Tooltip
-                      formatter={(v) => [`${v}%`, selectedOutcome?.label ?? '']}
+                      formatter={(v) => [
+                        formatCompact(Number(v)),
+                        selectedOutcome?.label ?? '',
+                      ]}
                       contentStyle={{
                         borderRadius: 8,
                         border: '1px solid var(--color-border)',
