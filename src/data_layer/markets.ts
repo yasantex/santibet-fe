@@ -606,13 +606,22 @@ export const useMarketChart = (
           side: 'buy',
           ts: t.at,
         }))
+        // Candle `close` is the series' own value (e.g. the underlying asset
+        // price for crypto markets) — plot it as-is; the chart auto-scales.
+        // Trade ticks carry outcome price (probability) → 0..100 via toCents.
+        const candlePoints = (h.candles ?? []).map((c) => ({
+          time: chartTimeLabel(c.at, interval),
+          value: c.close,
+        }))
+        const tradePoints = tradesToPoints(trades, outcomeId)
         const points =
           mode === 'live'
-            ? tradesToPoints(trades, outcomeId)
-            : (h.candles ?? []).map((c) => ({
-                time: chartTimeLabel(c.at, interval),
-                value: toCents(c.close),
-              }))
+            ? tradePoints.length
+              ? tradePoints
+              : candlePoints
+            : candlePoints.length
+              ? candlePoints
+              : tradePoints
         return { points, trades }
       }
 
