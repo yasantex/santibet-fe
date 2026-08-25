@@ -1,0 +1,97 @@
+import { HugeiconsIcon } from '@hugeicons/react'
+import { Clock01Icon } from '@hugeicons/core-free-icons'
+import { LiveBadge, ScoreBoard } from './LiveBits'
+import { categoryIcon } from '../../utils/marketDisplay'
+import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
+import { useCountdown } from '../../hooks/useCountdown'
+import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
+
+interface LiveEventCardProps {
+  event: UiEvent
+  onSelectMarket: (market: UiMarket) => void
+  onSelectOutcome: (market: UiMarket, outcome: UiOutcome) => void
+}
+
+const LiveEventCard = ({
+  event,
+  onSelectMarket,
+  onSelectOutcome,
+}: LiveEventCardProps) => {
+  const market = event.markets[0]
+  const { label, display } = useCountdown(market?.openTime, market?.closeTime)
+
+  if (!market) return null
+
+  return (
+    <div className='flex flex-col gap-3 rounded-2xl border border-border bg-card p-4'>
+      <div className='flex items-center justify-between'>
+        <div className='flex items-center gap-2'>
+          {event.imageUrl ? (
+            <img
+              src={event.imageUrl}
+              alt=''
+              className='h-7 w-7 shrink-0 rounded-full object-cover'
+            />
+          ) : (
+            <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-border/30 text-sm'>
+              {categoryIcon(event.category)}
+            </span>
+          )}
+          <span className='text-xs font-medium text-neutral-10'>
+            {event.category}
+          </span>
+        </div>
+        <LiveBadge />
+      </div>
+
+      <button
+        type='button'
+        onClick={() => onSelectMarket(market)}
+        className='line-clamp-2 min-h-10 text-left text-base font-bold leading-snug text-black hover:underline'
+      >
+        {market.title}
+      </button>
+
+      {event.liveState ? (
+        <ScoreBoard state={event.liveState} />
+      ) : (
+        display && (
+          <div className='flex items-center gap-1.5 text-xs font-semibold text-error'>
+            <HugeiconsIcon icon={Clock01Icon} size={14} />
+            {label} in {display}
+          </div>
+        )
+      )}
+
+      <div className='grid grid-cols-2 gap-2'>
+        {market.outcomes.slice(0, 2).map((o) => {
+          const isYes = o.id === market.yes?.id
+          return (
+            <button
+              key={o.id}
+              type='button'
+              onClick={() => onSelectOutcome(market, o)}
+              className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-bold ${
+                isYes
+                  ? 'bg-market-success text-success'
+                  : 'bg-market-error text-error'
+              }`}
+            >
+              <span className='uppercase'>{o.label}</span>
+              <span>{formatSharePrice(o.cents)}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className='flex items-center justify-between pt-0.5 text-xs text-placeholder'>
+        <span>Volume: {formatNairaCompact(market.volume)}</span>
+        {event.markets.length > 1 && (
+          <span>{event.markets.length} markets</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default LiveEventCard
