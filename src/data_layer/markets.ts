@@ -19,6 +19,7 @@ import type {
   LobbyCategory,
   LobbyEvent,
   LobbyEventListResponse,
+  LobbyHome,
   LobbyMarket,
   LobbyStatus,
   MarketChart,
@@ -362,6 +363,32 @@ export const useEventsInfinite = (params: EventQueryParams = {}) =>
     initialPageParam: undefined,
     queryFn: ({ pageParam }) => fetchEvents(params, pageParam),
     getNextPageParam: (last) => last.cursor ?? undefined,
+  })
+
+export interface LobbyHomeNormalized {
+  featured: UiEvent[]
+  trending: UiEvent[]
+  closingSoon: UiEvent[]
+  categories: LobbyCategory[]
+}
+
+/** The lobby home rails (featured / trending / closing-soon). Lobby feed only. */
+export const useLobbyHome = (limit = 12) =>
+  useQuery({
+    queryKey: ['lobby-home', limit],
+    queryFn: async (): Promise<LobbyHomeNormalized> => {
+      const feed = await resolveFeed()
+      if (feed !== 'lobby') {
+        return { featured: [], trending: [], closingSoon: [], categories: [] }
+      }
+      const h = await get<LobbyHome>(`${LOBBY_BASE}/home`, { limit })
+      return {
+        featured: (h.featured ?? []).map(normalizeLobbyEvent),
+        trending: (h.trending ?? []).map(normalizeLobbyEvent),
+        closingSoon: (h.closingSoon ?? []).map(normalizeLobbyEvent),
+        categories: h.categories ?? [],
+      }
+    },
   })
 
 export const useEvent = (id?: string) =>

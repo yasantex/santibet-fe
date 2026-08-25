@@ -41,6 +41,7 @@ const MarketDetail = () => {
     searchParams.get('outcome') ?? undefined,
   )
   const [chartMode, setChartMode] = useState<ChartMode>('live')
+  const [userPickedMode, setUserPickedMode] = useState(false)
   const [infoTab, setInfoTab] = useState<'rules' | 'trades'>('rules')
 
   const eventId = searchParams.get('event') ?? undefined
@@ -58,6 +59,22 @@ const MarketDetail = () => {
   const { data: chart } = useMarketChart(id, selectedOutcome?.id, chartMode)
   const chartData = chart?.points ?? []
   const trades = chart?.trades
+
+  // Live shows tick trades; when a market has none yet, fall back to the 1H
+  // candle view automatically (unless the user has picked a period themselves).
+  // Adjust-state-during-render pattern (react.dev/learn/you-might-not-need-an-effect).
+  const [seenChart, setSeenChart] = useState(chart)
+  if (chart !== seenChart) {
+    setSeenChart(chart)
+    if (!userPickedMode && chartMode === 'live' && chart && chart.points.length === 0) {
+      setChartMode('1h')
+    }
+  }
+
+  const pickChartMode = (mode: ChartMode) => {
+    setUserPickedMode(true)
+    setChartMode(mode)
+  }
 
   const copyLink = () => {
     void navigator.clipboard?.writeText(window.location.href)
@@ -182,7 +199,7 @@ const MarketDetail = () => {
                   <button
                     key={p.mode}
                     type='button'
-                    onClick={() => setChartMode(p.mode)}
+                    onClick={() => pickChartMode(p.mode)}
                     className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
                       chartMode === p.mode
                         ? 'bg-brand-green text-black dark:text-text-black!'
