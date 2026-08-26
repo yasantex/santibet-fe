@@ -14,7 +14,7 @@ import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
 import { useQueryClient } from '@tanstack/react-query'
 import ConfirmWithdrawal from './ConfirmWithdrawal'
-import { toMajorUnits, toMinorUnits } from '../../utils/functions'
+import { formatCurrency, toMajorUnits, toMinorUnits } from '../../utils/functions'
 
 const Withdraw = ({
   open,
@@ -129,6 +129,15 @@ const Withdraw = ({
           </div>
         ) : (
           <div className='flex flex-col gap-4'>
+            <p className='text-sm font-semibold text-neutral-10'>
+              Winning Balance:{' '}
+              <span className='text-black'>
+                {formatCurrency(
+                  toMajorUnits(wallet?.winnings ?? 0),
+                  wallet?.currency,
+                )}
+              </span>
+            </p>
             <div className='flex flex-col gap-1.5'>
               <span className='text-xs font-medium text-neutral-10'>
                 Withdraw to

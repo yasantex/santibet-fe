@@ -64,7 +64,7 @@ const TradePanel = ({
   const stakeNum = Number(amount) || 0
   const shares = price > 0 ? stakeNum / price : 0
   const potentialReturn = shares // each share settles at 1 unit if it wins
-  const toWin = Math.max(potentialReturn - stakeNum, 0)
+  const toWin = Math.max(potentialReturn, 0)
 
   const addAmount = (delta: number) =>
     setAmount(String((Number(amount) || 0) + delta))

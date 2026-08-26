@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import useUpdateToken from '../../hooks/useUpdateToken'
 import { useAppDispatch } from '../../utils/hooks'
 import { useFormik } from 'formik'
@@ -45,6 +45,7 @@ const LoginPage = () => {
   const updateToken = useUpdateToken()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const { pathname } = useLocation()
 
   const [step, setStep] = useState<Step>('identifier')
   const [identifier, setIdentifier] = useState('')
@@ -209,11 +210,14 @@ const LoginPage = () => {
 
   return (
     <div className='flex flex-col items-center justify-center w-full mx-auto mt-10 md:mt-20 max-w-100 px-5 md:max-w-125! gap-2.5'>
-      <h1 className='text-black font-bold text-[22px] text-center'>Welcome to Santibet</h1>
+      <h1 className='text-black font-bold text-[22px] text-center'>
+        {pathname === '/signin' ? 'Welcome back' : 'Welcome to Santibet'}
+      </h1>
       <p className='text-base text-center text-neutral-10'>
-        Sign in or create an account to start predicting.
+        {pathname === '/signin'
+          ? 'Sign in to continue predicting.'
+          : 'Create an account to start predicting.'}
       </p>
-
       {step === 'identifier' && (
         <>
           <Button

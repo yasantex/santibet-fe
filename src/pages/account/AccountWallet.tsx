@@ -160,28 +160,6 @@ const AccountWallet = () => {
                   : '••••••'}
               </span>
 
-              {visible && (
-                <div className='flex flex-col gap-1.5'>
-                  <p className='text-sm font-semibold text-neutral-10'>
-                    Trading Balance:{' '}
-                    <span className='text-black'>
-                      {formatCurrency(
-                        toMajorUnits(wallet?.trading ?? 0),
-                        wallet?.currency,
-                      )}
-                    </span>
-                  </p>
-                  <p className='text-sm font-semibold text-neutral-10'>
-                    Winning Balance:{' '}
-                    <span className='text-black'>
-                      {formatCurrency(
-                        toMajorUnits(wallet?.winnings ?? 0),
-                        wallet?.currency,
-                      )}
-                    </span>
-                  </p>
-                </div>
-              )}
 
               <div className='flex md:flex-row flex-col items-start md:items-center gap-2.5'>
                 <Button
