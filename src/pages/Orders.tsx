@@ -113,7 +113,7 @@ const Orders = () => {
             No orders found.
           </p>
         ) : (
-          <div className='divide-y divide-border/40'>
+          <div className='divide-y divide-border/40  max-h-150 overflow-y-auto'>
             {bets.map((bet) => (
               <article
                 key={bet.id}
@@ -143,7 +143,7 @@ const Orders = () => {
                 </div>
 
                 <div className='flex items-center justify-between gap-5 sm:justify-end'>
-                  <div className='text-right text-sm'>
+                  <div className='sm:text-right text-sm'>
                     <p className='font-semibold text-black'>
                       {formatCurrency(toMajorUnits(bet.stake.amount), bet.stake.currency)}
                     </p>

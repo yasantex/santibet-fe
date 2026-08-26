@@ -57,7 +57,9 @@ const Withdraw = ({
         queryClient.invalidateQueries({ queryKey: ['/wallet', {}] })
         queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] })
         setWithdrawalId(data.id)
-        setConfirmOpen(true)
+        if (data.codeRequired) {
+          setConfirmOpen(true)
+        }
       },
       onError: (error) => {
         if (isAxiosError(error)) {
@@ -99,12 +101,13 @@ const Withdraw = ({
 
   const handleDone = () => {
     handleClose()
+    setConfirmOpen(false)
   }
 
   return (
     <>
       <ModalComponent
-        open={open && !confirmOpen}
+        open={open}
         handleClose={handleDone}
         title='Withdraw Funds'
         className='max-w-125! w-[90%]!'

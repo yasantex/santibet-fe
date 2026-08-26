@@ -110,6 +110,7 @@ export interface WithdrawalRecord {
   createdAt: string
   dispatchedAt: string | null
   completedAt: string | null
+  codeRequired: boolean
 }
 
 export interface RequestWithdrawalRequest {

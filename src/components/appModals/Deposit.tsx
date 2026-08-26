@@ -114,7 +114,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
   const depositId = startResponse?.deposit.id ?? ''
 
-  const { mutateAsync: verifyDeposit, isPending: isVerifying } =
+  const { mutateAsync: verifyDeposit, isPending: isVerifying, isSuccess } =
     useSantiBetMutation<DepositRecord, void>({
       path: `/wallet/deposits/${depositId}/verify`,
       mutationOptions: {
@@ -126,7 +126,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
             )
             return
           }
-          if (data.status === 'SUCCESS') {
+          if (data.status === 'COMPLETED') {
             queryClient.invalidateQueries({ queryKey: ['/wallet', {}] })
             queryClient.invalidateQueries({
               queryKey: ['wallet-transactions'],
@@ -213,7 +213,7 @@ const handleSelectMethod = (id: DepositMethod) => {
             ? 'Select Crypto'
             : step === 'crypto-address'
               ? 'Deposit Crypto'
-              : verifyResult?.status === 'SUCCESS'
+              : isSuccess
                 ? 'Deposit Successful'
                 : 'Deposit Failed'
 
@@ -427,21 +427,21 @@ const handleSelectMethod = (id: DepositMethod) => {
         </div>
       )}
 
-      {step === 'result' && verifyResult && (
+      {step === 'result' && isSuccess && verifyResult && (
         <div className='flex flex-col items-center gap-4'>
           <HugeiconsIcon
             icon={
-              verifyResult.status === 'SUCCESS'
+              isSuccess
                 ? CheckmarkCircle02Icon
                 : AlertCircleIcon
             }
             size={32}
             className={
-              verifyResult.status === 'SUCCESS' ? 'text-success' : 'text-error'
+              isSuccess ? 'text-success' : 'text-error'
             }
           />
           <p className='text-sm text-center text-neutral-10'>
-            {verifyResult.status === 'SUCCESS'
+            {isSuccess
               ? 'Your deposit has been credited to your wallet.'
               : verifyResult.failureReason ||
                 'This deposit could not be completed.'}
