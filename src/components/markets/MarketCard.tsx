@@ -20,8 +20,12 @@ const OutcomeRow = ({
     <div className='flex items-center gap-3'>
       <div className='min-w-0 flex-1'>
         <div className='mb-1.5 flex items-baseline justify-between text-sm'>
-          <span className='font-bold text-black uppercase'>{outcome.label}</span>
-          <span className={`font-bold ${isYes ? 'text-success' : 'text-error'}`}>
+          <span className='font-bold text-black uppercase'>
+            {outcome.label}
+          </span>
+          <span
+            className={`font-bold ${isYes ? 'text-success' : 'text-error'}`}
+          >
             {outcome.percent}%
           </span>
         </div>
@@ -38,10 +42,10 @@ const OutcomeRow = ({
           e.stopPropagation()
           onClick?.()
         }}
-        className={`shrink-0 rounded-lg px-4 py-2.5 text-xs font-bold ${
+        className={`shrink-0 rounded-lg px-4 cursor-pointer py-2.5 text-xs font-bold ${
           isYes
-            ? 'bg-market-success text-success'
-            : 'bg-market-error text-error'
+            ? 'bg-market-success text-success hover:bg-market-success/50'
+            : 'bg-market-error text-error hover:bg-market-error/50'
         }`}
       >
         {formatSharePrice(outcome.cents)}
@@ -120,9 +124,7 @@ const MarketCard = ({
         <OutcomeRow
           outcome={market.yes}
           tone='yes'
-          onClick={() =>
-            market.yes && onSelectOutcome?.(market, market.yes)
-          }
+          onClick={() => market.yes && onSelectOutcome?.(market, market.yes)}
         />
         <OutcomeRow
           outcome={market.no}
