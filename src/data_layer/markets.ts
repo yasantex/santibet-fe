@@ -601,32 +601,32 @@ export const useMarketTrades = (id?: string, limit = 30, provider?: string) =>
 /** How many most-recent points the Live view keeps (tight window = visible movement). */
 const LIVE_WINDOW_POINTS = 40
 
-const chartTimeLabel = (iso: string, interval: ChartInterval): string => {
-  const d = new Date(iso)
+/**
+ * Price chart for the market detail page. On the lobby feed it uses the real
+ * candle history (Polymarket candles for imported markets, internal trades for
+ * native ones); on the raw fallback feed it derives points from recent trades.
+ * Points carry an epoch `t` and are plotted on a real time axis.
+ */
+export const chartTimeLabel = (t: number, interval: ChartInterval): string => {
+  const d = new Date(t)
   if (Number.isNaN(d.getTime())) return ''
   return interval === '1d'
     ? d.toLocaleDateString([], { month: 'short', day: 'numeric' })
     : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-/**
- * Price chart for the market detail page. On the lobby feed it uses the real
- * candle history (Polymarket candles for imported markets, internal trades for
- * native ones); on the raw fallback feed it derives points from recent trades.
- */
 const tradesToPoints = (
   trades: MarketTrade[],
   outcomeId?: string,
+  interval: ChartInterval = '1m',
 ): MarketChart['points'] =>
   [...(outcomeId ? trades.filter((t) => t.outcomeId === outcomeId) : trades)]
     .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
-    .map((t) => ({
-      time: new Date(t.ts).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      value: toCents(t.price),
-    }))
+    .map((t) => {
+      const ms = new Date(t.ts).getTime()
+      return { t: ms, time: chartTimeLabel(ms, interval), value: toCents(t.price) }
+    })
+
 
 export const useMarketChart = (
   id?: string,
@@ -640,10 +640,9 @@ export const useMarketChart = (
     queryKey: ['market-chart', id, outcomeId, mode],
     enabled: !!id,
     retry: false,
-    // Live view polls fast; candle intervals refresh more lazily. Poll even
-    // when the tab isn't focused so the live chart keeps moving while open.
-    refetchInterval: mode === 'live' ? 5000 : 30000,
-    refetchIntervalInBackground: true,
+    // Live refresh is driven by a component ticker (a plain timer that runs even
+    // when the tab is unfocused); candle intervals refresh on their own timer.
+    refetchInterval: mode === 'live' ? false : 30000,
     queryFn: async () => {
       const feed = await resolveFeed()
       if (feed === 'lobby') {
@@ -663,19 +662,17 @@ export const useMarketChart = (
         // Candle `close` is the series' own value (e.g. the underlying asset
         // price for crypto markets) — plot it as-is; the chart auto-scales.
         // Trade ticks carry outcome price (probability) → 0..100 via toCents.
-        const candlePoints = (h.candles ?? []).map((c) => ({
-          time: chartTimeLabel(c.at, interval),
-          value: c.close,
-        }))
-        const tradePoints = tradesToPoints(trades, outcomeId)
-        // Live: show a tight recent window so the auto Y-axis zooms in and the
-        // per-second movement of the latest candle is actually visible (the full
-        // 200-candle range flattens it out).
+        const candlePoints = (h.candles ?? []).map((c) => {
+          const ms = new Date(c.at).getTime()
+          return { t: ms, time: chartTimeLabel(ms, interval), value: c.close }
+        })
+        const tradePoints = tradesToPoints(trades, outcomeId, interval)
+        const base = tradePoints.length ? tradePoints : candlePoints
+        // Live: tight recent window (auto Y-axis zooms in). The detail page
+        // extends a live tail on a ticker so the timeline advances between polls.
         const points =
           mode === 'live'
-            ? (tradePoints.length ? tradePoints : candlePoints).slice(
-                -LIVE_WINDOW_POINTS,
-              )
+            ? base.slice(-LIVE_WINDOW_POINTS)
             : candlePoints.length
               ? candlePoints
               : tradePoints

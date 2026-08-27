@@ -8,7 +8,12 @@ import { LiveBadge } from '../components/markets/LiveBits'
 import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon } from '@hugeicons/core-free-icons'
-import { useEvents, useLiveEvents, useLobbyHome } from '../data_layer/markets'
+import {
+  useEvents,
+  useLiveEvents,
+  useLobbyHome,
+  useMarketChart,
+} from '../data_layer/markets'
 import { marketHref } from '../utils/marketDisplay'
 import type { UiEvent, UiMarket, UiOutcome } from '../types/market.types'
 import { formatNairaCompact } from '../utils/functions'
@@ -52,6 +57,12 @@ const MarketsDashboard = () => {
 
   const featured = allMarkets[0]
   const hotTopics = allMarkets.slice(1, 6)
+  // Real price/odds history for the featured card sparkline.
+  const { data: featuredChart } = useMarketChart(
+    featured?.id,
+    featured?.yes?.id,
+    '1h',
+  )
 
   const gridMarkets = useMemo(() => {
     const list =
@@ -72,6 +83,7 @@ const MarketsDashboard = () => {
         ) : (
           <FeaturedMarketCard
             market={featured}
+            chartData={featuredChart?.points}
             onSelect={goToMarket}
             onSelectOutcome={goToTrade}
           />
