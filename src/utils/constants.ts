@@ -3,12 +3,11 @@ import {
   BankIcon,
   Bitcoin01Icon,
   CreditCardIcon,
-  FilesFreeIcons,
   GiftFreeIcons,
   HelpSquareFreeIcons,
   Invoice01Icon,
   MoneyReceiveFlow02Icon,
-  User02FreeIcons,
+  Settings02Icon,
   Wallet01FreeIcons,
   Wallet03FreeIcons,
 } from '@hugeicons/core-free-icons'
@@ -106,6 +105,16 @@ export type ProfileAction = {
 
 export const accountMenuItems: ProfileAction[] = [
   {
+    id: 'profile-settings',
+    label: 'Settings',
+    icon: Settings02Icon,
+    path: '/account-profile',
+    action: (navigate, close) => {
+      navigate('/account-profile')
+      close()
+    },
+  },
+  {
     id: 'wallet',
     label: 'Wallet',
     icon: Wallet01FreeIcons,
@@ -115,6 +124,7 @@ export const accountMenuItems: ProfileAction[] = [
       close()
     },
   },
+
   {
     id: 'portfolio',
     label: 'Portfolio',
@@ -135,16 +145,7 @@ export const accountMenuItems: ProfileAction[] = [
       close()
     },
   },
-  {
-    id: 'profile-settings',
-    label: 'Profile & Settings',
-    icon: User02FreeIcons,
-    path: '/account-profile',
-    action: (navigate, close) => {
-      navigate('/account-profile')
-      close()
-    },
-  },
+
   {
     id: 'rewards',
     label: 'Rewards',
@@ -186,29 +187,6 @@ export const generalMenuItems: ProfileAction[] = [
     path: '/help-center',
     action: (navigate, close) => {
       navigate('/help-center')
-      close()
-    },
-  },
-]
-
-export const legalMenuItems: ProfileAction[] = [
-  {
-    id: 'terms',
-    label: 'Terms of Service',
-    icon: FilesFreeIcons,
-    path: '/terms',
-    action: (navigate, close) => {
-      navigate('/terms-of-service')
-      close()
-    },
-  },
-  {
-    id: 'privacy',
-    label: 'Privacy policy',
-    icon: FilesFreeIcons,
-    path: '/privacy-policy',
-    action: (navigate, close) => {
-      navigate('/privacy-policy')
       close()
     },
   },

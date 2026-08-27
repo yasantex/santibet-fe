@@ -115,3 +115,31 @@ export const VerifyPhoneRequestSchema = Yup.object().shape({
     .required('Phone number is required')
     .matches(/^\+?[0-9]{7,15}$/, 'Enter a valid phone number'),
 })
+
+
+export const UpdateProfileSchema = Yup.object({
+  firstName: Yup.string()
+    .min(1, 'First name must be 1–60 characters')
+    .max(60, 'First name must be 1–60 characters')
+    .nullable(),
+  lastName: Yup.string()
+    .min(1, 'Last name must be 1–60 characters')
+    .max(60, 'Last name must be 1–60 characters')
+    .nullable(),
+  displayName: Yup.string()
+    .min(3, 'Display name must be 3–30 characters')
+    .max(30, 'Display name must be 3–30 characters')
+    .matches(
+      /^[a-zA-Z0-9._]+$/,
+      'Only letters, numbers, dots, and underscores allowed',
+    )
+    .nullable(),
+  dateOfBirth: Yup.date()
+    .max(new Date(), 'Date of birth must be in the past')
+    .min(new Date(1900, 0, 1), 'Date of birth must be after 1900')
+    .nullable(),
+  avatarUrl: Yup.string()
+    .url('Must be a valid URL')
+    .max(2000, 'Avatar URL must be 2000 characters or fewer')
+    .nullable(),
+})

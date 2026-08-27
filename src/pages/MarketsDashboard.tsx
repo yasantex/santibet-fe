@@ -8,7 +8,12 @@ import { LiveBadge } from '../components/markets/LiveBits'
 import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon } from '@hugeicons/core-free-icons'
-import { useEvents, useLiveEvents, useLobbyHome } from '../data_layer/markets'
+import {
+  useEvents,
+  useLiveEvents,
+  useLobbyHome,
+  useMarketChart,
+} from '../data_layer/markets'
 import { marketHref } from '../utils/marketDisplay'
 import type { UiEvent, UiMarket, UiOutcome } from '../types/market.types'
 import { formatNairaCompact } from '../utils/functions'
@@ -52,6 +57,12 @@ const MarketsDashboard = () => {
 
   const featured = allMarkets[0]
   const hotTopics = allMarkets.slice(1, 6)
+  // Real price/odds history for the featured card sparkline.
+  const { data: featuredChart } = useMarketChart(
+    featured?.id,
+    featured?.yes?.id,
+    '1h',
+  )
 
   const gridMarkets = useMemo(() => {
     const list =
@@ -72,6 +83,7 @@ const MarketsDashboard = () => {
         ) : (
           <FeaturedMarketCard
             market={featured}
+            chartData={featuredChart?.points}
             onSelect={goToMarket}
             onSelectOutcome={goToTrade}
           />
@@ -143,8 +155,8 @@ const MarketsDashboard = () => {
       {closingSoon.length > 0 && (
         <section className='flex flex-col gap-3'>
           <div className='flex items-center gap-2'>
-            <span className='flex items-center gap-1.5 rounded-full bg-error/10 px-2.5 py-0.5 text-xs font-bold text-error'>
-              <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-error' />
+            <span className='flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-bold text-blue-500'>
+              <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500' />
               LIVE
             </span>
             <h2 className='text-sm font-semibold text-black uppercase'>
@@ -173,10 +185,10 @@ const MarketsDashboard = () => {
               key={category}
               type='button'
               onClick={() => setActiveCategory(category)}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+              className={`shrink-0 rounded-full cursor-pointer px-4 py-1.5 text-sm font-semibold transition-colors ${
                 activeCategory === category
                   ? 'bg-brand-green text-black dark:text-text-black!'
-                  : 'bg-card text-neutral-10 hover:text-black'
+                  : 'bg-card text-black hover:text-black/60'
               }`}
             >
               {category}

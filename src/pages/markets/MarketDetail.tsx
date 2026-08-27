@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   AreaChart,
@@ -30,7 +30,10 @@ import {
   formatSharePrice,
 } from '../../utils/functions'
 import { showSuccessToast } from '../../utils/toastUtils'
-import type { ChartMode, UiOutcome } from '../../types/market.types'
+import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
+
+// How often the Live view extends its tail / pulls a fresh quote.
+const LIVE_TICK_MS = 3000
 
 const CHART_PERIODS: { label: string; mode: ChartMode }[] = [
   { label: 'Live', mode: 'live' },
@@ -66,13 +69,64 @@ const MarketDetail = () => {
   // differ from the ephemeral id in the URL after a rollover) — waiting for it
   // avoids a throwaway 404 against the stale URL id.
   const marketId = market?.id
-  const { data: chart } = useMarketChart(
+  const { data: chart, refetch: refetchChart } = useMarketChart(
     marketId,
     selectedOutcome?.id,
     chartMode,
   )
-  const chartData = chart?.points ?? []
+  const basePoints = useMemo(() => chart?.points ?? [], [chart])
   const trades = chart?.trades
+
+  // Live tail: a rolling set of "now" points appended on a timer so the Live
+  // chart's timeline advances between candle updates. The timer (a plain
+  // interval) also pulls a fresh quote, so the value moves when there's activity
+  // — this runs even when react-query's focus-based polling would pause.
+  const [liveTail, setLiveTail] = useState<ChartPoint[]>([])
+  // Keep refs so the interval (set up once) always sees the latest values —
+  // react-query recreates `refetch` each render, so it must not be an effect dep.
+  const lastBaseRef = useRef<ChartPoint | undefined>(undefined)
+  const refetchRef = useRef(refetchChart)
+  useEffect(() => {
+    lastBaseRef.current = basePoints[basePoints.length - 1]
+    refetchRef.current = refetchChart
+  })
+
+  // Reset the tail whenever the series identity changes (render-time reset).
+  const seriesKey = `${marketId}:${selectedOutcome?.id}:${chartMode}`
+  const [tailKey, setTailKey] = useState(seriesKey)
+  if (tailKey !== seriesKey) {
+    setTailKey(seriesKey)
+    setLiveTail([])
+  }
+
+  useEffect(() => {
+    if (chartMode !== 'live') return
+    const id = window.setInterval(() => {
+      void refetchRef.current()
+      setLiveTail((prev) => {
+        const base = lastBaseRef.current
+        if (!base) return prev
+        const now = Date.now()
+        const kept = prev.filter((p) => p.t > base.t)
+        // Unique HH:MM:SS label so each tail sample is its own category and the
+        // line visibly extends; the axis formatter trims it back to HH:MM.
+        const time = new Date(now).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+        const next = [...kept, { t: now, time, value: base.value }]
+        return next.length > 80 ? next.slice(-80) : next
+      })
+    }, LIVE_TICK_MS)
+    return () => window.clearInterval(id)
+  }, [chartMode])
+
+  const chartData = useMemo(() => {
+    if (chartMode !== 'live') return basePoints
+    const cutoff = basePoints[basePoints.length - 1]?.t ?? 0
+    return [...basePoints, ...liveTail.filter((p) => p.t > cutoff)]
+  }, [basePoints, liveTail, chartMode])
 
   // Live odds via SSE (pushes each outcome's price as it moves); ticking
   // countdown for the close time.
@@ -275,10 +329,11 @@ const MarketDetail = () => {
                     </defs>
                     <XAxis
                       dataKey='time'
+                      tickFormatter={(v) => String(v).slice(0, 5)}
                       tick={{ fontSize: 11, fill: 'var(--color-neutral-10)' }}
                       tickLine={false}
                       axisLine={false}
-                      minTickGap={30}
+                      minTickGap={44}
                     />
                     <YAxis
                       domain={['auto', 'auto']}
@@ -298,7 +353,10 @@ const MarketDetail = () => {
                         border: '1px solid var(--color-border)',
                         background: 'var(--color-card)',
                         fontSize: 12,
+                        color: 'var(--color-text-black)',
                       }}
+                      itemStyle={{ color: 'var(--color-text-black)' }}
+                      labelStyle={{ color: 'var(--color-text-black)' }}
                     />
                     <Area
                       type='monotone'
@@ -306,6 +364,8 @@ const MarketDetail = () => {
                       stroke='var(--color-brand-green)'
                       strokeWidth={2}
                       fill='url(#fill)'
+                      isAnimationActive={false}
+                      dot={false}
                     />
                   </AreaChart>
                 </ResponsiveContainer>

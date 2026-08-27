@@ -67,7 +67,7 @@ const Header = () => {
               <Link
                 key={link.label}
                 to={link.href}
-                className='flex items-center gap-1.5 text-neutral-10 hover:text-black'
+                className='flex items-center gap-1.5 text-black hover:text-black/60'
               >
                 {link.label}
               </Link>

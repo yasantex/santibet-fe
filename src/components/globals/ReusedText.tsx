@@ -43,7 +43,7 @@ export const ProfileAvatar: FC<{
   }
   return (
     <div
-      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card text-[10px] font-bold text-white select-none ${className}`}
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card text-[10px] font-bold text-black select-none ${className}`}
     >
       {getInitials(firstName, lastName)}
     </div>

@@ -78,7 +78,7 @@ const MarketCard = ({
       onKeyDown={(e) => {
         if (e.key === 'Enter') onSelect?.(market)
       }}
-      className='flex cursor-pointer flex-col gap-4 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-brand-green/60'
+      className='flex cursor-pointer flex-col gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:border-brand-green/60'
     >
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2'>
@@ -97,8 +97,8 @@ const MarketCard = ({
             {market.category}
           </span>
           {live && (
-            <span className='flex items-center gap-1 rounded-full bg-error/10 px-2 py-0.5 text-[10px] font-bold text-error'>
-              <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-error' />
+            <span className='flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-500'>
+              <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500' />
               LIVE
             </span>
           )}
