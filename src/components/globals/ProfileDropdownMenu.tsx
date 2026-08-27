@@ -37,7 +37,6 @@ const ProfileDropdownMenu = ({
   toggleTheme,
   onLogout,
 }: ProfileDropdownMenuProps) => {
-  const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [appearance, setAppearance] = useState<AppearanceOption>(
     isDark ? 'dark' : 'light',
   )
