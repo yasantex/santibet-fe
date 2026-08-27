@@ -157,7 +157,7 @@ const AccountProfile = () => {
       </h1>
 
       <section className='flex flex-col gap-5 rounded-lg bg-card p-4'>
-        <div className='flex items-center gap-4 '>
+        <div className='flex items-center gap-2.5 '>
           <ProfileAvatar
             firstName={profile?.name ?? ''}
             lastName={profile?.name ?? ''}
@@ -172,7 +172,7 @@ const AccountProfile = () => {
                 <div className='h-3.5 w-24 animate-pulse rounded bg-neutral-10/20' />
               </>
             ) : (
-              <div className='flex flex-col gap-5'>
+              <div className='flex flex-col gap-2.5'>
                 <p className='text-base font-semibold text-black'>
                   {profile?.name ?? '—'}
                 </p>

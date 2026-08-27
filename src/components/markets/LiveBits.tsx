@@ -2,11 +2,11 @@ import type { LiveState } from '../../types/market.types'
 
 export const LiveBadge = ({ className = '' }: { className?: string }) => (
   <span
-    className={`inline-flex items-center gap-1 rounded-full bg-error/15 px-2 py-0.5 text-[10px] font-bold uppercase text-error ${className}`}
+    className={`inline-flex items-center gap-1 rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-500 ${className}`}
   >
     <span className='relative flex h-1.5 w-1.5'>
-      <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-error opacity-75' />
-      <span className='relative inline-flex h-1.5 w-1.5 rounded-full bg-error' />
+      <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75' />
+      <span className='relative inline-flex h-1.5 w-1.5 rounded-full bg-blue-500' />
     </span>
     Live
   </span>
