@@ -190,16 +190,20 @@ const WithdrawalAccounts = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
 
-  const { data, isLoading } = useSantiBetQuery<WithdrawalAccountsListResponse>({
-    path: '/wallet/withdrawal-accounts',
-    queryKey: ['withdrawal-accounts'],
-  })
-
-  const { data: cryptoData, isLoading: isLoadingCrypto } =
-    useSantiBetQuery<CryptoWalletResponse>({
-      path: '/wallet/crypto/accounts',
-      queryKey: ['crypto-withdrawal-accounts'],
+  const { data, isLoading, refetch } =
+    useSantiBetQuery<WithdrawalAccountsListResponse>({
+      path: '/wallet/withdrawal-accounts',
+      queryKey: ['withdrawal-accounts'],
     })
+
+  const {
+    data: cryptoData,
+    isLoading: isLoadingCrypto,
+    refetch: refetchCrypto,
+  } = useSantiBetQuery<CryptoWalletResponse>({
+    path: '/wallet/crypto/accounts',
+    queryKey: ['crypto-withdrawal-accounts'],
+  })
 
   const accounts = data?.data ?? []
   const cryptoAccounts = cryptoData?.data ?? []
@@ -267,6 +271,10 @@ const WithdrawalAccounts = () => {
       <AddWithdrawalAccount
         open={modalOpen && modal === 'add-withdrawal-account'}
         handleClose={handleModalClose}
+        refetch={() => {
+          refetch()
+          refetchCrypto()
+        }}
       />
     </div>
   )

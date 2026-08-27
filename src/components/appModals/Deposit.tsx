@@ -184,6 +184,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     data: cryptoAddress,
     isLoading: isLoadingAddress,
     isError: isCryptoError,
+    error
   } = useSantiBetQuery<CryptoAddressResponse>({
     path: `/wallet/crypto/address?currency=${cryptoCurrency}`,
     enabled: step === 'crypto-address' && !!cryptoCurrency,
@@ -373,7 +374,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
           {isCryptoError && !isLoadingAddress && (
             <p className='text-sm text-center text-error py-6'>
-              Couldn't load a deposit address. Please try again.
+              {error?.message ?? "Couldn't load a deposit address. Please try again."}
             </p>
           )}
 
