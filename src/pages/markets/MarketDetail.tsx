@@ -66,7 +66,11 @@ const MarketDetail = () => {
   // differ from the ephemeral id in the URL after a rollover) — waiting for it
   // avoids a throwaway 404 against the stale URL id.
   const marketId = market?.id
-  const { data: chart } = useMarketChart(marketId, selectedOutcome?.id, chartMode)
+  const { data: chart } = useMarketChart(
+    marketId,
+    selectedOutcome?.id,
+    chartMode,
+  )
   const chartData = chart?.points ?? []
   const trades = chart?.trades
 
@@ -83,7 +87,12 @@ const MarketDetail = () => {
   const [seenChart, setSeenChart] = useState(chart)
   if (chart !== seenChart) {
     setSeenChart(chart)
-    if (!userPickedMode && chartMode === 'live' && chart && chart.points.length === 0) {
+    if (
+      !userPickedMode &&
+      chartMode === 'live' &&
+      chart &&
+      chart.points.length === 0
+    ) {
       setChartMode('1h')
     }
   }
@@ -113,9 +122,7 @@ const MarketDetail = () => {
   if (isError || !market) {
     return (
       <main className='mx-auto flex w-full max-w-6xl flex-col items-center gap-4 px-3 py-20 text-center'>
-        <p className='text-sm text-neutral-10'>
-          We couldn’t load this market.
-        </p>
+        <p className='text-sm text-neutral-10'>We couldn’t load this market.</p>
         <button
           type='button'
           onClick={() => navigate('/')}
@@ -318,10 +325,10 @@ const MarketDetail = () => {
                     key={o.id}
                     type='button'
                     onClick={() => setSelectedId(o.id)}
-                    className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm font-bold transition-all ${
+                    className={`flex items-center justify-between cursor-pointer rounded-lg px-4 py-3 text-sm font-bold transition-all ${
                       isYes
-                        ? 'bg-market-success text-success'
-                        : 'bg-market-error text-error'
+                        ? 'bg-market-success text-success hover:bg-market-success/50'
+                        : 'bg-market-error text-error hover:bg-market-error/50'
                     } ${active ? 'ring-2 ring-brand-green' : ''}`}
                   >
                     <span className='uppercase'>{o.label}</span>

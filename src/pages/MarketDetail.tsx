@@ -57,9 +57,7 @@ const MarketDetail = () => {
 
   const chartData = useMemo(() => {
     if (!trades?.length || !selectedOutcome) return []
-    const forOutcome = trades.filter(
-      (t) => t.outcomeId === selectedOutcome.id,
-    )
+    const forOutcome = trades.filter((t) => t.outcomeId === selectedOutcome.id)
     if (!forOutcome.length) return []
     // Window relative to the latest trade so historical markets still chart.
     const latest = Math.max(...forOutcome.map((t) => new Date(t.ts).getTime()))
@@ -96,9 +94,7 @@ const MarketDetail = () => {
   if (isError || !market) {
     return (
       <main className='mx-auto flex w-full max-w-6xl flex-col items-center gap-4 px-3 py-20 text-center'>
-        <p className='text-sm text-neutral-10'>
-          We couldn’t load this market.
-        </p>
+        <p className='text-sm text-neutral-10'>We couldn’t load this market.</p>
         <button
           type='button'
           onClick={() => navigate('/')}
@@ -278,10 +274,10 @@ const MarketDetail = () => {
                     key={o.id}
                     type='button'
                     onClick={() => setSelectedId(o.id)}
-                    className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm font-bold transition-all ${
+                    className={`flex items-center justify-between cursor-pointer rounded-lg px-4 py-3 text-sm font-bold transition-all ${
                       isYes
-                        ? 'bg-market-success text-success'
-                        : 'bg-market-error text-error'
+                        ? 'bg-market-success text-success hover:bg-market-success/50'
+                        : 'bg-market-error text-error hover:bg-market-error/50'
                     } ${active ? 'ring-2 ring-brand-green' : ''}`}
                   >
                     <span className='uppercase'>{o.label}</span>

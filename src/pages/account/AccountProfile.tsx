@@ -21,6 +21,7 @@ import { Button } from '../../components/globals/Button'
 import Security from '../../components/appModals/auth/Security'
 import VerifyKyc from '../../components/appModals/auth/VerifyKyc'
 import { useNavigate } from 'react-router'
+import Deposit from '../../components/appModals/Deposit'
 
 type ProfileRow = {
   icon: typeof UserIcon
@@ -98,7 +99,7 @@ const AccountProfile = () => {
         {
           icon: CreditCardIcon,
           label: 'Payment Methods',
-          // onClick: () => handleModalOpen('paymentMethods'),
+          onClick: () => handleModalOpen('deposit'),
         },
       ],
     },
@@ -262,6 +263,12 @@ const AccountProfile = () => {
         type='email'
         defaultValue={profile?.email}
         refetch={refetch}
+      />
+      <Deposit
+        open={modalOpen && modal === 'deposit'}
+        handleClose={() => {
+          handleModalClose()
+        }}
       />
       <VerifyEmail
         open={modalOpen && modal === 'verifyPhone'}

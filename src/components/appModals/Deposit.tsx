@@ -20,7 +20,12 @@ import type {
 import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
 import { useQueryClient } from '@tanstack/react-query'
-import { formatCurrency, formatDate, toMajorUnits, toMinorUnits } from '../../utils/functions'
+import {
+  formatCurrency,
+  formatDate,
+  toMajorUnits,
+  toMinorUnits,
+} from '../../utils/functions'
 import { CopyButton } from '../globals/CopyButton'
 import type { UserData } from '../../types/types'
 
@@ -114,36 +119,39 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
   const depositId = startResponse?.deposit.id ?? ''
 
-  const { mutateAsync: verifyDeposit, isPending: isVerifying } =
-    useSantiBetMutation<DepositRecord, void>({
-      path: `/wallet/deposits/${depositId}/verify`,
-      mutationOptions: {
-        onSuccess: (data) => {
-          setVerifyResult(data)
-          if (data.status === 'PENDING') {
-            showWarningToast(
-              "We haven't received your payment yet. Try again in a moment.",
-            )
-            return
-          }
-          if (data.status === 'SUCCESS') {
-            queryClient.invalidateQueries({ queryKey: ['/wallet', {}] })
-            queryClient.invalidateQueries({
-              queryKey: ['wallet-transactions'],
-            })
-          }
-          setStep('result')
-        },
-        onError: (error) => {
-          if (isAxiosError(error)) {
-            const errorData = error.response?.data
-            showWarningToast(errorData?.message)
-          } else {
-            showWarningToast(error.message)
-          }
-        },
+  const {
+    mutateAsync: verifyDeposit,
+    isPending: isVerifying,
+    isSuccess,
+  } = useSantiBetMutation<DepositRecord, void>({
+    path: `/wallet/deposits/${depositId}/verify`,
+    mutationOptions: {
+      onSuccess: (data) => {
+        setVerifyResult(data)
+        if (data.status === 'PENDING') {
+          showWarningToast(
+            "We haven't received your payment yet. Try again in a moment.",
+          )
+          return
+        }
+        if (data.status === 'COMPLETED') {
+          queryClient.invalidateQueries({ queryKey: ['/wallet', {}] })
+          queryClient.invalidateQueries({
+            queryKey: ['wallet-transactions'],
+          })
+        }
+        setStep('result')
       },
-    })
+      onError: (error) => {
+        if (isAxiosError(error)) {
+          const errorData = error.response?.data
+          showWarningToast(errorData?.message)
+        } else {
+          showWarningToast(error.message)
+        }
+      },
+    },
+  })
 
   const handleAmountSubmit = async () => {
     const numeric = Number(amount)
@@ -181,14 +189,14 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     enabled: step === 'crypto-address' && !!cryptoCurrency,
   })
 
-const handleSelectMethod = (id: DepositMethod) => {
-  if (id === 'crypto' && !userProfile?.emailVerified) {
-    showWarningToast('Please verify your email to deposit with crypto')
-    return
+  const handleSelectMethod = (id: DepositMethod) => {
+    if (id === 'crypto' && !userProfile?.emailVerified) {
+      showWarningToast('Please verify your email to deposit with crypto')
+      return
+    }
+    setMethod(id)
+    setStep(id === 'bank' ? 'amount' : 'crypto-currency')
   }
-  setMethod(id)
-  setStep(id === 'bank' ? 'amount' : 'crypto-currency')
-}
 
   const handleSelectCryptoCurrency = (currency: CryptoCurrency) => {
     setCryptoCurrency(currency)
@@ -213,7 +221,7 @@ const handleSelectMethod = (id: DepositMethod) => {
             ? 'Select Crypto'
             : step === 'crypto-address'
               ? 'Deposit Crypto'
-              : verifyResult?.status === 'SUCCESS'
+              : isSuccess
                 ? 'Deposit Successful'
                 : 'Deposit Failed'
 
@@ -297,7 +305,6 @@ const handleSelectMethod = (id: DepositMethod) => {
               { label: 'Bank', value: instructions.bankName },
               { label: 'Account Number', value: instructions.accountNumber },
               { label: 'Account Name', value: instructions.accountName },
-              { label: 'Reference', value: instructions.reference },
             ].map((row) => (
               <div
                 key={row.label}
@@ -427,21 +434,15 @@ const handleSelectMethod = (id: DepositMethod) => {
         </div>
       )}
 
-      {step === 'result' && verifyResult && (
+      {step === 'result' && isSuccess && verifyResult && (
         <div className='flex flex-col items-center gap-4'>
           <HugeiconsIcon
-            icon={
-              verifyResult.status === 'SUCCESS'
-                ? CheckmarkCircle02Icon
-                : AlertCircleIcon
-            }
+            icon={isSuccess ? CheckmarkCircle02Icon : AlertCircleIcon}
             size={32}
-            className={
-              verifyResult.status === 'SUCCESS' ? 'text-success' : 'text-error'
-            }
+            className={isSuccess ? 'text-success' : 'text-error'}
           />
           <p className='text-sm text-center text-neutral-10'>
-            {verifyResult.status === 'SUCCESS'
+            {isSuccess
               ? 'Your deposit has been credited to your wallet.'
               : verifyResult.failureReason ||
                 'This deposit could not be completed.'}

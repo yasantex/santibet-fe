@@ -7,7 +7,12 @@ import { useSantiBetQuery } from '../../data_layer/utils'
 import { usePlaceBet } from '../../data_layer/bets'
 import SellPanel from './SellPanel'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
-import { NAIRA, formatSharePrice, toMajorUnits, toMinorUnits } from '../../utils/functions'
+import {
+  NAIRA,
+  formatSharePrice,
+  toMajorUnits,
+  toMinorUnits,
+} from '../../utils/functions'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { BetType } from '../../types/bet.types'
@@ -59,7 +64,7 @@ const TradePanel = ({
   const stakeNum = Number(amount) || 0
   const shares = price > 0 ? stakeNum / price : 0
   const potentialReturn = shares // each share settles at 1 unit if it wins
-  const toWin = Math.max(potentialReturn - stakeNum, 0)
+  const toWin = Math.max(potentialReturn, 0)
 
   const addAmount = (delta: number) =>
     setAmount(String((Number(amount) || 0) + delta))
@@ -99,6 +104,7 @@ const TradePanel = ({
         : potentialReturn.toFixed(0)
       showSuccessToast(`Prediction placed · ${symbol}${toWinDisplay} to win`)
       setAmount('')
+      navigate('/orders')
     } catch (error) {
       if (isAxiosError(error)) {
         showWarningToast(
@@ -206,7 +212,9 @@ const TradePanel = ({
                 inputMode='numeric'
                 value={limitCents}
                 onChange={(e) =>
-                  setLimitCents(e.target.value.replace(/[^\d]/g, '').slice(0, 2))
+                  setLimitCents(
+                    e.target.value.replace(/[^\d]/g, '').slice(0, 2),
+                  )
                 }
                 placeholder={String(outcome?.cents ?? '')}
                 className='w-16 bg-transparent text-right font-bold text-black outline-none'
@@ -226,7 +234,9 @@ const TradePanel = ({
               )}
             </div>
             <div className='flex items-center rounded-lg border border-border px-3 py-2.5'>
-              <span className='text-sm font-bold text-neutral-10'>{symbol}</span>
+              <span className='text-sm font-bold text-neutral-10'>
+                {symbol}
+              </span>
               <input
                 type='text'
                 inputMode='decimal'
