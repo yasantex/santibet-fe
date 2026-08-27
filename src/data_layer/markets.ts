@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   useInfiniteQuery,
   useQuery,
@@ -413,6 +413,26 @@ export const useLiveEvents = (params: EventQueryParams = {}, enabled = true) =>
  * NOTE: confirm the SSE event name/payload with backend to move to targeted
  * cache updates instead of refetch-on-tick.
  */
+interface OddsTick {
+  marketId: string
+  outcomeId: string
+  label?: string
+  price: number | null
+  impliedPercent?: number | null
+  decimalOdds?: number | null
+  bid?: number | null
+  ask?: number | null
+  source?: 'live' | 'stored' | 'none'
+  stale?: boolean
+  at?: string | null
+}
+
+/**
+ * Live odds via SSE (`GET /api/lobby/stream?markets=&event=`). The backend
+ * pushes an `odds` event per outcome; we write the new price straight into the
+ * cached market so outcome prices, the trade panel and the "% chance" header
+ * update live with no refetch. Price chart movement is separate (candle poll).
+ */
 export const useLobbyStream = (opts: {
   marketIds?: string[]
   eventId?: string
@@ -420,7 +440,6 @@ export const useLobbyStream = (opts: {
 }) => {
   const qc = useQueryClient()
   const { marketIds, eventId, enabled = true } = opts
-  const lastRef = useRef(0)
   const key = (marketIds ?? []).join(',')
 
   useEffect(() => {
@@ -441,23 +460,51 @@ export const useLobbyStream = (opts: {
       return
     }
 
-    const onTick = () => {
-      const now = Date.now()
-      if (now - lastRef.current < 2500) return // throttle bursts
-      lastRef.current = now
-      ;(key ? key.split(',') : []).forEach((mid) => {
-        qc.invalidateQueries({ queryKey: ['market', mid] })
-        qc.invalidateQueries({ queryKey: ['market-chart', mid] })
-      })
-      if (eventId) qc.invalidateQueries({ queryKey: ['event', eventId] })
-      qc.invalidateQueries({ queryKey: ['lobby-live'] })
+    const applyOutcome = (o: UiOutcome, tick: OddsTick, price: number) =>
+      o.id === tick.outcomeId
+        ? { ...o, price, cents: toCents(price), percent: toPercent(price) }
+        : o
+
+    const applyOdds = (raw: string) => {
+      let tick: OddsTick
+      try {
+        tick = JSON.parse(raw)
+      } catch {
+        return
+      }
+      if (!tick?.marketId || !tick?.outcomeId) return
+      const price =
+        typeof tick.price === 'number'
+          ? tick.price
+          : typeof tick.impliedPercent === 'number'
+            ? tick.impliedPercent / 100
+            : null
+      if (price == null) return
+
+      // Update any cached market that holds this outcome (covers the
+      // ['market', id, eventId] key regardless of which id resolved it).
+      qc.setQueriesData<UiMarket>(
+        {
+          predicate: (q) =>
+            q.queryKey[0] === 'market' &&
+            (q.state.data as UiMarket | undefined)?.outcomes?.some(
+              (o) => o.id === tick.outcomeId,
+            ) === true,
+        },
+        (old) =>
+          old
+            ? {
+                ...old,
+                outcomes: old.outcomes.map((o) => applyOutcome(o, tick, price)),
+                yes: old.yes ? applyOutcome(old.yes, tick, price) : old.yes,
+                no: old.no ? applyOutcome(old.no, tick, price) : old.no,
+              }
+            : old,
+      )
     }
 
-    es.onmessage = onTick
-    // Cover named SSE events too (odds/update/tick) in case the default channel isn't used.
-    ;['odds', 'update', 'tick'].forEach((name) =>
-      es?.addEventListener(name, onTick),
-    )
+    es.addEventListener('odds', (e) => applyOdds((e as MessageEvent).data))
+    es.onmessage = (e) => applyOdds(e.data) // fallback if unnamed channel is used
     es.onerror = () => {
       /* EventSource auto-reconnects; ignore transient errors */
     }
@@ -551,6 +598,9 @@ export const useMarketTrades = (id?: string, limit = 30, provider?: string) =>
       }),
   })
 
+/** How many most-recent points the Live view keeps (tight window = visible movement). */
+const LIVE_WINDOW_POINTS = 40
+
 const chartTimeLabel = (iso: string, interval: ChartInterval): string => {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
@@ -618,11 +668,14 @@ export const useMarketChart = (
           value: c.close,
         }))
         const tradePoints = tradesToPoints(trades, outcomeId)
+        // Live: show a tight recent window so the auto Y-axis zooms in and the
+        // per-second movement of the latest candle is actually visible (the full
+        // 200-candle range flattens it out).
         const points =
           mode === 'live'
-            ? tradePoints.length
-              ? tradePoints
-              : candlePoints
+            ? (tradePoints.length ? tradePoints : candlePoints).slice(
+                -LIVE_WINDOW_POINTS,
+              )
             : candlePoints.length
               ? candlePoints
               : tradePoints

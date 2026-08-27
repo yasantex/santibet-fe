@@ -74,10 +74,11 @@ const MarketDetail = () => {
   const chartData = chart?.points ?? []
   const trades = chart?.trades
 
-  // Live odds via SSE for in-play markets; ticking countdown for the close time.
+  // Live odds via SSE (pushes each outcome's price as it moves); ticking
+  // countdown for the close time.
   useLobbyStream({
     marketIds: marketId ? [marketId] : [],
-    enabled: !!market?.live,
+    enabled: !!marketId,
   })
   const countdown = useCountdown(market?.openTime, market?.closeTime)
 
