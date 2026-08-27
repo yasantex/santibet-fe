@@ -35,7 +35,7 @@ const Rewards = () => {
         Rewards balances and quests activate once the rewards API is available.
       </PreviewNotice>
 
-      <div className='flex flex-col gap-2 rounded-2xl bg-brand-green p-6 text-black'>
+      <div className='flex flex-col gap-2 rounded-2xl bg-brand-green p-6 text-black dark:text-[#000000]'>
         <span className='text-sm font-medium opacity-80'>Your points</span>
         <span className='text-4xl font-bold'>0</span>
         <span className='text-sm font-medium opacity-80'>

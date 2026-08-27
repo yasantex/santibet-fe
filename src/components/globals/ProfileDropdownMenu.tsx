@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import type { NavigateFunction } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowDown01Icon, CircleArrowDownDoubleIcon } from '@hugeicons/core-free-icons' 
+import {
+  ArrowDown01Icon,
+  CircleArrowDownDoubleIcon,
+} from '@hugeicons/core-free-icons'
 import {
   accountMenuItems,
   generalMenuItems,
@@ -10,6 +13,7 @@ import {
   type AppearanceOption,
 } from '../../utils/constants'
 import { ProfileAvatar } from './ReusedText'
+import Dropdown from './Dropdown'
 
 type ProfileUser = {
   name?: string | null
@@ -82,9 +86,7 @@ const ProfileDropdownMenu = ({
               className='flex gap-2.5 text-black items-center hover:bg-hover p-2 cursor-pointer'
             >
               <HugeiconsIcon icon={item.icon} size={20} />
-              <p className='text-sm text-black font-semibold'>
-                {item.label}
-              </p>
+              <p className='text-sm text-black font-semibold'>{item.label}</p>
             </div>
           ))}
           <div className='h-px bg-border my-1' />
@@ -102,31 +104,19 @@ const ProfileDropdownMenu = ({
           </p>
         </div>
       )}
-
-      <div>
-        <div
-          onClick={() => setAppearanceOpen((open) => !open)}
-          className='flex gap-2.5 text-black items-center justify-between hover:bg-hover p-2 cursor-pointer'
-        >
-          <div className='flex gap-2.5 items-center'>
-            <HugeiconsIcon icon={CircleArrowDownDoubleIcon} size={20} />
-            <p className='text-sm text-black font-medium'>Appearance</p>
-          </div>
-          <HugeiconsIcon
-            icon={ArrowDown01Icon}
-            size={16}
-            className={`transition-transform duration-150 ${
-              appearanceOpen ? 'rotate-180' : ''
-            }`}
-          />
-        </div>
-
-        {appearanceOpen && (
-          <div className='flex flex-col ml-5 pl-2'>
+      <Dropdown
+        align='start'
+        className='w-full'
+        menuClassName='w-full'
+        menu={({ close: closeAppearance }) => (
+          <div className='flex flex-col p-1'>
             {appearanceOptions.map((option) => (
               <div
                 key={option.value}
-                onClick={() => handleAppearanceSelect(option.value)}
+                onClick={() => {
+                  handleAppearanceSelect(option.value)
+                  closeAppearance()
+                }}
                 className='flex items-center justify-between p-2 cursor-pointer hover:bg-hover'
               >
                 <p
@@ -145,7 +135,15 @@ const ProfileDropdownMenu = ({
             ))}
           </div>
         )}
-      </div>
+      >
+        <div className='flex gap-2.5 text-black items-center justify-between hover:bg-hover p-2 cursor-pointer'>
+          <div className='flex gap-2.5 items-center'>
+            <HugeiconsIcon icon={CircleArrowDownDoubleIcon} size={20} />
+            <p className='text-sm text-black font-medium'>Appearance</p>
+          </div>
+          <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
+        </div>
+      </Dropdown>
 
       {restOfGeneralItems.map((item) => (
         <div

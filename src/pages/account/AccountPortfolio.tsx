@@ -17,21 +17,21 @@ const AccountPortfolio = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useBetPositions(activeTab)
+  } = useBetPositions()
 
   const positions = useMemo<BetPosition[]>(
-    () => (data?.pages ?? []).flatMap((p) => p.data),
+    () => (data?.pages ?? []).flatMap((p) => p?.data ?? []),
     [data],
   )
 
-  const currency = positions[0]?.currentValue.currency ?? 'NGN'
+  const currency = positions[0]?.currentValue?.currency ?? 'NGN'
 
   const stats = useMemo(() => {
     let value = 0
     let staked = 0
     let open = 0
     positions.forEach((p) => {
-      const v = toMajorUnits(p.currentValue.amount)
+      const v = toMajorUnits(p?.currentValue?.amount)
       const s = (Number(p.shares) || 0) * (Number(p.avgPrice) || 0)
       value += v
       staked += s

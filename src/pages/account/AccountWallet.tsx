@@ -128,12 +128,12 @@ const AccountWallet = () => {
         Wallet
       </h1>
 
-      <div className='flex flex-col gap-4 w-full'>
-        <div className='flex flex-col lg:flex-row gap-5 w-full'>
+      <div className='flex xl:flex-row flex-col gap-4 w-full'>
+        <div className='flex flex-col w-full rounded-lg bg-card max-w-2xl'>
           {isLoading || !wallet ? (
-            <div className='h-64 w-full animate-pulse rounded-lg bg-card' />
+            <div className='h-64 w-full animate-pulse bg-card' />
           ) : (
-            <div className='flex w-full h-full md:h-60 flex-col gap-4 rounded-lg bg-card p-4'>
+            <div className='flex flex-col gap-4 p-4 border-b border-border/40'>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-placeholder'>
                   Available Balance
@@ -153,35 +153,21 @@ const AccountWallet = () => {
 
               <span className='md:text-3xl text-2xl font-bold text-black'>
                 {visible
-                  ? formatCurrency(toMajorUnits(wallet?.total ?? 0), wallet?.currency)
+                  ? formatCurrency(
+                      toMajorUnits(wallet?.total ?? 0),
+                      wallet?.currency,
+                    )
                   : '••••••'}
               </span>
 
-              {visible && (
-                <div className='flex flex-col gap-1.5'>
-                  <p className='text-sm font-semibold text-neutral-10'>
-                    Trading Balance:{' '}
-                    <span className=' text-black'>
-                      {formatCurrency(toMajorUnits(wallet?.trading ?? 0), wallet?.currency)}{' '}
-                    </span>
-                  </p>
 
-                  <p className='text-sm font-semibold text-neutral-10'>
-                    Winning Balance:{' '}
-                    <span className=' text-black'>
-                      {formatCurrency(toMajorUnits(wallet?.winnings ?? 0), wallet?.currency)}{' '}
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              <div className='flex md:flex-row flex-col items-center gap-2.5'>
+              <div className='flex md:flex-row flex-col items-start md:items-center gap-2.5'>
                 <Button
                   type='button'
                   text='Deposit cash'
                   variation='primary'
                   size='medium'
-                  className='w-fit! '
+                  className='w-fit!'
                   onClick={() => handleModalOpen('deposit')}
                 />
                 <Button
@@ -195,9 +181,13 @@ const AccountWallet = () => {
               </div>
             </div>
           )}
-          <WithdrawalAccounts />
+
+          {/* Withdrawal accounts render naturally below, no height cap */}
+          <div className='p-4'>
+            <WithdrawalAccounts />
+          </div>
         </div>
-        <div className='flex flex-col gap-4'>
+        <div className='flex flex-col gap-4 w-full max-w-2xl'>
           <div className='flex items-center justify-between'>
             <h2 className='text-base font-semibold text-black'>Transactions</h2>
             <FilterComponent
@@ -213,7 +203,7 @@ const AccountWallet = () => {
             />
           </div>
 
-          <div className='flex flex-col gap-2 rounded-lg bg-card p-4'>
+          <div className='flex flex-col gap-2 rounded-lg bg-card p-4 '>
             {isLoading ? (
               <div className='flex flex-col gap-3'>
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -229,7 +219,7 @@ const AccountWallet = () => {
               </p>
             ) : (
               <>
-                <div className='flex flex-col divide-y divide-border/40'>
+                <div className='flex flex-col divide-y divide-border max-h-150 overflow-y-auto'>
                   {transactions.map((item) => {
                     const isPositive = item.direction === 'CREDIT'
                     return (
@@ -262,7 +252,10 @@ const AccountWallet = () => {
                             }`}
                           >
                             {isPositive ? '+' : '-'}
-                            {formatCurrency(toMajorUnits(item.amount), item.currency)}
+                            {formatCurrency(
+                              toMajorUnits(item.amount),
+                              item.currency,
+                            )}
                           </span>
                           <StatusBadge
                             value={item.status}

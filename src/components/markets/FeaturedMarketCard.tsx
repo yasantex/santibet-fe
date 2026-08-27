@@ -74,7 +74,7 @@ const FeaturedMarketCard = ({
             e.stopPropagation()
             if (yes) onSelectOutcome?.(market, yes)
           }}
-          className='rounded-lg bg-market-success py-3 text-sm font-bold text-success'
+          className='rounded-lg cursor-pointer bg-market-success hover:bg-market-success/50 py-3 text-sm font-bold text-success'
         >
           {yes?.label ?? 'YES'} {formatSharePrice(yes?.cents ?? 0)}
         </button>
@@ -84,7 +84,7 @@ const FeaturedMarketCard = ({
             e.stopPropagation()
             if (no) onSelectOutcome?.(market, no)
           }}
-          className='rounded-lg bg-market-error py-3 text-sm font-bold text-error'
+          className='rounded-lg cursor-pointer bg-market-error hover:bg-market-error/50 py-3 text-sm font-bold text-error'
         >
           {no?.label ?? 'NO'} {formatSharePrice(no?.cents ?? 0)}
         </button>

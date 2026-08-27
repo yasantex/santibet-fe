@@ -83,7 +83,7 @@ const AccountRow = ({ account }: { account: WithdrawalAccount }) => {
         </div>
       </div>
 
-      <div className='flex items-center gap-2 self-end sm:self-auto'>
+      <div className='flex items-center gap-2'>
         <button
           type='button'
           onClick={handleDeleteTap}
@@ -103,11 +103,7 @@ const AccountRow = ({ account }: { account: WithdrawalAccount }) => {
   )
 }
 
-const CryptoAccountRow = ({
-  account,
-}: {
-  account: CrytpoAddress
-}) => {
+const CryptoAccountRow = ({ account }: { account: CrytpoAddress }) => {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const queryClient = useQueryClient()
 
@@ -209,8 +205,8 @@ const WithdrawalAccounts = () => {
   const cryptoAccounts = cryptoData?.data ?? []
 
   return (
-    <div className='flex flex-col gap-2 w-full rounded-lg bg-card p-4'>
-      <div className='flex items-center justify-between'>
+    <div className='flex flex-col gap-2 w-full rounded-lg bg-card p-4 '>
+      <div className='flex md:flex-row flex-col md:items-center items-start gap-2.5 justify-between'>
         <h2 className='text-base font-semibold text-black'>
           Withdrawal Accounts
         </h2>
@@ -224,47 +220,49 @@ const WithdrawalAccounts = () => {
         />
       </div>
 
-      <span className='text-xs font-semibold text-neutral-10 mt-2'>
-        Bank Accounts
-      </span>
-      {isLoading ? (
-        <div className='flex flex-col gap-2'>
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className='h-16 animate-pulse rounded-lg bg-hover' />
-          ))}
-        </div>
-      ) : accounts.length === 0 ? (
-        <p className='py-4 text-center text-sm text-neutral-10'>
-          No saved bank accounts yet.
-        </p>
-      ) : (
-        <div className='flex flex-col gap-2'>
-          {accounts.map((account) => (
-            <AccountRow key={account.id} account={account} />
-          ))}
-        </div>
-      )}
+      <main className='flex flex-col gap-2 max-h-150 overflow-y-auto'>
+        <span className='text-xs font-semibold text-neutral-10 mt-2'>
+          Bank Accounts
+        </span>
+        {isLoading ? (
+          <div className='flex flex-col gap-2'>
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className='h-16 animate-pulse rounded-lg bg-hover' />
+            ))}
+          </div>
+        ) : accounts.length === 0 ? (
+          <p className='py-4 text-center text-sm text-neutral-10'>
+            No saved bank accounts yet.
+          </p>
+        ) : (
+          <div className='flex flex-col gap-2'>
+            {accounts.map((account) => (
+              <AccountRow key={account.id} account={account} />
+            ))}
+          </div>
+        )}
 
-      <span className='text-xs font-semibold text-neutral-10 mt-3'>
-        Crypto Addresses
-      </span>
-      {isLoadingCrypto ? (
-        <div className='flex flex-col gap-2'>
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className='h-16 animate-pulse rounded-lg bg-hover' />
-          ))}
-        </div>
-      ) : cryptoAccounts.length === 0 ? (
-        <p className='py-4 text-center text-sm text-neutral-10'>
-          No saved crypto addresses yet.
-        </p>
-      ) : (
-        <div className='flex flex-col gap-2'>
-          {cryptoAccounts.map((account) => (
-            <CryptoAccountRow key={account.id} account={account} />
-          ))}
-        </div>
-      )}
+        <span className='text-xs font-semibold text-neutral-10 mt-3'>
+          Crypto Addresses
+        </span>
+        {isLoadingCrypto ? (
+          <div className='flex flex-col gap-2'>
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className='h-16 animate-pulse rounded-lg bg-hover' />
+            ))}
+          </div>
+        ) : cryptoAccounts.length === 0 ? (
+          <p className='py-4 text-center text-sm text-neutral-10'>
+            No saved crypto addresses yet.
+          </p>
+        ) : (
+          <div className='flex flex-col gap-2'>
+            {cryptoAccounts.map((account) => (
+              <CryptoAccountRow key={account.id} account={account} />
+            ))}
+          </div>
+        )}
+      </main>
 
       <AddWithdrawalAccount
         open={modalOpen && modal === 'add-withdrawal-account'}
