@@ -4,24 +4,20 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowDown01Icon,
   CircleArrowDownDoubleIcon,
+  User02FreeIcons,
 } from '@hugeicons/core-free-icons'
 import {
-  accountMenuItems,
-  generalMenuItems,
-  legalMenuItems,
   appearanceOptions,
+  generalMenuItems,
   type AppearanceOption,
 } from '../../utils/constants'
 import { ProfileAvatar } from './ReusedText'
 import Dropdown from './Dropdown'
+import type { UserData } from '../../types/types'
 
-type ProfileUser = {
-  name?: string | null
-  phone?: string | null
-} | null
 
 type ProfileDropdownMenuProps = {
-  user: ProfileUser
+  user: UserData | null
   navigate: NavigateFunction
   close: () => void
   isDark: boolean
@@ -50,24 +46,18 @@ const ProfileDropdownMenu = ({
     if (wantsDark !== isDark) toggleTheme()
   }
 
-  const leaderboardItem = generalMenuItems.find((i) => i.id === 'leaderboard')
-  const restOfGeneralItems = generalMenuItems.filter(
-    (i) => i.id !== 'leaderboard',
-  )
-
   return (
     <div className='flex text-sm flex-col gap-1 p-2'>
       {user && (
         <div className='flex items-center gap-2.5 px-2 py-1.5'>
           <ProfileAvatar
-            firstName={user?.name ?? ''}
-            lastName={user?.name ?? ''}
+            firstName={user?.firstName ?? ''}
+            lastName={user?.lastName ?? ''}
             imageUrl={null}
-            className='dark:bg-[#e4e5e3]!'
           />
           <div className='flex flex-col gap-1'>
             <p className='font-semibold text-xs text-black'>
-              {user?.name ?? '--'}
+              {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : '--'}
             </p>
             <p className='text-neutral-10 text-xs font-medium'>
               {user?.phone ?? '--'}
@@ -78,31 +68,20 @@ const ProfileDropdownMenu = ({
 
       {user && (
         <>
-          {accountMenuItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => item.action(navigate, close)}
-              className='flex gap-2.5 text-black items-center hover:bg-hover p-2 cursor-pointer'
-            >
-              <HugeiconsIcon icon={item.icon} size={20} />
-              <p className='text-sm text-black font-semibold'>{item.label}</p>
-            </div>
-          ))}
+          <div
+            onClick={() => {
+              navigate('/account')
+              close()
+            }}
+            className='flex gap-2.5 text-black items-center hover:bg-hover p-2 cursor-pointer'
+          >
+            <HugeiconsIcon icon={User02FreeIcons} size={20} />
+            <p className='text-sm text-black font-semibold'>My Profile</p>
+          </div>
           <div className='h-px bg-border my-1' />
         </>
       )}
 
-      {leaderboardItem && (
-        <div
-          onClick={() => leaderboardItem.action(navigate, close)}
-          className='flex gap-2.5 text-black items-center hover:bg-hover p-2 cursor-pointer'
-        >
-          <HugeiconsIcon icon={leaderboardItem.icon} size={20} />
-          <p className='text-sm text-black font-medium'>
-            {leaderboardItem.label}
-          </p>
-        </div>
-      )}
       <Dropdown
         align='start'
         className='w-full'
@@ -143,8 +122,7 @@ const ProfileDropdownMenu = ({
           <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
         </div>
       </Dropdown>
-
-      {restOfGeneralItems.map((item) => (
+      {generalMenuItems.map((item) => (
         <div
           key={item.id}
           onClick={() => item.action(navigate, close)}
@@ -153,18 +131,6 @@ const ProfileDropdownMenu = ({
           <HugeiconsIcon icon={item.icon} size={20} />
           <p className='text-sm text-black font-medium'>{item.label}</p>
         </div>
-      ))}
-
-      <div className='h-px bg-border my-1' />
-
-      {legalMenuItems.map((item) => (
-        <p
-          key={item.id}
-          onClick={() => item.action(navigate, close)}
-          className='text-sm text-black font-medium px-2 py-2 cursor-pointer hover:bg-hover'
-        >
-          {item.label}
-        </p>
       ))}
 
       <div className='h-px bg-border my-1' />

@@ -1,16 +1,15 @@
-import React, { useState } from 'react'
-import ModalComponent, { type ModalProps } from '../../globals/ModalComponent'
+import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
-import { FormSwitch } from '../../globals/FormSwitch'
+import { FormSwitch } from '../../../components/globals/FormSwitch'
 import { useSantiBetMutation } from '../../../data_layer/utils'
 import type { TwoFactorSetupResponse } from '../../../types/types'
 import { useAppSelector } from '../../../utils/hooks'
 import { useModalControl } from '../../../hooks/useModalControl'
-import TwoFactorSetupModal from './TwoFactorSetupModal'
-import DisableTwoFactorModal from './DisableTwoFactorModal'
-import ChangePassword from './ChangePassword'
-import RegenerateRecoveryCodes from './RegenerateRecoveryCodes'
+import TwoFactorSetupModal from '../../../components/appModals/auth/TwoFactorSetupModal'
+import DisableTwoFactorModal from '../../../components/appModals/auth/DisableTwoFactorModal'
+import ChangePassword from '../../../components/appModals/auth/ChangePassword'
+import RegenerateRecoveryCodes from '../../../components/appModals/auth/RegenerateRecoveryCodes'
 
 interface SecurityRow {
   id: string
@@ -22,7 +21,7 @@ interface SecurityRow {
   onClick?: () => void
 }
 
-const Security = ({ open, handleClose }: ModalProps) => {
+const SecurityTab = () => {
   const { user } = useAppSelector((state) => state.user)
   const [setupData, setSetupData] = useState<TwoFactorSetupResponse | null>(
     null,
@@ -93,81 +92,63 @@ const Security = ({ open, handleClose }: ModalProps) => {
   ]
 
   return (
-    <ModalComponent
-      open={open}
-      handleClose={handleClose}
-      title='Security'
-      className='max-w-125! w-[90%]!'
-    >
-      <div className='flex flex-col gap-2.5'>
-        {rows.map((row) => (
-          <button
-            key={row.id}
-            type='button'
-            onClick={row.hasSwitch ? undefined : row.onClick}
-            className={`flex w-full bg-card rounded-lg items-center gap-3 px-4 py-4 text-left border-b border-border hover:bg-hover dark:hover:bg-white/5 ${
-              row.hasSwitch ? 'cursor-default' : 'cursor-pointer'
-            }`}
-            disabled={row.hasSwitch}
-          >
-            <div className='flex-1 min-w-0'>
-              <div className='text-sm font-medium text-black'>{row.label}</div>
-              <div className='text-xs text-neutral-500 dark:text-neutral-400'>
-                {row.description}
-              </div>
+    <div className='flex flex-col gap-2.5'>
+      {rows.map((row) => (
+        <button
+          key={row.id}
+          type='button'
+          onClick={row.hasSwitch ? undefined : row.onClick}
+          className={`flex w-full bg-card rounded-lg items-center gap-3 px-4 py-4 text-left border-b border-border hover:bg-hover dark:hover:bg-white/5 ${
+            row.hasSwitch ? 'cursor-default' : 'cursor-pointer'
+          }`}
+          disabled={row.hasSwitch}
+        >
+          <div className='flex-1 min-w-0'>
+            <div className='text-sm font-medium text-black'>{row.label}</div>
+            <div className='text-xs text-neutral-500 dark:text-neutral-400'>
+              {row.description}
             </div>
+          </div>
 
-            {row.hasSwitch ? (
-              <div onClick={(e) => e.stopPropagation()}>
-                <FormSwitch
-                  checked={row.checked || false}
-                  onChange={row.onToggle || (() => {})}
-                  disabled={isPending}
-                  showLabel={false}
-                />
-              </div>
-            ) : (
-              <HugeiconsIcon
-                icon={ArrowRight01Icon}
-                size={18}
-                className='text-neutral-10 shrink-0'
+          {row.hasSwitch ? (
+            <div onClick={(e) => e.stopPropagation()}>
+              <FormSwitch
+                checked={row.checked || false}
+                onChange={row.onToggle || (() => {})}
+                disabled={isPending}
+                showLabel={false}
               />
-            )}
-          </button>
-        ))}
-      </div>
+            </div>
+          ) : (
+            <HugeiconsIcon
+              icon={ArrowRight01Icon}
+              size={18}
+              className='text-neutral-10 shrink-0'
+            />
+          )}
+        </button>
+      ))}
+
       <TwoFactorSetupModal
         open={modalOpen && modal === 'setup-enable'}
-        handleClose={() => {
-          handleModalClose()
-          handleClose()
-        }}
+        handleClose={() => handleModalClose()}
         secret={setupData?.secret!}
         otpauthUri={setupData?.otpauthUri!}
       />
       <DisableTwoFactorModal
         open={modalOpen && modal === 'disable'}
-        handleClose={() => {
-          handleModalClose()
-          handleClose()
-        }}
+        handleClose={() => handleModalClose()}
       />
       <RegenerateRecoveryCodes
         open={modalOpen && modal === 'generate-backup-codes'}
-        handleClose={() => {
-          handleModalClose()
-          handleClose()
-        }}
+        handleClose={() => handleModalClose()}
       />
       <ChangePassword
         open={modalOpen && modal === 'change-password'}
-        handleClose={() => {
-          handleModalClose()
-          handleClose()
-        }}
+        handleClose={() => handleModalClose()}
       />
-    </ModalComponent>
+    </div>
   )
 }
 
-export default Security
+export default SecurityTab

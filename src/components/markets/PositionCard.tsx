@@ -15,24 +15,24 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
   const navigate = useNavigate()
   // The API now embeds a market summary; only fetch when it's absent.
   const { data: market } = useMarket(
-    position.market ? undefined : position.marketId,
+    position?.market ? undefined : position?.marketId,
   )
-  const { mutateAsync: cashOut, isPending } = useCashOut(position.id)
+  const { mutateAsync: cashOut, isPending } = useCashOut(position?.id)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const title = position.market?.title ?? market?.title ?? 'Loading market…'
-  const outcome = market?.outcomes.find((o) => o.id === position.outcomeId)
-  const outcomeLabel = position.outcomeLabel ?? outcome?.label ?? ''
+  const title = position?.market?.title ?? market?.title ?? 'Loading market…'
+  const outcome = market?.outcomes.find((o) => o.id === position?.outcomeId)
+  const outcomeLabel = position?.outcomeLabel ?? outcome?.label ?? ''
   const isYes = outcomeLabel
     ? YES_LABELS.includes(outcomeLabel.toLowerCase())
     : market?.yes?.id === position.outcomeId
   const shares = Number(position.shares) || 0 // ₦1-unit count (money math)
   // ₦100-contract count for display; backend `contracts` preferred, else ÷100.
   const contracts =
-    position.contracts != null ? Number(position.contracts) : shares / 100
+    position?.contracts != null ? Number(position?.contracts) : shares / 100
   const avgPrice = Number(position.avgPrice) || 0
   const staked = shares * avgPrice
-  const value = toMajorUnits(position.currentValue.amount)
+  const value = toMajorUnits(position?.currentValue?.amount)
   const pnl = value - staked
   const isProfit = pnl >= 0
   const isOpen = position.status === 'open'
@@ -92,13 +92,13 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
       <div className='flex items-center justify-between text-xs text-placeholder'>
         <span>
           Staked{' '}
-          {formatCurrency(String(staked), position.currentValue.currency)}
+          {formatCurrency(String(staked), position?.currentValue?.currency)}
         </span>
         <span>
           Value{' '}
           {formatCurrency(
             value,
-            position.currentValue.currency,
+            position?.currentValue?.currency,
           )}
         </span>
       </div>
@@ -110,7 +110,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
           {isProfit ? '+' : '-'}
           {formatCurrency(
             String(Math.abs(pnl)),
-            position.currentValue.currency,
+            position?.currentValue?.currency,
           )}
         </span>
         {isOpen && (
@@ -137,7 +137,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
             <span className='font-semibold text-black'>{title}</span> at its
             current value of{' '}
             <span className='font-semibold text-black'>
-              {formatCurrency(value, position.currentValue.currency)}
+              {formatCurrency(value, position?.currentValue?.currency)}
             </span>
             ?
           </p>

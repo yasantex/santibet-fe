@@ -155,8 +155,8 @@ const MarketsDashboard = () => {
       {closingSoon.length > 0 && (
         <section className='flex flex-col gap-3'>
           <div className='flex items-center gap-2'>
-            <span className='flex items-center gap-1.5 rounded-full bg-error/10 px-2.5 py-0.5 text-xs font-bold text-error'>
-              <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-error' />
+            <span className='flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-bold text-blue-500'>
+              <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500' />
               LIVE
             </span>
             <h2 className='text-sm font-semibold text-black uppercase'>
@@ -185,10 +185,10 @@ const MarketsDashboard = () => {
               key={category}
               type='button'
               onClick={() => setActiveCategory(category)}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+              className={`shrink-0 rounded-full cursor-pointer px-4 py-1.5 text-sm font-semibold transition-colors ${
                 activeCategory === category
                   ? 'bg-brand-green text-black dark:text-text-black!'
-                  : 'bg-card text-neutral-10 hover:text-black'
+                  : 'bg-card text-black hover:text-black/60'
               }`}
             >
               {category}

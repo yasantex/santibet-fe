@@ -68,7 +68,7 @@ const showToast = (message: string, type: ToastType) => {
       position: 'top-right',
       style: {
         background: 'var(--color-white)',
-        border: type === 'success' ? '1px solid #238b45' : '1px solid #EF4444',
+        border: type === 'success' ? '1px solid #22c55e' : '1px solid #ef4444',
       },
     },
   )

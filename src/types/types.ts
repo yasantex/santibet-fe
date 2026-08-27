@@ -9,9 +9,13 @@ export interface UserData {
   id: string
   email: string
   message: string
+  firstName: string | null
+  lastName: string | null
+  displayName: string | null
+  dateOfBirth: string | null
+  avatarUrl: string | null
   phone: string | null
   name: string | null
-  avatarUrl: string | null
   emailVerified: boolean
   phoneVerified: boolean
   mfaEnabled: boolean
@@ -44,11 +48,10 @@ export interface StatusConfig {
 }
 
 export type FormatDateTimeOptions = {
-  dateStyle?: "full" | "long" | "medium" | "short";
-  timeStyle?: "full" | "long" | "medium" | "short";
-  locale?: string;
-};
-
+  dateStyle?: 'full' | 'long' | 'medium' | 'short'
+  timeStyle?: 'full' | 'long' | 'medium' | 'short'
+  locale?: string
+}
 
 export type KycStatusResponse = {
   status: string
