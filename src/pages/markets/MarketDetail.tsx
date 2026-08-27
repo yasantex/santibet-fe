@@ -297,7 +297,10 @@ const MarketDetail = () => {
                         border: '1px solid var(--color-border)',
                         background: 'var(--color-card)',
                         fontSize: 12,
+                        color: 'var(--color-text-black)',
                       }}
+                      itemStyle={{ color: 'var(--color-text-black)' }}
+                      labelStyle={{ color: 'var(--color-text-black)' }}
                     />
                     <Area
                       type='monotone'

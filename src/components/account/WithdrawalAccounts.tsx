@@ -166,7 +166,7 @@ const CryptoAccountRow = ({ account }: { account: CrytpoAddress }) => {
         </div>
       </div>
 
-      <div className='flex items-center gap-2 self-end sm:self-auto'>
+      <div className='flex items-center gap-2'>
         <button
           type='button'
           onClick={handleDeleteTap}
@@ -223,7 +223,6 @@ const WithdrawalAccounts = () => {
           onClick={() => handleModalOpen('add-withdrawal-account')}
         />
       </div>
-
       <main className='flex flex-col gap-2 max-h-150 overflow-y-auto'>
         <span className='text-xs font-semibold text-neutral-10 mt-2'>
           Bank Accounts
