@@ -142,9 +142,10 @@ export interface MarketHistoryResponse {
   trades: MarketHistoryTick[]
 }
 
-export type ChartInterval = '1h' | '6h' | '1d'
-/** Chart selection: "live" plots tick trades, the rest plot OHLC candles. */
-export type ChartMode = 'live' | ChartInterval
+/** Candle granularities the history endpoint accepts. */
+export type ChartInterval = '1m' | '5m' | '15m' | '1h' | '6h' | '1d'
+/** Chart selection shown as tabs. "live" maps to the 1-minute (near real-time) series. */
+export type ChartMode = 'live' | '1h' | '6h' | '1d'
 
 export interface ChartPoint {
   time: string
