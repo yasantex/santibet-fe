@@ -8,6 +8,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { Button } from '../globals/Button'
 import { FormInput } from '../globals/FormInput'
+import { OtpInput } from '../globals/OtpInput'
 import { useFormik } from 'formik'
 import { useSantiBetMutation } from '../../data_layer/utils'
 import type {
@@ -20,6 +21,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   AddWithdrawalAccountSchema,
   AddCryptoWithdrawalAccountSchema,
+  VerifySchema,
 } from '../../utils/validations'
 import { useBankOptions } from '../../hooks/useBankOptions'
 import CustomSelector from '../globals/CustomSelector'
@@ -32,7 +34,12 @@ type ResolveResponse = BaseApiResponse & {
   bankCode: string
 }
 
-type AccountStep = 'method' | 'bank' | 'crypto'
+type StepUpRequestResponse = BaseApiResponse & {
+  channel: string
+  destination: string
+}
+
+type AccountStep = 'method' | 'bank' | 'crypto' | 'crypto-otp'
 type AccountMethod = 'bank' | 'crypto'
 
 const ACCOUNT_METHODS: {
@@ -63,19 +70,24 @@ const cryptoCurrencies = [
   { label: 'USDT', value: 'USDT' },
 ]
 
-const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
+const AddWithdrawalAccount = ({ open, handleClose, refetch }: ModalProps & {refetch: ()=> void}) => {
   const [step, setStep] = useState<AccountStep>('method')
+  const [stepUpDestination, setStepUpDestination] = useState<string | null>(
+    null,
+  )
   const queryClient = useQueryClient()
   const { banksData, setSearchBanks } = useBankOptions()
 
   const resetAll = () => {
     setStep('method')
+    setStepUpDestination(null)
   }
 
   const handleClosed = () => {
     resetAll()
     bankForm.resetForm()
     cryptoForm.resetForm()
+    otpForm.resetForm()
     handleClose()
   }
 
@@ -91,6 +103,7 @@ const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['withdrawal-accounts'] })
           showSuccessToast('Withdrawal account added')
+          refetch()
           handleClosed()
         },
         onError: (error) => {
@@ -192,6 +205,7 @@ const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
             queryKey: ['withdrawal-accounts'],
           })
           showSuccessToast('Crypto address added')
+          refetch()
           handleClosed()
         },
         onError: (error) => {
@@ -226,12 +240,71 @@ const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
     },
   })
 
+  // ---------- Step-up (required before crypto flow is entered) ----------
+
+  const { mutateAsync: requestStepUp, isPending: isRequestingStepUp } =
+    useSantiBetMutation<StepUpRequestResponse, { channel: string }>({
+      path: '/auth/step-up/request',
+      mutationOptions: {
+        onSuccess: (data) => {
+          setStepUpDestination(data.destination)
+        },
+        onError: (error) => {
+          if (isAxiosError(error)) {
+            showWarningToast(error.response?.data?.message)
+          } else {
+            showWarningToast(error.message)
+          }
+        },
+      },
+    })
+
+  const { mutateAsync: confirmStepUp, isPending: isConfirmingStepUp } =
+    useSantiBetMutation<BaseApiResponse, { code: string }>({
+      path: '/auth/step-up/confirm',
+      mutationOptions: {
+        onError: (error) => {
+          if (isAxiosError(error)) {
+            showWarningToast(error.response?.data?.message)
+          } else {
+            showWarningToast(error.message)
+          }
+        },
+      },
+    })
+
+  const otpForm = useFormik({
+    initialValues: {
+      code: '',
+    },
+    validationSchema: VerifySchema,
+    onSubmit: async (vals) => {
+      try {
+        await confirmStepUp({ code: vals.code })
+        setStep('crypto')
+      } catch (error) {
+        console.error(error)
+      }
+    },
+  })
+
+  const handleSelectCrypto = async () => {
+    try {
+      await requestStepUp({ channel: 'email' })
+      setStep('crypto-otp')
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   const title =
     step === 'method'
       ? 'Add Withdrawal Account'
       : step === 'bank'
         ? 'Add Bank Account'
-        : 'Add Crypto Address'
+        : step === 'crypto'
+          ? 'Add Crypto Address'
+          : 'Confirm Crypto Address'
 
   return (
     <ModalComponent
@@ -246,13 +319,24 @@ const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
             <button
               key={m.id}
               type='button'
-              onClick={() => setStep(m.id)}
-              className='flex w-full items-center gap-3 rounded-lg border border-border px-4 py-3 text-left hover:bg-hover cursor-pointer'
+              onClick={() => {
+                if (m.id === 'crypto') {
+                  handleSelectCrypto()
+                } else {
+                  setStep(m.id)
+                }
+              }}
+              disabled={isRequestingStepUp}
+              className='flex w-full items-center gap-3 rounded-lg border border-border px-4 py-3 text-left hover:bg-hover cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed'
             >
               <HugeiconsIcon icon={m.icon} size={20} className='text-black' />
               <div className='flex-1'>
                 <p className='text-sm font-semibold text-black'>{m.label}</p>
-                <p className='text-xs text-neutral-10'>{m.subtitle}</p>
+                <p className='text-xs text-neutral-10'>
+                  {m.id === 'crypto' && isRequestingStepUp
+                    ? 'Sending confirmation code…'
+                    : m.subtitle}
+                </p>
               </div>
               <HugeiconsIcon
                 icon={ArrowRight01Icon}
@@ -330,6 +414,42 @@ const AddWithdrawalAccount = ({ open, handleClose }: ModalProps) => {
             className='w-full'
             loading={isAddingBank}
             disabled={isAddingBank}
+          />
+        </form>
+      )}
+
+      {step === 'crypto-otp' && (
+        <form
+          onSubmit={otpForm.handleSubmit}
+          className='w-full flex flex-col gap-2.5 mt-2.5'
+        >
+          {stepUpDestination && (
+            <p className='text-sm text-neutral-10'>
+              We sent a code to {stepUpDestination}
+            </p>
+          )}
+          <OtpInput
+            length={6}
+            name='code'
+            value={otpForm.values.code}
+            hasTitle
+            title='Enter Code'
+            onChange={(val) => otpForm.setFieldValue('code', val)}
+            onComplete={() => otpForm.setFieldTouched('code', true)}
+            errors={
+              otpForm.errors.code && otpForm.touched.code
+                ? otpForm.errors.code
+                : ''
+            }
+          />
+          <Button
+            type='submit'
+            text='Confirm'
+            variation='primary'
+            className='mt-2.5'
+            size='large'
+            loading={isConfirmingStepUp}
+            disabled={isConfirmingStepUp}
           />
         </form>
       )}

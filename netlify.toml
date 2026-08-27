@@ -7,6 +7,13 @@
   NODE_VERSION = "22"
   PNPM_VERSION = "10.13.1"
 
+# Proxy API calls to the backend so cookies are same-site (must come before the SPA catch-all)
+[[redirects]]
+  from = "/api/*"
+  to = "https://santibet-8b7dfea9557d.herokuapp.com/api/:splat"
+  status = 200
+  force = true
+
 # SPA fallback: react-router owns the routing, so every unmatched path
 # must serve index.html instead of Netlify's 404 page.
 [[redirects]]
