@@ -1,4 +1,5 @@
 // src/components/markets/FeaturedMarketCard.tsx
+import { useMemo } from 'react'
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
@@ -19,13 +20,16 @@ const FeaturedMarketCard = ({
 }: FeaturedMarketCardProps) => {
   const yes = market.yes
   const no = market.no
-  const series =
-    chartData && chartData.length > 1
-      ? chartData
-      : // gentle flat-ish placeholder around the current YES probability
-        Array.from({ length: 8 }).map((_, i) => ({
-          value: (yes?.percent ?? 50) + Math.sin(i) * 3,
-        }))
+  // Real history when we have it; otherwise a flat line at the current chance
+  // (accurate to the market's present state — no fabricated movement). Memoised
+  // so the chart doesn't re-animate to empty on every render.
+  const series = useMemo(
+    () =>
+      chartData && chartData.length > 1
+        ? chartData
+        : Array.from({ length: 8 }).map(() => ({ value: yes?.percent ?? 50 })),
+    [chartData, yes?.percent],
+  )
 
   return (
     <div
@@ -62,6 +66,7 @@ const FeaturedMarketCard = ({
               stroke='var(--color-brand-green)'
               strokeWidth={2}
               dot={false}
+              isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>

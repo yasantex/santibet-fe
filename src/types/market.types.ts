@@ -148,8 +148,9 @@ export type ChartInterval = '1m' | '5m' | '15m' | '1h' | '6h' | '1d'
 export type ChartMode = 'live' | '1h' | '6h' | '1d'
 
 export interface ChartPoint {
-  time: string
-  value: number // 0..100 (probability / ₦-out-of-100)
+  t: number // epoch ms — used for ordering / the live tail
+  time: string // display label (categorical axis)
+  value: number
 }
 
 export interface MarketChart {
