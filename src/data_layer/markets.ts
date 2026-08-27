@@ -583,13 +583,17 @@ export const useMarketChart = (
   outcomeId?: string,
   mode: ChartMode = 'live',
 ) => {
-  const interval: ChartInterval = mode === 'live' ? '1h' : mode
+  // "Live" plots the 1-minute series — its latest candle is the current minute
+  // and updates as price moves, so the fast refetch makes the chart move.
+  const interval: ChartInterval = mode === 'live' ? '1m' : mode
   return useQuery<MarketChart>({
     queryKey: ['market-chart', id, outcomeId, mode],
     enabled: !!id,
     retry: false,
-    // Live view polls fast; candle intervals refresh more lazily.
+    // Live view polls fast; candle intervals refresh more lazily. Poll even
+    // when the tab isn't focused so the live chart keeps moving while open.
     refetchInterval: mode === 'live' ? 5000 : 30000,
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       const feed = await resolveFeed()
       if (feed === 'lobby') {
