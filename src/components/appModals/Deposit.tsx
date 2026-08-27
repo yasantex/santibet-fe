@@ -184,7 +184,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     data: cryptoAddress,
     isLoading: isLoadingAddress,
     isError: isCryptoError,
-    error
+    error,
   } = useSantiBetQuery<CryptoAddressResponse>({
     path: `/wallet/crypto/address?currency=${cryptoCurrency}`,
     enabled: step === 'crypto-address' && !!cryptoCurrency,
@@ -192,7 +192,18 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
   const handleSelectMethod = (id: DepositMethod) => {
     if (id === 'crypto' && !userProfile?.emailVerified) {
-      showWarningToast('Please verify your email to deposit with crypto')
+      showWarningToast(
+        'Please verify your email on your profile to deposit with crypto',
+      )
+      return
+    }
+    if (
+      id === 'crypto' &&
+      (!userProfile?.firstName || !userProfile?.lastName)
+    ) {
+      showWarningToast(
+        'Please update your profile information to include your first name and last name to deposit with crypto',
+      )
       return
     }
     setMethod(id)
@@ -374,7 +385,8 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
           {isCryptoError && !isLoadingAddress && (
             <p className='text-sm text-center text-error py-6'>
-              {error?.message ?? "Couldn't load a deposit address. Please try again."}
+              {error?.message ??
+                "Couldn't load a deposit address. Please try again."}
             </p>
           )}
 

@@ -23,7 +23,7 @@ const LiveEventCard = ({
   if (!market) return null
 
   return (
-    <div className='flex flex-col gap-3 rounded-2xl border border-border bg-card p-4'>
+    <div className='flex flex-col gap-3 rounded-lg border border-border bg-card p-4'>
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2'>
           {event.imageUrl ? (
@@ -56,7 +56,7 @@ const LiveEventCard = ({
         <ScoreBoard state={event.liveState} />
       ) : (
         display && (
-          <div className='flex items-center gap-1.5 text-xs font-semibold text-error'>
+          <div className='flex items-center gap-1.5 text-xs font-semibold text-placeholder'>
             <HugeiconsIcon icon={Clock01Icon} size={14} />
             {label} in {display}
           </div>

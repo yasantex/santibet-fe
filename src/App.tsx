@@ -5,6 +5,7 @@ import ScrollToTop from './components/globals/ScrollToTop'
 import AppLayout from './layout/AppLayout'
 import AuthRoute from './routes/AuthRoute'
 import ProtectedRoute from './routes/ProtectedRoute'
+import AccountLayout from './pages/account/AccountLayout'
 
 // Route components are code-split so the initial bundle stays small; heavy deps
 // (recharts, qrcode) load only with the pages that use them.
@@ -13,6 +14,7 @@ const MarketDetail = lazy(() => import('./pages/markets/MarketDetail'))
 const EventDetail = lazy(() => import('./pages/markets/EventDetail'))
 const CategoryPage = lazy(() => import('./pages/markets/CategoryPage'))
 const LiveMarkets = lazy(() => import('./pages/markets/LiveMarkets'))
+const AccountMenu = lazy(() => import('./pages/account/AccountMenu'))
 const AccountProfile = lazy(() => import('./pages/account/AccountProfile'))
 const AccountWallet = lazy(() => import('./pages/account/AccountWallet'))
 const AccountPortfolio = lazy(() => import('./pages/account/AccountPortfolio'))
@@ -83,13 +85,19 @@ function App() {
             </Route>
 
             <Route element={<ProtectedRoute />}>
-              <Route path='/account-profile' element={<AccountProfile />} />
-              <Route path='/rewards' element={<Rewards />} />
-              <Route path='/account-wallet' element={<AccountWallet />} />
-              <Route path='/account-portfolio' element={<AccountPortfolio />} />
-              <Route path='/orders' element={<Orders />} />
-              <Route path='/refer-earn' element={<ReferEarn />} />
+              <Route path='/account' element={<AccountMenu />} />
 
+              <Route element={<AccountLayout />}>
+                <Route path='/account-profile' element={<AccountProfile />} />
+                <Route path='/rewards' element={<Rewards />} />
+                <Route path='/account-wallet' element={<AccountWallet />} />
+                <Route
+                  path='/account-portfolio'
+                  element={<AccountPortfolio />}
+                />
+                <Route path='/orders' element={<Orders />} />
+                <Route path='/refer-earn' element={<ReferEarn />} />
+              </Route>
             </Route>
           </Route>
         </Routes>

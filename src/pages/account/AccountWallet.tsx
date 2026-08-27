@@ -123,13 +123,13 @@ const AccountWallet = () => {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return (
-    <main className='mx-auto flex w-full flex-col gap-6 px-3 pt-4 pb-20 md:px-8'>
+    <main className='mx-auto flex w-full flex-col gap-6'>
       <h1 className='text-[18px] font-bold text-black md:text-[28px]'>
         Wallet
       </h1>
 
-      <div className='flex xl:flex-row flex-col gap-4 w-full'>
-        <div className='flex flex-col w-full rounded-lg bg-card max-w-2xl'>
+      <div className='flex flex-col gap-4 w-full'>
+        <div className='flex flex-col w-full rounded-lg bg-card '>
           {isLoading || !wallet ? (
             <div className='h-64 w-full animate-pulse bg-card' />
           ) : (
@@ -160,8 +160,7 @@ const AccountWallet = () => {
                   : '••••••'}
               </span>
 
-
-              <div className='flex md:flex-row flex-col items-start md:items-center gap-2.5'>
+              <div className='flex flex-row items-center gap-2.5'>
                 <Button
                   type='button'
                   text='Deposit cash'
@@ -182,12 +181,9 @@ const AccountWallet = () => {
             </div>
           )}
 
-          {/* Withdrawal accounts render naturally below, no height cap */}
-          <div className='p-4'>
-            <WithdrawalAccounts />
-          </div>
+          <WithdrawalAccounts />
         </div>
-        <div className='flex flex-col gap-4 w-full max-w-2xl'>
+        <div className='flex flex-col gap-4 w-full'>
           <div className='flex items-center justify-between'>
             <h2 className='text-base font-semibold text-black'>Transactions</h2>
             <FilterComponent
