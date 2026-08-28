@@ -27,10 +27,12 @@ const AccountSidebar = () => {
             />
             <div className='flex flex-col gap-0.5'>
               <p className='text-sm font-semibold text-black'>
-                {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : '--'}
+                {user?.firstName && user?.lastName
+                  ? `${user.firstName} ${user.lastName}`
+                  : '--'}
               </p>
               <p className='text-xs font-medium text-neutral-10'>
-                {user?.phone ?? '--'}
+                {user?.phone ?? user?.email}{' '}
               </p>
             </div>
           </div>

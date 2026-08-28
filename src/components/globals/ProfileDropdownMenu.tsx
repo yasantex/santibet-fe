@@ -60,7 +60,7 @@ const ProfileDropdownMenu = ({
               {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : '--'}
             </p>
             <p className='text-neutral-10 text-xs font-medium'>
-              {user?.phone ?? '--'}
+              {user?.phone ?? user?.email}
             </p>
           </div>
         </div>

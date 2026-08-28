@@ -35,7 +35,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
   const value = toMajorUnits(position?.currentValue?.amount)
   const pnl = value - staked
   const isProfit = pnl >= 0
-  const isOpen = position.status === 'open'
+  const isOpen = position.status === 'OPEN'
 
   const handleCashOut = async () => {
     try {
