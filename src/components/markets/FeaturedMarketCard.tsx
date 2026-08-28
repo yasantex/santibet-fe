@@ -1,4 +1,3 @@
-// src/components/markets/FeaturedMarketCard.tsx
 import { useMemo } from 'react'
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts'
 import type { UiMarket, UiOutcome } from '../../types/market.types'

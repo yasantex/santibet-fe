@@ -6,7 +6,12 @@ import { HugeiconsIcon } from '@hugeicons/react'
 
 type ToastType = 'success' | 'error'
 
-const showToast = (message: string, type: ToastType) => {
+export type ToastAction = {
+  label: string
+  onClick: () => void
+}
+
+const showToast = (message: string, type: ToastType, action?: ToastAction) => {
   toast.custom(
     (t): ReactElement => (
       <div
@@ -61,6 +66,21 @@ const showToast = (message: string, type: ToastType) => {
         >
           {message}
         </span>
+
+        {action && (
+          <button
+            type='button'
+            onClick={() => {
+              toast.dismiss(t)
+              action.onClick()
+            }}
+            className={`${
+              type === 'success' ? 'text-success' : 'text-error'
+            } text-sm font-semibold hover:underline underline-offset-2 cursor-pointer`}
+          >
+            {action.label}
+          </button>
+        )}
       </div>
     ),
     {
@@ -68,12 +88,16 @@ const showToast = (message: string, type: ToastType) => {
       position: 'top-right',
       style: {
         background: 'var(--color-white)',
-        border: type === 'success' ? '1px solid #22c55e' : '1px solid #ef4444',
+        border:
+          type === 'success'
+            ? '1px solid var(--color-success)'
+            : '1px solid var(--color-error)',
       },
     },
   )
 }
 
-export const showSuccessToast = (message: string) =>
-  showToast(message, 'success')
-export const showWarningToast = (message: string) => showToast(message, 'error')
+export const showSuccessToast = (message: string, action?: ToastAction) =>
+  showToast(message, 'success', action)
+export const showWarningToast = (message: string, action?: ToastAction) =>
+  showToast(message, 'error', action)

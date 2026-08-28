@@ -20,6 +20,7 @@ import type {
 import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router'
 import {
   formatCurrency,
   formatDate,
@@ -64,6 +65,7 @@ const DEPOSIT_METHODS: {
 ]
 
 const Deposit = ({ open, handleClose }: ModalProps) => {
+  const navigate = useNavigate()
   const [step, setStep] = useState<DepositStep>('method')
   const [method, setMethod] = useState<DepositMethod | null>(null)
 
@@ -194,6 +196,13 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     if (id === 'crypto' && !userProfile?.emailVerified) {
       showWarningToast(
         'Please verify your email on your profile to deposit with crypto',
+        {
+          label: 'Verify email',
+          onClick: () => {
+            handleClose()
+            navigate('/account-profile?tab=verification')
+          },
+        },
       )
       return
     }
@@ -203,6 +212,13 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     ) {
       showWarningToast(
         'Please update your profile information to include your first name and last name to deposit with crypto',
+        {
+          label: 'Update profile',
+          onClick: () => {
+            handleClose()
+            navigate('/account-profile')
+          },
+        },
       )
       return
     }

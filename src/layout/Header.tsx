@@ -19,6 +19,9 @@ import { useAppSelector } from '../utils/hooks'
 import { useTheme } from '../hooks/useTheme'
 import useLogout from '../hooks/useLogout'
 import ProfileDropdownMenu from '../components/globals/ProfileDropdownMenu'
+import { useSantiBetQuery } from '../data_layer/utils'
+import { formatCurrency, toMajorUnits } from '../utils/functions'
+import type { WalletBalance } from '../types/wallet.types'
 
 const CategoryRow = () => (
   <div className='hide-scroll-bar  lg:hidden flex items-center gap-6 overflow-x-auto px-4  text-sm font-medium text-neutral-10 md:px-6'>
@@ -42,6 +45,11 @@ const Header = () => {
   const { logout } = useLogout()
 
   const { user } = useAppSelector((state) => state.user)
+
+  const { data: wallet } = useSantiBetQuery<WalletBalance>({
+    path: '/wallet',
+    enabled: !!user,
+  })
 
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -99,6 +107,20 @@ const Header = () => {
 
           {user ? (
             <div className='flex items-center gap-2.5'>
+              <Link
+                to='/account-portfolio'
+                className='shrink-0 lg:flex hidden items-center text-sm font-semibold text-black hover:text-black/60'
+              >
+                Portfolio
+              </Link>
+              <Link
+                to='/account-wallet'
+                className='shrink-0 flex items-center gap-1.5 rounded-md bg-hover px-3 py-1.5 text-sm font-semibold text-black hover:bg-hover/70'
+              >
+                {wallet
+                  ? formatCurrency(toMajorUnits(wallet.total ?? 0), wallet.currency)
+                  : '—'}
+              </Link>
               <Button
                 type='button'
                 text='Deposit cash'
