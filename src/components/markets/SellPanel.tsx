@@ -98,13 +98,13 @@ const SellPositionRow = ({
 }
 
 const SellPanel = ({ market }: { market: UiMarket }) => {
-  const { data, isLoading } = useBetPositions('open')
+  const { data, isLoading } = useBetPositions('OPEN')
 
   const positions = useMemo<BetPosition[]>(
     () =>
       (data?.pages ?? [])
         .flatMap((p) => p.data)
-        .filter((p) => p.marketId === market.id && p.status === 'open'),
+        .filter((p) => p.marketId === market.id && p.status === 'OPEN'),
     [data, market.id],
   )
 

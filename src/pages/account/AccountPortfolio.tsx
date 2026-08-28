@@ -5,10 +5,10 @@ import { useBetPositions } from '../../data_layer/bets'
 import { formatCurrency, toMajorUnits } from '../../utils/functions'
 import type { BetPosition } from '../../types/bet.types'
 
-type PortfolioTab = 'open' | 'settled'
+type PortfolioTab = 'OPEN' | 'SETTLED'
 
 const AccountPortfolio = () => {
-  const [activeTab, setActiveTab] = useState<PortfolioTab>('open')
+  const [activeTab, setActiveTab] = useState<PortfolioTab>('OPEN')
 
   const {
     data,
@@ -35,7 +35,7 @@ const AccountPortfolio = () => {
       const s = (Number(p.shares) || 0) * (Number(p.avgPrice) || 0)
       value += v
       staked += s
-      if (p.status === 'open') open += 1
+      if (p.status === 'OPEN') open += 1
     })
     return { value, pnl: value - staked, open }
   }, [positions])
@@ -43,7 +43,7 @@ const AccountPortfolio = () => {
   const filtered = useMemo(
     () =>
       positions.filter((p) =>
-        activeTab === 'open' ? p.status === 'open' : p.status !== 'open',
+        activeTab === 'OPEN' ? p.status === 'OPEN' : p.status !== 'OPEN',
       ),
     [positions, activeTab],
   )
@@ -64,7 +64,7 @@ const AccountPortfolio = () => {
           ))}
         </div>
       ) : (
-        <div className='flex flex-col gap-4 lg:flex-row'>
+        <div className='grid-cols-1 gap-4 grid xl:grid-cols-2'>
           <div className='flex min-w-60 max-w-100 flex-col gap-1 rounded-lg bg-card p-4'>
             <span className='text-sm text-placeholder'>Portfolio Value</span>
             <span className='text-lg font-bold text-black'>
@@ -90,7 +90,7 @@ const AccountPortfolio = () => {
       )}
 
       <div className='inline-flex w-46 items-center gap-1 rounded-full bg-hover p-1'>
-        {(['open', 'settled'] as const).map((status) => (
+        {(['OPEN', 'SETTLED'] as const).map((status) => (
           <button
             key={status}
             type='button'
@@ -101,7 +101,7 @@ const AccountPortfolio = () => {
                 : 'text-placeholder'
             }`}
           >
-            {status}
+            {status?.toLocaleLowerCase()}
           </button>
         ))}
       </div>
@@ -112,7 +112,7 @@ const AccountPortfolio = () => {
         </p>
       ) : (
         <>
-          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+          <div className='grid grid-cols-1 gap-4 xl:grid-cols-2'>
             {isLoading ? (
               Array.from({ length: 2 }).map((_, i) => (
                 <div key={i} className='h-52 animate-pulse rounded-lg bg-card' />
@@ -123,7 +123,7 @@ const AccountPortfolio = () => {
               ))
             ) : (
               <p className='col-span-full py-8 text-center text-sm text-placeholder'>
-                No {activeTab} positions yet.
+                No {activeTab?.toLocaleLowerCase()} positions yet.
               </p>
             )}
           </div>
