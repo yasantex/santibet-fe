@@ -52,10 +52,10 @@ body {
   --color-neutral-10: #9aa09c;
   --font-outfit: 'Outfit', sans-serif;
   --background: #ffffff;
-  --color-error: #ef4444;
-  --color-error-bg: #ffeded;
-  --color-surface-error: #fff2f2;
-  --color-border-error: #ff2e2e;
+  --color-error: #ff6347;
+  --color-error-bg: #fff0ed;
+  --color-surface-error: #fff0ed;
+  --color-border-error: #ff6347;
   --color-border: #e4e5e3;
   --color-hover: #eaeaea;
   --color-surface-hover: #9aa09c;
@@ -65,7 +65,7 @@ body {
   --color-card: #e4e5e3;
   --color-warning: #ff8000;
   --color-success-bg: #eefcf3;
-  --color-error-bg: #ffeded;
+  --color-error-bg: #fff0ed;
   --color-glass: #e4e5e3;
   --color-placeholder: #6b706d;
   --color-market-success: #183123;

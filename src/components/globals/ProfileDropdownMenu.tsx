@@ -4,6 +4,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowDown01Icon,
   CircleArrowDownDoubleIcon,
+  LogoutSquare01Icon,
   User02FreeIcons,
 } from '@hugeicons/core-free-icons'
 import {
@@ -14,7 +15,6 @@ import {
 import { ProfileAvatar } from './ReusedText'
 import Dropdown from './Dropdown'
 import type { UserData } from '../../types/types'
-
 
 type ProfileDropdownMenuProps = {
   user: UserData | null
@@ -57,7 +57,9 @@ const ProfileDropdownMenu = ({
           />
           <div className='flex flex-col gap-1'>
             <p className='font-semibold text-xs text-black'>
-              {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : '--'}
+              {user?.firstName && user?.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : '--'}
             </p>
             <p className='text-neutral-10 text-xs font-medium'>
               {user?.phone ?? user?.email}
@@ -140,8 +142,9 @@ const ProfileDropdownMenu = ({
           close()
           onLogout()
         }}
-        className='text-sm text-error font-medium mt-1 px-2 py-2 cursor-pointer hover:bg-hover'
+        className='text-sm text-error flex items-center gap-2.5 font-medium mt-1 px-2 py-2 cursor-pointer hover:bg-hover'
       >
+        <HugeiconsIcon icon={LogoutSquare01Icon} size={20} />
         Log Out
       </p>
     </div>

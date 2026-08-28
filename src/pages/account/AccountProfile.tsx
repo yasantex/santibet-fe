@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { useAppSelector } from '../../utils/hooks'
 import type { KycStatusResponse, UserData } from '../../types/types'
 import { useSantiBetQuery } from '../../data_layer/utils'
@@ -11,7 +12,11 @@ import VerificationTab from './profileTabs/VerificationTab'
 
 type AccountTab = 'profile' | 'security' | 'verification'
 
+const VALID_TABS: AccountTab[] = ['profile', 'security', 'verification']
+
 const AccountProfile = () => {
+  const [searchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab') as AccountTab | null
   const {
     data: userProfile,
     isLoading,
@@ -30,7 +35,17 @@ const AccountProfile = () => {
   const { user } = useAppSelector((state) => state.user)
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
-  const [activeTab, setActiveTab] = useState<AccountTab>('profile')
+  const [activeTab, setActiveTab] = useState<AccountTab>(
+    tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'profile',
+  )
+  const [syncedTabParam, setSyncedTabParam] = useState(tabParam)
+
+  if (tabParam !== syncedTabParam) {
+    setSyncedTabParam(tabParam)
+    if (tabParam && VALID_TABS.includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }
 
   const profile = userProfile ?? user
 
