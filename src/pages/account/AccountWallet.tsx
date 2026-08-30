@@ -235,6 +235,9 @@ const AccountWallet = () => {
                             <span className='text-sm font-semibold text-black capitalize'>
                               {item.type.replaceAll('_', ' ').toLowerCase()}
                             </span>
+                            <span className='text-sm text-black'>
+                              {item.description}
+                            </span>
                             <span className='text-xs text-placeholder'>
                               {formatDate(item.createdAt)}
                             </span>

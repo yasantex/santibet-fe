@@ -31,11 +31,40 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
   const contracts =
     position?.contracts != null ? Number(position?.contracts) : shares / 100
   const avgPrice = Number(position.avgPrice) || 0
-  const staked = shares * avgPrice
-  const value = toMajorUnits(position?.currentValue?.amount)
-  const pnl = value - staked
-  const isProfit = pnl >= 0
+  const currency =
+    position?.stake?.currency ?? position?.currentValue?.currency
+  const staked = position?.stake
+    ? toMajorUnits(position.stake.amount)
+    : shares * avgPrice
   const isOpen = position.status === 'OPEN'
+  const result = position.result ?? null
+
+  // OPEN positions mark-to-market against currentValue/unrealizedPnl; once
+  // SETTLED/CLOSED, currentValue goes null and realizedPnl is the source of truth.
+  const value = isOpen ? toMajorUnits(position?.currentValue?.amount ?? 0) : null
+  const pnl = isOpen
+    ? position.unrealizedPnl
+      ? toMajorUnits(position.unrealizedPnl.amount)
+      : (value ?? 0) - staked
+    : position.realizedPnl
+      ? toMajorUnits(position.realizedPnl.amount)
+      : 0
+  const isProfit = pnl >= 0
+  // Amount actually returned to the user for a settled/closed position.
+  const payout = staked + pnl
+
+  const statusMeta = isOpen
+    ? { label: 'In progress', className: 'bg-warning/10 text-warning' }
+    : result === 'WON'
+      ? { label: 'Won', className: 'bg-surface-success text-success' }
+      : result === 'LOST'
+        ? { label: 'Lost', className: 'bg-surface-error text-error' }
+        : result === 'CASHED_OUT'
+          ? { label: 'Cashed out', className: 'bg-surface-hover text-black' }
+          : {
+              label: position.status.toLowerCase(),
+              className: 'bg-surface-hover text-black',
+            }
 
   const handleCashOut = async () => {
     try {
@@ -54,8 +83,10 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
   return (
     <div className='flex flex-col gap-4 rounded-lg bg-card p-4'>
       <div className='flex items-center justify-between'>
-        <span className='w-fit rounded-full bg-surface-hover px-2.5 py-0.5 text-xs font-semibold capitalize text-black'>
-          {position.status.toLowerCase()}
+        <span
+          className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${statusMeta.className}`}
+        >
+          {statusMeta.label}
         </span>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${
@@ -90,16 +121,10 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
       </div>
 
       <div className='flex items-center justify-between text-xs text-placeholder'>
+        <span>Staked {formatCurrency(String(staked), currency)}</span>
         <span>
-          Staked{' '}
-          {formatCurrency(String(staked), position?.currentValue?.currency)}
-        </span>
-        <span>
-          Value{' '}
-          {formatCurrency(
-            value,
-            position?.currentValue?.currency,
-          )}
+          {isOpen ? 'Value' : 'Payout'}{' '}
+          {formatCurrency(String(isOpen ? (value ?? 0) : payout), currency)}
         </span>
       </div>
 
@@ -107,11 +132,9 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
         <span
           className={`text-sm font-bold ${isProfit ? 'text-success' : 'text-error'}`}
         >
+          {isOpen && 'Unrealized '}
           {isProfit ? '+' : '-'}
-          {formatCurrency(
-            String(Math.abs(pnl)),
-            position?.currentValue?.currency,
-          )}
+          {formatCurrency(String(Math.abs(pnl)), currency)}
         </span>
         {isOpen && (
           <Button
@@ -137,7 +160,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
             <span className='font-semibold text-black'>{title}</span> at its
             current value of{' '}
             <span className='font-semibold text-black'>
-              {formatCurrency(value, position?.currentValue?.currency)}
+              {formatCurrency(String(value ?? 0), currency)}
             </span>
             ?
           </p>
