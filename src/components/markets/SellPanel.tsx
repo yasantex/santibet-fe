@@ -25,9 +25,9 @@ const SellPositionRow = ({
     position.contracts != null ? Number(position.contracts) : shares / 100
   const avgPrice = Number(position.avgPrice) || 0
   const staked = shares * avgPrice
-  const value = toMajorUnits(position.currentValue.amount)
+  const value = toMajorUnits(position.currentValue?.amount ?? 0)
   const pnl = value - staked
-  const currency = position.currentValue.currency
+  const currency = position.currentValue?.currency
 
   const handleCashOut = async () => {
     try {
