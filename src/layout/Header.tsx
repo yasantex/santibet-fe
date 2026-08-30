@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import logo from '../assets/Santibet Logo.svg'
 import logoDark from '../assets/Santibet Logo (white).svg'
-
 import { Link, useNavigate } from 'react-router'
 import Dropdown from '../components/globals/Dropdown'
 import SearchInput from '../components/globals/SearchInput'
@@ -20,6 +19,7 @@ import { useTheme } from '../hooks/useTheme'
 import useLogout from '../hooks/useLogout'
 import ProfileDropdownMenu from '../components/globals/ProfileDropdownMenu'
 import { useSantiBetQuery } from '../data_layer/utils'
+import { useBetPositions } from '../data_layer/bets'
 import { formatCurrency, toMajorUnits } from '../utils/functions'
 import type { WalletBalance } from '../types/wallet.types'
 
@@ -43,13 +43,21 @@ const Header = () => {
     useModalControl()
   const { isDark, toggleTheme } = useTheme()
   const { logout } = useLogout()
-
   const { user } = useAppSelector((state) => state.user)
 
   const { data: wallet } = useSantiBetQuery<WalletBalance>({
     path: '/wallet',
     enabled: !!user,
   })
+
+  const { data: openPositions } = useBetPositions('OPEN', 100)
+  const portfolioValue = useMemo(
+    () =>
+      (openPositions?.pages ?? [])
+        .flatMap((page) => page?.data ?? [])
+        .reduce((sum, p) => sum + toMajorUnits(p?.currentValue?.amount ?? 0), 0),
+    [openPositions],
+  )
 
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -109,17 +117,25 @@ const Header = () => {
             <div className='flex items-center gap-2.5'>
               <Link
                 to='/account-portfolio'
-                className='shrink-0 lg:flex hidden items-center text-sm font-semibold text-black hover:text-black/60'
+                className='shrink-0 hidden md:flex flex-col items-center gap-px rounded-md px-3 text-xs font-semibold text-black py-1 hover:bg-hover/70'
               >
-                Portfolio
+                <span>{formatCurrency(String(portfolioValue), wallet?.currency)}</span>
+                <span className='text-[10px] text-neutral-10'>Portfolio</span>
               </Link>
               <Link
                 to='/account-wallet'
-                className='shrink-0 flex items-center gap-1.5 rounded-md bg-hover px-3 py-1.5 text-sm font-semibold text-black hover:bg-hover/70'
+                className='shrink-0 flex flex-col items-center gap-px rounded-md px-3 text-xs font-semibold text-black py-1 hover:bg-hover/70'
               >
-                {wallet
-                  ? formatCurrency(toMajorUnits(wallet.total ?? 0), wallet.currency)
-                  : '—'}
+                <span>
+                  {wallet
+                    ? formatCurrency(
+                        toMajorUnits(wallet.total ?? 0),
+                        wallet.currency,
+                      )
+                    : '—'}
+                </span>
+                <span className='text-[10px] text-neutral-10'>Cash</span>
+
               </Link>
               <Button
                 type='button'

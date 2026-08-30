@@ -11,6 +11,8 @@ export type BetStatus =
 
 export type PositionStatusApi = 'OPEN' | 'CLOSED' | 'SETTLED'
 
+export type PositionResult = 'WON' | 'LOST' | 'CASHED_OUT'
+
 export interface Money {
   amount: string
   currency: string
@@ -60,15 +62,26 @@ export interface BetPosition {
   marketId: string
   outcomeId: string
   status: PositionStatusApi
+  /** Only present once a position is SETTLED or CLOSED. */
+  result?: PositionResult | null
   /** ₦1-unit share count (API ledger unit). Use for money math only. */
   shares: string
   /** ₦100-settling contract count (= shares ÷ 100). Preferred for display. */
   contracts?: string | number | null
   avgPrice: string
-  currentValue: Money
+  currentPrice?: string
+  stake?: Money
+  potentialReturn?: Money
+  /** Live mark-to-market value; null once the position is settled/closed. */
+  currentValue: Money | null
+  /** Live P&L while OPEN; null once settled/closed. */
+  unrealizedPnl?: Money | null
+  /** Final P&L once SETTLED or CLOSED; null while still OPEN. */
+  realizedPnl?: Money | null
   market?: MarketSummary | null
   outcomeLabel?: string | null
   openedAt: string
+  settledAt?: string | null
 }
 
 export interface BetPositionListResponse {

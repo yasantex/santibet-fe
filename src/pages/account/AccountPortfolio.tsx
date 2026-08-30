@@ -24,20 +24,27 @@ const AccountPortfolio = () => {
     [data],
   )
 
-  const currency = positions[0]?.currentValue?.currency ?? 'NGN'
+  const currency =
+    positions[0]?.stake?.currency ?? positions[0]?.currentValue?.currency ?? 'NGN'
 
   const stats = useMemo(() => {
     let value = 0
-    let staked = 0
+    let pnl = 0
     let open = 0
     positions.forEach((p) => {
-      const v = toMajorUnits(p?.currentValue?.amount)
-      const s = (Number(p.shares) || 0) * (Number(p.avgPrice) || 0)
-      value += v
-      staked += s
-      if (p.status === 'OPEN') open += 1
+      const isOpen = p.status === 'OPEN'
+      if (isOpen) {
+        open += 1
+        value += toMajorUnits(p?.currentValue?.amount ?? 0)
+        pnl += p.unrealizedPnl
+          ? toMajorUnits(p.unrealizedPnl.amount)
+          : toMajorUnits(p?.currentValue?.amount ?? 0) -
+            (p?.stake ? toMajorUnits(p.stake.amount) : (Number(p.shares) || 0) * (Number(p.avgPrice) || 0))
+      } else {
+        pnl += p.realizedPnl ? toMajorUnits(p.realizedPnl.amount) : 0
+      }
     })
-    return { value, pnl: value - staked, open }
+    return { value, pnl, open }
   }, [positions])
 
   const filtered = useMemo(

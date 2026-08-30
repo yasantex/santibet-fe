@@ -99,12 +99,12 @@ const TradePanel = ({
         type,
         ...(type === 'limit' ? { limitPrice: Number(limitCents) / 100 } : {}),
       })
-      const toWinDisplay = bet.potentialReturn
-        ? toMajorUnits(bet.potentialReturn.amount).toFixed(0)
-        : potentialReturn.toFixed(0)
-      showSuccessToast(`Prediction placed · ${symbol}${toWinDisplay} to win`)
+      // const toWinDisplay = bet.potentialReturn
+      //   ? toMajorUnits(bet.potentialReturn.amount).toFixed(0)
+      //   : potentialReturn.toFixed(0)
+      showSuccessToast(`Prediction placed · ${symbol}${potentialReturn} to win`)
       setAmount('')
-      navigate('/orders')
+      navigate('/account-portfolio')
     } catch (error) {
       if (isAxiosError(error)) {
         showWarningToast(
@@ -233,7 +233,7 @@ const TradePanel = ({
                 </span>
               )}
             </div>
-            <div className='flex items-center rounded-lg border border-border px-3 py-2.5'>
+            <div className='flex items-center rounded-lg border-2 border-brand-green px-3 py-2.5'>
               <span className='text-sm font-bold text-neutral-10'>
                 {symbol}
               </span>
