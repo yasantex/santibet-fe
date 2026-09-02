@@ -20,6 +20,7 @@ import useLogout from '../hooks/useLogout'
 import ProfileDropdownMenu from '../components/globals/ProfileDropdownMenu'
 import { useSantiBetQuery } from '../data_layer/utils'
 import { useBetPositions } from '../data_layer/bets'
+import { useUnreadNotificationCount } from '../data_layer/notifications'
 import { formatCurrency, toMajorUnits } from '../utils/functions'
 import type { WalletBalance } from '../types/wallet.types'
 
@@ -49,6 +50,8 @@ const Header = () => {
     path: '/wallet',
     enabled: !!user,
   })
+
+  const { count: unreadNotifications } = useUnreadNotificationCount()
 
   const { data: openPositions } = useBetPositions('OPEN', 100)
   const portfolioValue = useMemo(
@@ -143,13 +146,19 @@ const Header = () => {
                 onClick={() => handleModalOpen('deposit')}
                 className='shrink-0 w-fit! lg:flex! hidden!'
               />
-              <div className='p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'>
+              <Link
+                to='/notifications'
+                className='relative p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'
+              >
                 <HugeiconsIcon
                   icon={Notification03Icon}
                   size={22}
                   className='shrink-0 text-black'
                 />
-              </div>
+                {unreadNotifications > 0 && (
+                  <span className='absolute top-1 right-1 h-2 w-2 rounded-full bg-brand-green' />
+                )}
+              </Link>
               <Dropdown
                 align='end'
                 className='w-full'

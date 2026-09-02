@@ -32,3 +32,29 @@ export const filterCategories: FilterCategory[] = [
     ],
   },
 ]
+
+export const notificationFilterCategories: FilterCategory[] = [
+  {
+    key: 'type',
+    label: 'Type',
+    multiple: true,
+    options: [
+      { label: 'Bets', value: 'BET' },
+      { label: 'Markets', value: 'MARKET' },
+      { label: 'Wallet', value: 'WALLET' },
+      { label: 'Referrals', value: 'REFERRAL' },
+      { label: 'Security', value: 'SECURITY' },
+      { label: 'Promotions', value: 'PROMO' },
+      { label: 'System', value: 'SYSTEM' },
+    ],
+  },
+  {
+    key: 'read',
+    label: 'Status',
+    multiple: false,
+    options: [
+      { label: 'Unread', value: 'UNREAD' },
+      { label: 'Read', value: 'READ' },
+    ],
+  },
+]

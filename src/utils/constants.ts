@@ -7,6 +7,7 @@ import {
   HelpSquareFreeIcons,
   Invoice01Icon,
   MoneyReceiveFlow02Icon,
+  Notification03Icon,
   Settings02Icon,
   Wallet01FreeIcons,
   Wallet03FreeIcons,
@@ -114,6 +115,7 @@ export const accountMenuItems: ProfileAction[] = [
       close()
     },
   },
+
   {
     id: 'wallet',
     label: 'Wallet',
@@ -153,6 +155,16 @@ export const accountMenuItems: ProfileAction[] = [
     path: '/rewards',
     action: (navigate, close) => {
       navigate('/rewards')
+      close()
+    },
+  },
+  {
+    id: 'notifications',
+    label: 'Notifications',
+    icon: Notification03Icon,
+    path: '/notifications',
+    action: (navigate, close) => {
+      navigate('/notifications')
       close()
     },
   },
