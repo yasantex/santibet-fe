@@ -33,6 +33,12 @@ type WithdrawalQuoteResponse = BaseApiResponse & {
 
 type WithdrawStep = 'form' | 'quote'
 
+// Minimum/maximum/fee are runtime settings an operator can change; this is
+// just the documented default so the form can validate before round-tripping
+// to the server. It's corrected from the server's own AMOUNT_BELOW_MINIMUM
+// response the moment one comes back.
+const DEFAULT_MIN_WITHDRAWAL_MINOR = 100000 // ₦1,000
+
 const Withdraw = ({
   open,
   handleClose,
@@ -45,6 +51,9 @@ const Withdraw = ({
   const [withdrawalId, setWithdrawalId] = useState('')
   const [step, setStep] = useState<WithdrawStep>('form')
   const [quote, setQuote] = useState<WithdrawalQuoteResponse | null>(null)
+  const [minWithdrawalMinor, setMinWithdrawalMinor] = useState(
+    DEFAULT_MIN_WITHDRAWAL_MINOR,
+  )
   const [pendingWithdrawal, setPendingWithdrawal] = useState<{
     amount: string
     paymentMethodId: string
@@ -117,6 +126,13 @@ const Withdraw = ({
       onError: (error) => {
         if (isAxiosError(error)) {
           const errorData = error.response?.data
+          if (errorData?.code === 'AMOUNT_BELOW_MINIMUM' && errorData?.minimum) {
+            const minimum = Number(errorData.minimum)
+            setMinWithdrawalMinor(minimum)
+            setAmountError(
+              `Minimum withdrawal is ${formatCurrency(toMajorUnits(minimum), wallet?.currency)}`,
+            )
+          }
           showWarningToast(errorData?.message)
         } else {
           showWarningToast(error.message)
@@ -137,7 +153,15 @@ const Withdraw = ({
       },
       onError: (error) => {
         if (isAxiosError(error)) {
-          showWarningToast(error.response?.data?.message)
+          const errorData = error.response?.data
+          if (errorData?.code === 'AMOUNT_BELOW_MINIMUM' && errorData?.minimum) {
+            const minimum = Number(errorData.minimum)
+            setMinWithdrawalMinor(minimum)
+            setAmountError(
+              `Minimum withdrawal is ${formatCurrency(toMajorUnits(minimum), wallet?.currency)}`,
+            )
+          }
+          showWarningToast(errorData?.message)
         } else {
           showWarningToast(error.message)
         }
@@ -151,6 +175,12 @@ const Withdraw = ({
     const numeric = Number(amount)
     if (!amount || Number.isNaN(numeric) || numeric <= 0) {
       setAmountError('Enter a valid amount')
+      return null
+    }
+    if (toMinorUnits(numeric) < minWithdrawalMinor) {
+      setAmountError(
+        `Minimum withdrawal is ${formatCurrency(toMajorUnits(minWithdrawalMinor), wallet?.currency)}`,
+      )
       return null
     }
     if (numeric > winningBalance) {
