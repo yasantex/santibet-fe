@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons'
 import {
@@ -16,22 +15,28 @@ import type { AppNotification, NotificationType } from '../types/notification.ty
 type NotificationFilterValues = Record<'type' | 'read', string[]>
 
 const typeLabels: Record<NotificationType, string> = {
-  BET: 'Bet',
-  MARKET: 'Market',
-  WALLET: 'Wallet',
-  REFERRAL: 'Referral',
-  SECURITY: 'Security',
-  PROMO: 'Promotion',
-  SYSTEM: 'System',
+  ACCOUNT_VERIFICATION: 'Account verification',
+  KYC_UPDATE: 'KYC update',
+  DEPOSIT_SUCCESS: 'Deposit',
+  DEPOSIT_FAILED: 'Deposit',
+  WITHDRAWAL_REQUESTED: 'Withdrawal',
+  WITHDRAWAL_APPROVED: 'Withdrawal',
+  WITHDRAWAL_FAILED: 'Withdrawal',
+  WITHDRAWAL_COMPLETED: 'Withdrawal',
+  BET_ACCEPTED: 'Bet',
+  CASH_OUT_COMPLETED: 'Cash out',
+  MARKET_RESOLVED: 'Market',
+  WINNINGS_CREDITED: 'Winnings',
+  SECURITY_ALERT: 'Security',
 }
 
+
 const NotificationRow = ({ notification }: { notification: AppNotification }) => {
-  const navigate = useNavigate()
-  const markRead = useMarkNotificationRead()
+  const { mutate: markRead } = useMarkNotificationRead(notification.id)
+  const isRead = !!notification.readAt
 
   const open = () => {
-    if (!notification.read) markRead.mutate(notification.id)
-    if (notification.actionUrl) navigate(notification.actionUrl)
+    if (!isRead) markRead()
   }
 
   return (
@@ -42,23 +47,23 @@ const NotificationRow = ({ notification }: { notification: AppNotification }) =>
     >
       <span
         className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-          notification.read ? 'bg-transparent' : 'bg-brand-green'
+          isRead ? 'bg-transparent' : 'bg-brand-green'
         }`}
       />
       <div className='flex min-w-0 flex-1 flex-col gap-0.5'>
         <div className='flex items-center justify-between gap-2'>
           <span
-            className={`text-sm text-black ${
-              notification.read ? 'font-medium' : 'font-bold'
-            }`}
+            className={`text-sm text-black ${isRead ? 'font-medium' : 'font-bold'}`}
           >
             {notification.title}
           </span>
           <span className='shrink-0 text-[11px] text-placeholder'>
-            {typeLabels[notification.type]}
+            {typeLabels[notification.type] ?? notification.type}
           </span>
         </div>
-        <p className='text-sm text-neutral-10'>{notification.message}</p>
+        {notification.body && (
+          <p className='text-sm text-neutral-10'>{notification.body}</p>
+        )}
         <span className='text-xs text-placeholder'>
           {formatDate(notification.createdAt)}
         </span>
@@ -73,18 +78,28 @@ const Notifications = () => {
     read: [],
   })
 
+  // unreadOnly is server-side; type/read-only-shown are refined client-side
+  // over whatever's loaded, since the API only filters on unreadOnly.
+  const unreadOnly = filters.read.includes('UNREAD')
+
   const {
     data,
     isLoading,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useNotifications(filters)
+  } = useNotifications(unreadOnly)
 
-  const markAllRead = useMarkAllNotificationsRead()
+  const { mutate: markAllRead } = useMarkAllNotificationsRead()
 
-  const notifications = data?.pages.flatMap((page) => page.data ?? []) ?? []
-  const hasUnread = notifications.some((n) => !n.read)
+  const notifications = useMemo(() => {
+    const all = data?.pages.flatMap((page) => page.data ?? []) ?? []
+    return all
+      .filter((n) => (filters.type.length ? filters.type.includes(n.type) : true))
+      .filter((n) => (filters.read.includes('READ') ? !!n.readAt : true))
+  }, [data, filters])
+
+  const hasUnread = notifications.some((n) => !n.readAt)
 
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -119,7 +134,7 @@ const Notifications = () => {
             size='medium'
             className='w-fit!'
             extra={<HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />}
-            onClick={() => markAllRead.mutate()}
+            onClick={() => markAllRead()}
           />
         )}
       </div>
