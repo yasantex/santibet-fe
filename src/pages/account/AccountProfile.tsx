@@ -51,7 +51,7 @@ const AccountProfile = () => {
 
   return (
     <main className='mx-auto flex w-full flex-col gap-6'>
-      <h1 className='text-[18px] not-first:md:text-[28px] font-bold text-black'>
+      <h1 className='text-[18px] font-bold text-black md:text-[28px]'>
         Settings
       </h1>
 

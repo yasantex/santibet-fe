@@ -318,7 +318,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
       {step === 'instructions' && instructions && (
         <div className='flex flex-col gap-4'>
           <p className='text-sm text-left text-neutral-10'>
-            Transfer the exact amount to the account below, then tap
+            Transfer the <span className='font-bold'>EXACT</span> amount to the account below, then tap
             &quot;I&apos;ve paid&quot; to confirm.
           </p>
 
