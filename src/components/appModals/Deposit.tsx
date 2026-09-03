@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ModalComponent, { type ModalProps } from '../globals/ModalComponent'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -120,6 +120,9 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     })
 
   const depositId = startResponse?.deposit.id ?? ''
+  // Only surface errors for an explicit "Check now" click — the background
+  // poll retries silently rather than toasting on every transient hiccup.
+  const isManualCheckRef = useRef(false)
 
   const {
     mutateAsync: verifyDeposit,
@@ -130,12 +133,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     mutationOptions: {
       onSuccess: (data) => {
         setVerifyResult(data)
-        if (data.status === 'PENDING') {
-          showWarningToast(
-            "We haven't received your payment yet. Try again in a moment.",
-          )
-          return
-        }
+        if (data.status === 'PENDING') return
         if (data.status === 'COMPLETED') {
           queryClient.invalidateQueries({ queryKey: ['/wallet', {}] })
           queryClient.invalidateQueries({
@@ -145,15 +143,34 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
         setStep('result')
       },
       onError: (error) => {
+        if (!isManualCheckRef.current) return
         if (isAxiosError(error)) {
-          const errorData = error.response?.data
-          showWarningToast(errorData?.message)
+          showWarningToast(error.response?.data?.message)
         } else {
           showWarningToast(error.message)
         }
       },
     },
   })
+
+  // Auto-detect payment: poll the same verify check the "Check now" button
+  // triggers, so the transfer is picked up without a manual click. Stops as
+  // soon as it settles (step leaves 'instructions') or the request expires.
+  useEffect(() => {
+    if (step !== 'instructions' || !depositId) return
+    const expiresAtStr = startResponse?.instructions.expiresAt
+    const expiresAt = expiresAtStr ? new Date(expiresAtStr).getTime() : null
+
+    const poll = () => {
+      if (expiresAt && Date.now() > expiresAt) return
+      isManualCheckRef.current = false
+      verifyDeposit().catch(() => {})
+    }
+
+    const intervalId = setInterval(poll, 5000)
+    return () => clearInterval(intervalId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, depositId])
 
   const handleAmountSubmit = async () => {
     const numeric = Number(amount)
@@ -169,11 +186,14 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     }
   }
 
-  const handleIvePaid = async () => {
+  const handleCheckNow = async () => {
+    isManualCheckRef.current = true
     try {
       await verifyDeposit()
     } catch (error) {
       console.error(error)
+    } finally {
+      isManualCheckRef.current = false
     }
   }
 
@@ -318,8 +338,9 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
       {step === 'instructions' && instructions && (
         <div className='flex flex-col gap-4'>
           <p className='text-sm text-left text-neutral-10'>
-            Transfer the <span className='font-bold'>EXACT</span> amount to the account below, then tap
-            &quot;I&apos;ve paid&quot; to confirm.
+            Transfer the <span className='font-bold'>EXACT</span> amount to
+            the account below. We&apos;ll credit your wallet automatically as
+            soon as it arrives — no need to stay on this screen.
           </p>
 
           <div className='flex flex-col gap-2.5 rounded-lg border border-border p-4'>
@@ -349,19 +370,24 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
             ))}
           </div>
 
+          <div className='flex items-center justify-center gap-2 text-xs text-neutral-10'>
+            <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-brand-green' />
+            Waiting for your transfer to arrive…
+          </div>
+
           <p className='text-xs text-center text-neutral-10'>
             Expires {formatDate(instructions.expiresAt)}{' '}
           </p>
 
           <Button
             type='button'
-            text="I've paid"
-            variation='primary'
+            text='Check now'
+            variation='plain'
             size='large'
             className='w-full'
             loading={isVerifying}
             disabled={isVerifying}
-            onClick={handleIvePaid}
+            onClick={handleCheckNow}
           />
         </div>
       )}
