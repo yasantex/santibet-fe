@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import ModalComponent, { type ModalProps } from '../globals/ModalComponent'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -12,6 +12,11 @@ import {
 import { Button } from '../globals/Button'
 import { FormInput } from '../globals/FormInput'
 import { useSantiBetMutation, useSantiBetQuery } from '../../data_layer/utils'
+import { useNotificationStream } from '../../data_layer/notificationStreamContext'
+import {
+  WALLET_BALANCE_KEY,
+  WALLET_TRANSACTIONS_KEY,
+} from '../../data_layer/queryKeys'
 import type {
   StartDepositResponse,
   DepositRecord,
@@ -40,6 +45,12 @@ type DepositStep =
 
 type DepositMethod = 'bank' | 'crypto'
 type CryptoCurrency = 'USDC' | 'USDT'
+
+/**
+ * How long to wait on the push alone before also polling. Covers the case
+ * where the stream is up but its event never lands.
+ */
+const POLL_FALLBACK_DELAY = 3 * 60 * 1000
 
 const DEPOSIT_METHODS: {
   id: DepositMethod
@@ -74,7 +85,12 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   const [amountError, setAmountError] = useState('')
   const [startResponse, setStartResponse] =
     useState<StartDepositResponse | null>(null)
-  const [verifyResult, setVerifyResult] = useState<DepositRecord | null>(null)
+  // How the deposit finished, whichever path got there first — the pushed
+  // DEPOSIT_SUCCESS event or the polled verify call.
+  const [settled, setSettled] = useState<{
+    status: 'COMPLETED' | 'FAILED'
+    reason?: string | null
+  } | null>(null)
 
   // Crypto state
   const [cryptoCurrency, setCryptoCurrency] = useState<CryptoCurrency | null>(
@@ -82,6 +98,8 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   )
 
   const queryClient = useQueryClient()
+  const { connected: streamConnected, subscribeToDepositSuccess } =
+    useNotificationStream()
 
   const resetAll = () => {
     setStep('method')
@@ -89,7 +107,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     setAmount('')
     setAmountError('')
     setStartResponse(null)
-    setVerifyResult(null)
+    setSettled(null)
     setCryptoCurrency(null)
   }
 
@@ -120,57 +138,77 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     })
 
   const depositId = startResponse?.deposit.id ?? ''
-  // Only surface errors for an explicit "Check now" click — the background
-  // poll retries silently rather than toasting on every transient hiccup.
-  const isManualCheckRef = useRef(false)
 
-  const {
-    mutateAsync: verifyDeposit,
-    isPending: isVerifying,
-    isSuccess,
-  } = useSantiBetMutation<DepositRecord, void>({
+  const { mutateAsync: verifyDeposit } = useSantiBetMutation<
+    DepositRecord,
+    void
+  >({
     path: `/wallet/deposits/${depositId}/verify`,
     mutationOptions: {
       onSuccess: (data) => {
-        setVerifyResult(data)
         if (data.status === 'PENDING') return
         if (data.status === 'COMPLETED') {
-          queryClient.invalidateQueries({ queryKey: ['/wallet', {}] })
+          queryClient.invalidateQueries({ queryKey: WALLET_BALANCE_KEY })
           queryClient.invalidateQueries({
-            queryKey: ['wallet-transactions'],
+            queryKey: WALLET_TRANSACTIONS_KEY,
           })
         }
+        setSettled({
+          status: data.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          reason: data.failureReason,
+        })
         setStep('result')
       },
-      onError: (error) => {
-        if (!isManualCheckRef.current) return
-        if (isAxiosError(error)) {
-          showWarningToast(error.response?.data?.message)
-        } else {
-          showWarningToast(error.message)
-        }
-      },
+      // The fallback poll retries silently rather than toasting on every
+      // transient hiccup; a real failure arrives as a settled deposit record.
+      onError: () => {},
     },
   })
 
-  // Auto-detect payment: poll the same verify check the "Check now" button
-  // triggers, so the transfer is picked up without a manual click. Stops as
-  // soon as it settles (step leaves 'instructions') or the request expires.
+  // Primary path: the backend pushes DEPOSIT_SUCCESS once the transfer is
+  // credited, for both the bank and crypto rails. Crypto has no deposit id up
+  // front, so on that screen any success belongs to the address on display.
+  const isAwaitingPayment =
+    step === 'instructions' || step === 'crypto-address'
+
+  useEffect(() => {
+    if (!isAwaitingPayment) return
+    return subscribeToDepositSuccess((event) => {
+      if (depositId && event.depositId && event.depositId !== depositId) return
+      queryClient.invalidateQueries({ queryKey: WALLET_BALANCE_KEY })
+      queryClient.invalidateQueries({ queryKey: WALLET_TRANSACTIONS_KEY })
+      setSettled({ status: 'COMPLETED' })
+      setStep('result')
+    })
+  }, [
+    isAwaitingPayment,
+    depositId,
+    subscribeToDepositSuccess,
+    queryClient,
+  ])
+
+  // Fallback: poll while the push connection is down, and once the wait has
+  // run long enough that a dropped event is the likelier explanation.
   useEffect(() => {
     if (step !== 'instructions' || !depositId) return
+
     const expiresAtStr = startResponse?.instructions.expiresAt
     const expiresAt = expiresAtStr ? new Date(expiresAtStr).getTime() : null
+    const waitingSince = Date.now()
 
     const poll = () => {
       if (expiresAt && Date.now() > expiresAt) return
-      isManualCheckRef.current = false
+      // While the stream is healthy, hold off until the grace period lapses.
+      if (streamConnected && Date.now() - waitingSince < POLL_FALLBACK_DELAY) {
+        return
+      }
       verifyDeposit().catch(() => {})
     }
 
     const intervalId = setInterval(poll, 5000)
     return () => clearInterval(intervalId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, depositId])
+  }, [step, depositId, streamConnected])
 
   const handleAmountSubmit = async () => {
     const numeric = Number(amount)
@@ -183,17 +221,6 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
       await startDeposit({ amount: String(toMinorUnits(numeric)) })
     } catch (error) {
       console.error(error)
-    }
-  }
-
-  const handleCheckNow = async () => {
-    isManualCheckRef.current = true
-    try {
-      await verifyDeposit()
-    } catch (error) {
-      console.error(error)
-    } finally {
-      isManualCheckRef.current = false
     }
   }
 
@@ -269,7 +296,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
             ? 'Select Crypto'
             : step === 'crypto-address'
               ? 'Deposit Crypto'
-              : isSuccess
+              : settled?.status === 'COMPLETED'
                 ? 'Deposit Successful'
                 : 'Deposit Failed'
 
@@ -381,13 +408,11 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
           <Button
             type='button'
-            text='Check now'
+            text='Close'
             variation='plain'
             size='large'
             className='w-full'
-            loading={isVerifying}
-            disabled={isVerifying}
-            onClick={handleCheckNow}
+            onClick={handleDone}
           />
         </div>
       )}
@@ -471,6 +496,11 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
                 ))}
               </div>
 
+              <div className='flex items-center justify-center gap-2 text-xs text-neutral-10'>
+                <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-brand-green' />
+                Waiting for your deposit to arrive…
+              </div>
+
               <p className='text-xs text-center text-neutral-10'>
                 Sending any other coin or network may result in permanent loss
                 of funds.
@@ -489,18 +519,23 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
         </div>
       )}
 
-      {step === 'result' && isSuccess && verifyResult && (
+      {step === 'result' && settled && (
         <div className='flex flex-col items-center gap-4'>
           <HugeiconsIcon
-            icon={isSuccess ? CheckmarkCircle02Icon : AlertCircleIcon}
+            icon={
+              settled.status === 'COMPLETED'
+                ? CheckmarkCircle02Icon
+                : AlertCircleIcon
+            }
             size={32}
-            className={isSuccess ? 'text-success' : 'text-error'}
+            className={
+              settled.status === 'COMPLETED' ? 'text-success' : 'text-error'
+            }
           />
           <p className='text-sm text-center text-neutral-10'>
-            {isSuccess
+            {settled.status === 'COMPLETED'
               ? 'Your deposit has been credited to your wallet.'
-              : verifyResult.failureReason ||
-                'This deposit could not be completed.'}
+              : settled.reason || 'This deposit could not be completed.'}
           </p>
           <Button
             type='button'

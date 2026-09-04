@@ -1,9 +1,6 @@
 import { Toaster } from 'sonner'
-import { useNotificationStream } from '../../data_layer/notifications'
 
 const ToastNotification = () => {
-  useNotificationStream()
-
   return (
     <Toaster
       position='bottom-right'
