@@ -8,6 +8,7 @@ import { PersistGate } from 'redux-persist/integration/react'
 import { Provider } from 'react-redux'
 import { persistor, store } from './redux/store.ts'
 import { CookiesProvider } from 'react-cookie'
+import { NotificationStreamProvider } from './data_layer/notificationStream.tsx'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,7 +32,9 @@ createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <CookiesProvider>
-              <App />
+              <NotificationStreamProvider>
+                <App />
+              </NotificationStreamProvider>
             </CookiesProvider>
           </BrowserRouter>
         </QueryClientProvider>
