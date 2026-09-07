@@ -125,6 +125,18 @@ export interface CryptoAddressResponse {
   destinationTag: string | null
 }
 
+export type CryptoNetworkId = 'trc20' | 'erc20' | 'bep20'
+
+export interface CryptoNetworkInfo {
+  currency: 'USDC' | 'USDT'
+  networks: CryptoNetworkId[]
+  defaultNetwork: CryptoNetworkId
+}
+
+export interface CryptoNetworksResponse {
+  data: CryptoNetworkInfo[]
+}
+
 export interface CryptoWithdrawalAccount {
   address: string
   network: string
