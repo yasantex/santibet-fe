@@ -44,8 +44,8 @@ const OutcomeRow = ({
         }}
         className={`shrink-0 rounded-lg px-4 cursor-pointer py-2.5 text-xs font-bold ${
           isYes
-            ? 'bg-market-success text-success hover:bg-market-success/50'
-            : 'bg-market-error text-error hover:bg-market-error/50'
+            ? 'bg-market-success text-success hover:bg-success hover:text-white'
+            : 'bg-market-error text-error hover:bg-error hover:text-white'
         }`}
       >
         {formatSharePrice(outcome.cents)}
@@ -59,6 +59,8 @@ interface MarketCardProps {
   onSelect?: (market: UiMarket) => void
   onSelectOutcome?: (market: UiMarket, outcome: UiOutcome) => void
   onSave?: (market: UiMarket) => void
+  /** Whether this market is currently saved to favorites. */
+  isSaved?: boolean
   /** Show a LIVE badge + ticking countdown in the header. */
   live?: boolean
 }
@@ -68,6 +70,7 @@ const MarketCard = ({
   onSelect,
   onSelectOutcome,
   onSave,
+  isSaved = false,
   live = false,
 }: MarketCardProps) => {
   return (
@@ -105,12 +108,12 @@ const MarketCard = ({
         </div>
         <button
           type='button'
-          aria-label='Save market'
+          aria-label={isSaved ? 'Remove from favorites' : 'Save market'}
           onClick={(e) => {
             e.stopPropagation()
             onSave?.(market)
           }}
-          className='text-neutral-10 hover:text-black'
+          className={isSaved ? 'text-black' : 'text-neutral-10 hover:text-black'}
         >
           <HugeiconsIcon icon={Bookmark02Icon} size={18} />
         </button>

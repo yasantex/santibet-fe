@@ -63,7 +63,7 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
         </div>
         <div className='flex flex-col rounded-md bg-surface-hover px-3 py-2'>
           <span className='text-xs text-black/60'>To win</span>
-          <span className='font-bold text-success'>
+          <span className='font-bold text-surface-success'>
             {money(bet.potentialReturn)}
           </span>
         </div>

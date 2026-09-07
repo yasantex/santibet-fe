@@ -17,7 +17,7 @@ import type { UiMarket, UiOutcome } from '../../types/market.types'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { BetType } from '../../types/bet.types'
 
-const QUICK_ADDS = [1000, 5000, 10000, 50000]
+const QUICK_ADDS = [100, 200, 500, 1000]
 
 interface TradePanelProps {
   market: UiMarket
@@ -233,7 +233,7 @@ const TradePanel = ({
                 </span>
               )}
             </div>
-            <div className='flex items-center rounded-lg border-2 border-brand-green px-3 py-2.5'>
+            <div className='flex items-center rounded-lg border-2 border-black px-3 py-2.5'>
               <span className='text-sm font-bold text-neutral-10'>
                 {symbol}
               </span>

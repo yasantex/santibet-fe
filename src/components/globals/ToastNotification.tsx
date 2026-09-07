@@ -1,5 +1,5 @@
 import { Toaster } from 'sonner'
-import { useNotificationStream } from '../../data_layer/notifications'
+import { useNotificationStream } from '../../data_layer/notificationStreamContext'
 
 const ToastNotification = () => {
   useNotificationStream()

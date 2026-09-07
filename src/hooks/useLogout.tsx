@@ -1,6 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
-import { persistor } from '../redux/store'
 import { useCookies } from 'react-cookie'
 import { useSantiBetMutation } from '../data_layer/utils'
 import { useAppDispatch } from '../utils/hooks'
@@ -30,9 +29,11 @@ const useLogout = () => {
     try {
       await apiLogoutAll()
       clearAllCookies()
+      // clearUser() clears the persisted user slice on the next redux-persist
+      // write — purging the whole store here would also wipe favorites and
+      // saved categories, which aren't tied to the session.
       dispatch(clearUser())
       queryClient.clear()
-      await persistor.purge()
       showSuccessToast('Logged out successfully')
       navigate('/')
     } catch (error) {
