@@ -122,7 +122,6 @@ const MarketCard = ({
       <h3 className='line-clamp-2 min-h-11 text-base leading-snug font-bold text-black'>
         {market.title}
       </h3>
-
       <div className='flex flex-col gap-4'>
         <OutcomeRow
           outcome={market.yes}
