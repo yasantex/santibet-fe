@@ -21,6 +21,8 @@ import type {
   StartDepositResponse,
   DepositRecord,
   CryptoAddressResponse,
+  CryptoNetworksResponse,
+  CryptoNetworkId,
 } from '../../types/wallet.types'
 import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
@@ -41,10 +43,21 @@ type DepositStep =
   | 'instructions'
   | 'result'
   | 'crypto-currency'
+  | 'crypto-network'
   | 'crypto-address'
 
 type DepositMethod = 'bank' | 'crypto'
 type CryptoCurrency = 'USDC' | 'USDT'
+type CryptoNetwork = CryptoNetworkId
+
+// Display metadata; the actual selectable set per currency comes from the API
+// (GET /api/wallet/crypto/networks).
+const NETWORK_LABELS: Record<CryptoNetwork, { label: string; subtitle: string }> =
+  {
+    trc20: { label: 'Tron (TRC20)', subtitle: 'Low fees · fast' },
+    erc20: { label: 'Ethereum (ERC20)', subtitle: 'Higher fees' },
+    bep20: { label: 'BNB Smart Chain (BEP20)', subtitle: 'Low fees' },
+  }
 
 /**
  * How long to wait on the push alone before also polling. Covers the case
@@ -96,6 +109,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   const [cryptoCurrency, setCryptoCurrency] = useState<CryptoCurrency | null>(
     null,
   )
+  const [cryptoNetwork, setCryptoNetwork] = useState<CryptoNetwork | null>(null)
 
   const queryClient = useQueryClient()
   const { connected: streamConnected, subscribeToDepositSuccess } =
@@ -109,6 +123,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     setStartResponse(null)
     setSettled(null)
     setCryptoCurrency(null)
+    setCryptoNetwork(null)
   }
 
   useEffect(() => {
@@ -229,14 +244,30 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     path: '/auth/me',
   })
 
+  // Supported networks per currency (drives the currency + network choices).
+  const { data: networksData } = useSantiBetQuery<CryptoNetworksResponse>({
+    path: '/wallet/crypto/networks',
+    queryKey: ['crypto-networks'],
+    enabled: method === 'crypto',
+  })
+
+  const cryptoCurrencies = (networksData?.data?.length
+    ? networksData.data.map((d) => d.currency)
+    : (['USDC', 'USDT'] as CryptoCurrency[]))
+
+  const availableNetworks: CryptoNetworkId[] =
+    networksData?.data?.find((d) => d.currency === cryptoCurrency)?.networks ??
+    []
+
   const {
     data: cryptoAddress,
     isLoading: isLoadingAddress,
     isError: isCryptoError,
     error,
   } = useSantiBetQuery<CryptoAddressResponse>({
-    path: `/wallet/crypto/address?currency=${cryptoCurrency}`,
-    enabled: step === 'crypto-address' && !!cryptoCurrency,
+    path: `/wallet/crypto/address?currency=${cryptoCurrency}&network=${cryptoNetwork}`,
+    queryKey: ['crypto-address', cryptoCurrency, cryptoNetwork],
+    enabled: step === 'crypto-address' && !!cryptoCurrency && !!cryptoNetwork,
   })
 
   const handleSelectMethod = (id: DepositMethod) => {
@@ -273,9 +304,29 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     setStep(id === 'bank' ? 'amount' : 'crypto-currency')
   }
 
+  const defaultNetwork =
+    networksData?.data?.find((d) => d.currency === cryptoCurrency)
+      ?.defaultNetwork ?? null
+
   const handleSelectCryptoCurrency = (currency: CryptoCurrency) => {
     setCryptoCurrency(currency)
-    setStep('crypto-address')
+    // Pre-select the currency's default network so the user can just continue.
+    setCryptoNetwork(
+      networksData?.data?.find((d) => d.currency === currency)
+        ?.defaultNetwork ?? null,
+    )
+    setStep('crypto-network')
+  }
+
+  // If the networks list resolves after the currency was picked, adopt the
+  // default (render-time adjust — no effect, to satisfy the lint rule).
+  if (
+    step === 'crypto-network' &&
+    !cryptoNetwork &&
+    defaultNetwork &&
+    availableNetworks.includes(defaultNetwork)
+  ) {
+    setCryptoNetwork(defaultNetwork)
   }
 
   const handleDone = () => {
@@ -294,11 +345,13 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
           ? 'Complete Your Deposit'
           : step === 'crypto-currency'
             ? 'Select Crypto'
-            : step === 'crypto-address'
-              ? 'Deposit Crypto'
-              : settled?.status === 'COMPLETED'
-                ? 'Deposit Successful'
-                : 'Deposit Failed'
+            : step === 'crypto-network'
+              ? 'Select Network'
+              : step === 'crypto-address'
+                ? 'Deposit Crypto'
+                : settled?.status === 'COMPLETED'
+                  ? 'Deposit Successful'
+                  : 'Deposit Failed'
 
   return (
     <ModalComponent
@@ -422,7 +475,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
           <p className='text-sm text-left text-neutral-10 mb-1'>
             Choose which coin you want to deposit with.
           </p>
-          {(['USDC', 'USDT'] as CryptoCurrency[]).map((currency) => (
+          {cryptoCurrencies.map((currency) => (
             <button
               key={currency}
               type='button'
@@ -439,6 +492,79 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
               />
             </button>
           ))}
+        </div>
+      )}
+
+      {step === 'crypto-network' && (
+        <div className='flex flex-col gap-2.5'>
+          <p className='text-sm text-left text-neutral-10 mb-1'>
+            Choose the network to receive your {cryptoCurrency} on. It must
+            match the network you send from.
+          </p>
+          {availableNetworks.length === 0 ? (
+            <p className='py-4 text-center text-sm text-neutral-10'>
+              Loading supported networks…
+            </p>
+          ) : (
+            availableNetworks.map((id) => {
+              const meta = NETWORK_LABELS[id]
+              const selected = cryptoNetwork === id
+              return (
+                <button
+                  key={id}
+                  type='button'
+                  onClick={() => setCryptoNetwork(id)}
+                  className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left cursor-pointer transition-colors ${
+                    selected
+                      ? 'border-brand-green bg-brand-green/10'
+                      : 'border-border hover:bg-hover'
+                  }`}
+                >
+                  <div className='flex-1'>
+                    <p className='flex items-center gap-2 text-sm font-semibold text-black'>
+                      {meta?.label ?? id.toUpperCase()}
+                      {defaultNetwork === id && (
+                        <span className='rounded-full bg-brand-green/20 px-2 py-0.5 text-[10px] font-bold text-success uppercase'>
+                          Recommended
+                        </span>
+                      )}
+                    </p>
+                    {meta?.subtitle && (
+                      <p className='text-xs text-neutral-10'>{meta.subtitle}</p>
+                    )}
+                  </div>
+                  <span
+                    className={`flex h-4 w-4 items-center justify-center rounded-full border ${
+                      selected
+                        ? 'border-brand-green bg-brand-green'
+                        : 'border-border'
+                    }`}
+                  >
+                    {selected && (
+                      <span className='h-1.5 w-1.5 rounded-full bg-black' />
+                    )}
+                  </span>
+                </button>
+              )
+            })
+          )}
+
+          <Button
+            type='button'
+            text='Continue'
+            variation='primary'
+            size='large'
+            className='w-full'
+            disabled={!cryptoNetwork}
+            onClick={() => setStep('crypto-address')}
+          />
+          <button
+            type='button'
+            onClick={() => setStep('crypto-currency')}
+            className='text-sm font-semibold text-neutral-10 hover:text-black'
+          >
+            ← Back
+          </button>
         </div>
       )}
 
@@ -508,14 +634,24 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
             </>
           )}
 
-          <Button
-            type='button'
-            text='Done'
-            variation='primary'
-            size='large'
-            className='w-full'
-            onClick={handleDone}
-          />
+          <div className='flex gap-3'>
+            <Button
+              type='button'
+              text='Change network'
+              variation='plain'
+              size='large'
+              className='w-full'
+              onClick={() => setStep('crypto-network')}
+            />
+            <Button
+              type='button'
+              text='Done'
+              variation='primary'
+              size='large'
+              className='w-full'
+              onClick={handleDone}
+            />
+          </div>
         </div>
       )}
 
