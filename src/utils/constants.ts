@@ -2,13 +2,17 @@ import {
   Award01FreeIcons,
   BankIcon,
   Bitcoin01Icon,
+  Bookmark02Icon,
+  ComputerIcon,
   CreditCardIcon,
   GiftFreeIcons,
   HelpSquareFreeIcons,
   Invoice01Icon,
+  Moon02Icon,
   MoneyReceiveFlow02Icon,
   Notification03Icon,
   Settings02Icon,
+  Sun01Icon,
   Wallet01FreeIcons,
   Wallet03FreeIcons,
 } from '@hugeicons/core-free-icons'
@@ -40,12 +44,78 @@ export type SearchResult = {
 
 export const primaryNavLinks: NavLink[] = [
   { label: 'Live', href: '/live' },
-  { label: 'Trending', href: '/browse' },
+  { label: 'Trending', href: '/' },
+  { label: 'Politics', href: '/category/Politics' },
   { label: 'Sports', href: '/category/Sports' },
   { label: 'Crypto', href: '/category/Crypto' },
-  { label: 'Politics', href: '/category/Politics' },
   { label: 'Business', href: '/category/Business' },
+  { label: 'Entertainment', href: '/category/Entertainment' },
+  { label: 'Tech', href: '/category/Tech' },
+  { label: 'General', href: '/category/General' },
+  // These don't have live markets behind them yet — added ahead of the
+  // backend catalogue so the header already reads like the target design.
+  { label: 'Esports', href: '/category/Esports' },
+  { label: 'Finance', href: '/category/Finance' },
+  { label: 'Geopolitics', href: '/category/Geopolitics' },
+  { label: 'Culture', href: '/category/Culture' },
+  { label: 'Economy', href: '/category/Economy' },
+  { label: 'Weather', href: '/category/Weather' },
+  { label: 'Elections', href: '/category/Elections' },
+  { label: 'Art', href: '/category/Art' },
 ]
+
+/**
+ * Sub-topics shown in the category-page sidebar (e.g. "Trump", "Midterms"
+ * under Politics). The backend doesn't expose per-market tags yet, so this
+ * is a curated placeholder list per category — swap for real tag data once
+ * the API returns it. Counts shown against these are computed live from
+ * loaded market titles, so they stay honest even though the topic list
+ * itself is mocked.
+ */
+export const categoryTopics: Record<string, string[]> = {
+  Politics: [
+    'Trump',
+    'Midterms',
+    'Congress',
+    'Senate',
+    'White House',
+    'Elections',
+    'Courts',
+    'Primaries',
+  ],
+  Sports: [
+    'Football',
+    'Basketball',
+    'Baseball',
+    'Soccer',
+    'Tennis',
+    'Boxing',
+    'MMA',
+    'Olympics',
+  ],
+  Crypto: [
+    'Bitcoin',
+    'Ethereum',
+    'Solana',
+    'Altcoins',
+    'ETF',
+    'Regulation',
+    'DeFi',
+    'NFT',
+  ],
+  Business: ['Earnings', 'IPO', 'Mergers', 'Stocks', 'Startups', 'Layoffs'],
+  Entertainment: ['Movies', 'Music', 'Awards', 'TV', 'Celebrity', 'Streaming'],
+  Tech: ['AI', 'Apple', 'Google', 'Meta', 'Space', 'Gadgets'],
+  General: ['Trending', 'Featured', 'New'],
+  Esports: ['League of Legends', 'CS2', 'Valorant', 'Dota 2', 'Overwatch'],
+  Finance: ['Fed Rates', 'Inflation', 'Recession', 'Markets', 'Banks'],
+  Geopolitics: ['Russia', 'China', 'Middle East', 'Ukraine', 'Trade War'],
+  Culture: ['Internet', 'Viral', 'Social Media', 'Fashion'],
+  Economy: ['GDP', 'Jobs', 'Inflation', 'Housing', 'Trade'],
+  Weather: ['Hurricanes', 'Temperature', 'Storms', 'Climate'],
+  Elections: ['Presidential', 'Senate', 'Governor', 'Midterms'],
+  Art: ['Auctions', 'NFT Art', 'Exhibitions'],
+}
 
 export type DepositOption = {
   id: string
@@ -138,6 +208,16 @@ export const accountMenuItems: ProfileAction[] = [
     },
   },
   {
+    id: 'favorites',
+    label: 'Favorites',
+    icon: Bookmark02Icon,
+    path: '/account-favorites',
+    action: (navigate, close) => {
+      navigate('/account-favorites')
+      close()
+    },
+  },
+  {
     id: 'orders',
     label: 'Orders',
     icon: Invoice01Icon,
@@ -206,10 +286,14 @@ export const generalMenuItems: ProfileAction[] = [
 
 export type AppearanceOption = 'system' | 'light' | 'dark'
 
-export const appearanceOptions: { value: AppearanceOption; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
+export const appearanceOptions: {
+  value: AppearanceOption
+  label: string
+  icon: IconSvgElement
+}[] = [
+  { value: 'light', label: 'Light', icon: Sun01Icon },
+  { value: 'dark', label: 'Dark', icon: Moon02Icon },
+  { value: 'system', label: 'System', icon: ComputerIcon },
 ]
 
 export const currencySymbols: Record<string, string> = {

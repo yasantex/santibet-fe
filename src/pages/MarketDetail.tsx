@@ -247,6 +247,8 @@ const MarketDetail = () => {
                         background: 'var(--color-card)',
                         fontSize: 12,
                       }}
+                      labelStyle={{ color: 'var(--color-black)' }}
+                      itemStyle={{ color: 'var(--color-black)' }}
                     />
                     <Area
                       type='monotone'
@@ -269,16 +271,19 @@ const MarketDetail = () => {
               {market.outcomes.map((o) => {
                 const active = o.id === selectedOutcome?.id
                 const isYes = o.id === market.yes?.id
+                const colorClasses = active
+                  ? isYes
+                    ? 'bg-success text-white'
+                    : 'bg-error text-white'
+                  : isYes
+                    ? 'bg-market-success text-success hover:bg-success hover:text-white'
+                    : 'bg-market-error text-error hover:bg-error hover:text-white'
                 return (
                   <button
                     key={o.id}
                     type='button'
                     onClick={() => setSelectedId(o.id)}
-                    className={`flex items-center justify-between cursor-pointer rounded-lg px-4 py-3 text-sm font-bold transition-all ${
-                      isYes
-                        ? 'bg-market-success text-success hover:bg-market-success/50'
-                        : 'bg-market-error text-error hover:bg-market-error/50'
-                    } ${active ? 'ring-2 ring-brand-green' : ''}`}
+                    className={`flex items-center justify-between cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses}`}
                   >
                     <span className='uppercase'>{o.label}</span>
                     <span>{o.cents}¢</span>

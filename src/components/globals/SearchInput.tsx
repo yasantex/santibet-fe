@@ -7,11 +7,13 @@ const SearchInput = ({
   placeholder,
   containerClassName,
   showIcon = true,
+  autoFocus = false,
 }: {
   searchTerm: string
   placeholder: string
   showIcon?: boolean
   containerClassName?: string
+  autoFocus?: boolean
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }) => {
   return (
@@ -27,6 +29,7 @@ const SearchInput = ({
         value={searchTerm}
         onChange={handleChange}
         placeholder={placeholder}
+        autoFocus={autoFocus}
         className='h-11! w-full py-1! text-sm font-medium text-black outline-none placeholder:text-placeholder'
       />
     </div>

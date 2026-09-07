@@ -73,8 +73,8 @@ const LiveEventCard = ({
               onClick={() => onSelectOutcome(market, o)}
               className={`flex items-center justify-between rounded-lg cursor-pointer px-3 py-2.5 text-sm font-bold ${
                 isYes
-                  ? 'bg-market-success text-success hover:bg-market-success/50'
-                  : 'bg-market-error text-error hover:bg-market-error/50'
+                  ? 'bg-market-success text-success hover:bg-success hover:text-white'
+                  : 'bg-market-error text-error hover:bg-error hover:text-white'
               }`}
             >
               <span className='uppercase'>{o.label}</span>

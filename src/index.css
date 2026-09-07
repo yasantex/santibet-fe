@@ -57,7 +57,7 @@ body {
   --color-surface-base: #ddf1e4;
   --color-black: #000000;
   --color-text-black: #000000;
-  --color-neutral-10: #9aa09c;
+  --color-neutral-10: #7F7F7F;
   --font-outfit: 'Outfit', sans-serif;
   --background: #ffffff;
   --color-error: #ff6347;
@@ -76,8 +76,8 @@ body {
   --color-error-bg: #fff0ed;
   --color-glass: #e4e5e3;
   --color-placeholder: #6b706d;
-  --color-market-success: #183123;
-  --color-market-error: #341f20;
+  --color-market-success: #ecf9f1;
+  --color-market-error: #fcebeb;
 }
 
 :root {

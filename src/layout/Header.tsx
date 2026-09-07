@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import logo from '../assets/Santibet Logo.svg'
 import logoDark from '../assets/Santibet Logo (white).svg'
-import { Link, useNavigate } from 'react-router'
+import { Link, NavLink, useNavigate } from 'react-router'
 import Dropdown from '../components/globals/Dropdown'
 import SearchInput from '../components/globals/SearchInput'
 import Deposit from '../components/appModals/Deposit'
@@ -9,7 +9,12 @@ import { useModalControl } from '../hooks/useModalControl'
 import { primaryNavLinks, type SearchResult } from '../utils/constants'
 import { useMarketSearch } from '../data_layer/markets'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Menu01FreeIcons, Notification03Icon } from '@hugeicons/core-free-icons'
+import {
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  Menu01FreeIcons,
+  Notification03Icon,
+} from '@hugeicons/core-free-icons'
 import SearchResultsList from '../data_layer/SearchResultsList'
 import MobileSearchOverlay from '../mobile/MobileSearchOverlay'
 import MobileBottomNav from '../mobile/MobileBottomNav'
@@ -24,19 +29,77 @@ import { useUnreadNotificationCount } from '../data_layer/notifications'
 import { formatCurrency, toMajorUnits } from '../utils/functions'
 import type { WalletBalance } from '../types/wallet.types'
 
-const CategoryRow = () => (
-  <div className='hide-scroll-bar  lg:hidden flex items-center gap-6 overflow-x-auto px-4  text-sm font-medium text-neutral-10 md:px-6'>
-    {primaryNavLinks.map((link) => (
-      <Link
-        key={link.label}
-        to={link.href}
-        className='flex items-center gap-1.5 text-neutral-10 hover:text-black'
+const CategoryRow = () => {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+  }, [])
+
+  useEffect(() => {
+    updateScrollState()
+    const el = scrollRef.current
+    if (!el) return
+    el.addEventListener('scroll', updateScrollState, { passive: true })
+    window.addEventListener('resize', updateScrollState)
+    return () => {
+      el.removeEventListener('scroll', updateScrollState)
+      window.removeEventListener('resize', updateScrollState)
+    }
+  }, [updateScrollState])
+
+  const scrollByAmount = (delta: number) =>
+    scrollRef.current?.scrollBy({ left: delta, behavior: 'smooth' })
+
+  return (
+    <div className='relative flex items-center'>
+      {canScrollLeft && (
+        <button
+          type='button'
+          aria-label='Scroll categories left'
+          onClick={() => scrollByAmount(-160)}
+          className='absolute left-0 z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-neutral-10 shadow-sm hover:text-black'
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+        </button>
+      )}
+      <div
+        ref={scrollRef}
+        className='hide-scroll-bar flex items-center gap-6 overflow-x-auto scroll-smooth px-4 text-sm font-semibold md:px-6'
       >
-        {link.label}
-      </Link>
-    ))}
-  </div>
-)
+        {primaryNavLinks.map((link) => (
+          <NavLink
+            key={link.label}
+            to={link.href}
+            end={link.href === '/'}
+            className={({ isActive }) =>
+              `flex shrink-0 items-center gap-1.5 py-1 ${
+                isActive ? 'text-black' : 'text-black/60 hover:text-black'
+              }`
+            }
+          >
+            {link.label}
+          </NavLink>
+        ))}
+      </div>
+      {canScrollRight && (
+        <button
+          type='button'
+          aria-label='Scroll categories right'
+          onClick={() => scrollByAmount(160)}
+          className='absolute right-0 z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-neutral-10 shadow-sm hover:text-black'
+        >
+          <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+        </button>
+      )}
+    </div>
+  )
+}
 
 const Header = () => {
   const navigate = useNavigate()
@@ -58,7 +121,10 @@ const Header = () => {
     () =>
       (openPositions?.pages ?? [])
         .flatMap((page) => page?.data ?? [])
-        .reduce((sum, p) => sum + toMajorUnits(p?.currentValue?.amount ?? 0), 0),
+        .reduce(
+          (sum, p) => sum + toMajorUnits(p?.currentValue?.amount ?? 0),
+          0,
+        ),
     [openPositions],
   )
 
@@ -81,22 +147,9 @@ const Header = () => {
               className='w-25 h-10'
             />
           </Link>
-          <nav className='lg:flex items-center gap-5 text-sm font-semibold hidden'>
-            {primaryNavLinks.map((link) => (
-              <Link
-                key={link.label}
-                to={link.href}
-                className='flex items-center gap-1.5 text-black hover:text-black/60'
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <div className='flex items-center justify-end gap-5 w-full'>
           <main className='lg:flex items-center  gap-2.5 hidden'>
             <Dropdown
-              className='flex-1 w-55!'
+              className='flex-1 w-55! md:w-105!'
               menuClassName='w-[400px] max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
               menu={({ close }) => (
                 <SearchResultsList
@@ -115,14 +168,17 @@ const Header = () => {
               />
             </Dropdown>
           </main>
-
+        </div>
+        <div className='flex items-center justify-end gap-5 w-full'>
           {user ? (
             <div className='flex items-center gap-2.5'>
               <Link
                 to='/account-portfolio'
                 className='shrink-0 hidden md:flex flex-col items-center gap-px rounded-md px-3 text-xs font-semibold text-black py-1 hover:bg-hover/70'
               >
-                <span>{formatCurrency(String(portfolioValue), wallet?.currency)}</span>
+                <span>
+                  {formatCurrency(String(portfolioValue), wallet?.currency)}
+                </span>
                 <span className='text-[10px] text-neutral-10'>Portfolio</span>
               </Link>
               <Link
@@ -138,7 +194,6 @@ const Header = () => {
                     : '—'}
                 </span>
                 <span className='text-[10px] text-neutral-10'>Cash</span>
-
               </Link>
               <Button
                 type='button'
