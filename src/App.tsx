@@ -19,6 +19,7 @@ const Notifications = lazy(() => import('./pages/Notifications'))
 const AccountProfile = lazy(() => import('./pages/account/AccountProfile'))
 const AccountWallet = lazy(() => import('./pages/account/AccountWallet'))
 const AccountPortfolio = lazy(() => import('./pages/account/AccountPortfolio'))
+const AccountFavorites = lazy(() => import('./pages/account/AccountFavorites'))
 const Orders = lazy(() => import('./pages/Orders'))
 const ReferEarn = lazy(() => import('./pages/ReferEarn'))
 const Leaderboard = lazy(() => import('./pages/Leaderboard'))
@@ -30,7 +31,6 @@ const ResponsibleGambling = lazy(() => import('./pages/ResponsibleGambling'))
 const ContactSupport = lazy(() => import('./pages/ContactSupport'))
 const Faqs = lazy(() => import('./pages/Faqs'))
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
-// const SignupPage = lazy(() => import('./pages/auth/SignupPage'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const RecoverPassword = lazy(() => import('./pages/auth/RecoverPassword'))
 const TwoFaPage = lazy(() => import('./pages/auth/TwoFaPage'))
@@ -96,6 +96,10 @@ function App() {
                 <Route
                   path='/account-portfolio'
                   element={<AccountPortfolio />}
+                />
+                <Route
+                  path='/account-favorites'
+                  element={<AccountFavorites />}
                 />
                 <Route path='/orders' element={<Orders />} />
                 <Route path='/refer-earn' element={<ReferEarn />} />

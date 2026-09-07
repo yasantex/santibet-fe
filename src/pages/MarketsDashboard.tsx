@@ -14,6 +14,7 @@ import {
   useLobbyHome,
   useMarketChart,
 } from '../data_layer/markets'
+import { useFavorites } from '../hooks/useFavorites'
 import { marketHref } from '../utils/marketDisplay'
 import type { UiEvent, UiMarket, UiOutcome } from '../types/market.types'
 import { formatNairaCompact } from '../utils/functions'
@@ -21,6 +22,8 @@ import { formatNairaCompact } from '../utils/functions'
 const MarketsDashboard = () => {
   const navigate = useNavigate()
   const [activeCategory, setActiveCategory] = useState('All')
+
+  const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
   const { data, isLoading, isError, refetch } = useEvents({ limit: 60 })
   const { data: home } = useLobbyHome()
@@ -171,6 +174,8 @@ const MarketsDashboard = () => {
                   live
                   onSelect={goToMarket}
                   onSelectOutcome={goToTrade}
+                  onSave={toggleFavorite}
+                  isSaved={isFavorite(market.id)}
                 />
               </div>
             ))}
@@ -229,6 +234,8 @@ const MarketsDashboard = () => {
                   market={market}
                   onSelect={goToMarket}
                   onSelectOutcome={goToTrade}
+                  onSave={toggleFavorite}
+                  isSaved={isFavorite(market.id)}
                 />
               ))}
           {!isLoading && !gridMarkets.length && (

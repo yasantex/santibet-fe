@@ -14,7 +14,7 @@ import {
 import axios from 'axios'
 import type { AxiosRequestConfig } from 'axios'
 import { Cookies, useCookies } from 'react-cookie'
-import { persistor, store } from '../redux/store'
+import { store } from '../redux/store'
 import { clearUser } from '../redux/userSlice'
 
 export type QueryParams = Record<
@@ -132,8 +132,12 @@ const clearAuthenticatedSession = () => {
 
   cookies.remove('token', removeOptions)
   cookies.remove('sb_rt', removeOptions)
+  // clearUser() resets the in-memory user slice; redux-persist re-persists
+  // that on the next state change. `persistor.purge()` would instead wipe
+  // the *entire* persisted store (favorites, saved categories, etc.) since
+  // there's no per-slice persist config here — this only needs to clear
+  // the session, not every other locally-saved preference.
   store.dispatch(clearUser())
-  void persistor.purge()
 }
 
 const isSessionRevokedError = (error: unknown) =>

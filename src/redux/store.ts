@@ -10,6 +10,7 @@ import {
   REGISTER,
 } from 'redux-persist'
 import userSlice from './userSlice'
+import favoritesSlice from './favoritesSlice'
 const storage = {
   getItem(key: string) {
     return Promise.resolve(window.localStorage.getItem(key))
@@ -32,6 +33,7 @@ const persistConfig = {
 
 const rootReducer = combineReducers({
   user: userSlice,
+  favorites: favoritesSlice,
 
   // other reducers would go here
 })

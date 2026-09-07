@@ -2,8 +2,6 @@ import { useState } from 'react'
 import type { NavigateFunction } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  ArrowDown01Icon,
-  CircleArrowDownDoubleIcon,
   LogoutSquare01Icon,
   User02FreeIcons,
 } from '@hugeicons/core-free-icons'
@@ -13,7 +11,6 @@ import {
   type AppearanceOption,
 } from '../../utils/constants'
 import { ProfileAvatar } from './ReusedText'
-import Dropdown from './Dropdown'
 import type { UserData } from '../../types/types'
 
 type ProfileDropdownMenuProps = {
@@ -84,46 +81,6 @@ const ProfileDropdownMenu = ({
         </>
       )}
 
-      <Dropdown
-        align='start'
-        className='w-full'
-        menuClassName='w-full'
-        menu={({ close: closeAppearance }) => (
-          <div className='flex flex-col p-1'>
-            {appearanceOptions.map((option) => (
-              <div
-                key={option.value}
-                onClick={() => {
-                  handleAppearanceSelect(option.value)
-                  closeAppearance()
-                }}
-                className='flex items-center justify-between p-2 cursor-pointer hover:bg-hover'
-              >
-                <p
-                  className={
-                    appearance === option.value
-                      ? 'text-sm text-black font-semibold'
-                      : 'text-sm text-neutral-10 font-medium'
-                  }
-                >
-                  {option.label}
-                </p>
-                {appearance === option.value && (
-                  <span className='w-1.5 h-1.5 rounded-full bg-black' />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      >
-        <div className='flex gap-2.5 text-black items-center justify-between hover:bg-hover p-2 cursor-pointer'>
-          <div className='flex gap-2.5 items-center'>
-            <HugeiconsIcon icon={CircleArrowDownDoubleIcon} size={20} />
-            <p className='text-sm text-black font-medium'>Appearance</p>
-          </div>
-          <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
-        </div>
-      </Dropdown>
       {generalMenuItems.map((item) => (
         <div
           key={item.id}
@@ -147,6 +104,29 @@ const ProfileDropdownMenu = ({
         <HugeiconsIcon icon={LogoutSquare01Icon} size={20} />
         Log Out
       </p>
+
+      <div className='flex items-center gap-1 border-t border-border p-1 mt-1'>
+        {appearanceOptions.map((option) => {
+          const active = appearance === option.value
+          return (
+            <button
+              key={option.value}
+              type='button'
+              onClick={() => handleAppearanceSelect(option.value)}
+              aria-label={option.label}
+              aria-pressed={active}
+              className={`flex flex-1 items-center text-black justify-center rounded-xl py-2 cursor-pointer transition-colors ${
+                active ? 'bg-hover' : ''
+              }`}
+            >
+              <HugeiconsIcon
+                icon={option.icon}
+                size={20}
+              />
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

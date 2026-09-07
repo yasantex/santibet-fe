@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router'
 import { useEvent } from '../../data_layer/markets'
+import { useFavorites } from '../../hooks/useFavorites'
 import MarketCard from '../../components/markets/MarketCard'
 import { categoryIcon, marketHref } from '../../utils/marketDisplay'
 import { MarketCardSkeleton } from '../../components/globals/ReusedText'
@@ -10,6 +11,7 @@ const EventDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: event, isLoading, isError } = useEvent(id)
+  const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
@@ -63,6 +65,8 @@ const EventDetail = () => {
                 market={market}
                 onSelect={goToMarket}
                 onSelectOutcome={goToTrade}
+                onSave={toggleFavorite}
+                isSaved={isFavorite(market.id)}
               />
             ))}
             {!event.markets.length && (

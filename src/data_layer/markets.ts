@@ -268,70 +268,75 @@ export const useMarketsInfinite = (params: MarketQueryParams = {}) =>
     getNextPageParam: (last) => last.cursor ?? undefined,
   })
 
+export const fetchMarketById = async (
+  id: string,
+  eventId?: string,
+): Promise<UiMarket> => {
+  const feed = await resolveFeed()
+  // Lobby detail accepts a stable DB id or slug and never 404s across id
+  // spaces; only fall through to the raw catalogue if it genuinely 404s
+  // (e.g. an old bookmark pointing at a raw provider id).
+  if (feed === 'lobby') {
+    try {
+      return normalizeLobbyMarket(
+        await get<LobbyMarket>(`${LOBBY_BASE}/markets/${id}`),
+        'General',
+        eventId ?? '',
+      )
+    } catch (err) {
+      if (!(isAxiosError(err) && err.response?.status === 404)) throw err
+      // Recurring series (e.g. BTC hourly) roll over: the round id is
+      // ephemeral. Resolve the *current* round via the stable event.
+      if (eventId) {
+        const ev = normalizeLobbyEvent(
+          await get<LobbyEvent>(`${LOBBY_BASE}/events/${eventId}`),
+        )
+        const current =
+          ev.markets.find((m) => m.id === id) ??
+          ev.markets.find((m) => m.live) ??
+          ev.markets[0]
+        if (current) return current
+      }
+      // else fall through to the raw catalogue below
+    }
+  }
+
+  try {
+    const m = await get<ApiMarket>(`${MARKET_BASE}/markets/${id}`)
+    return normalizeMarket(m)
+  } catch (err) {
+    // Ids sourced from the events feed 404 on the single-market endpoint;
+    // fall back to locating the market inside its event.
+    if (isAxiosError(err) && err.response?.status === 404) {
+      // 1. Known event (in-app navigation carries ?event=): resolve directly.
+      if (eventId) {
+        const ev = await get<ApiEvent>(`${MARKET_BASE}/events/${eventId}`)
+        const found = (ev.markets ?? []).find((mm) => mm.id === id)
+        if (found) {
+          return normalizeMarket({ ...found, eventId: ev.id }, ev.category)
+        }
+      }
+      // 2. Bare deep link: scan the events feed for the market id.
+      const list = await get<ApiEventListResponse>(`${MARKET_BASE}/events`, {
+        limit: 100,
+      })
+      for (const ev of list.data ?? []) {
+        const found = (ev.markets ?? []).find((mm) => mm.id === id)
+        if (found) {
+          return normalizeMarket({ ...found, eventId: ev.id }, ev.category)
+        }
+      }
+    }
+    throw err
+  }
+}
+
 export const useMarket = (id?: string, eventId?: string) =>
   useQuery({
     queryKey: ['market', id, eventId],
     enabled: !!id,
     retry: false,
-    queryFn: async () => {
-      const feed = await resolveFeed()
-      // Lobby detail accepts a stable DB id or slug and never 404s across id
-      // spaces; only fall through to the raw catalogue if it genuinely 404s
-      // (e.g. an old bookmark pointing at a raw provider id).
-      if (feed === 'lobby') {
-        try {
-          return normalizeLobbyMarket(
-            await get<LobbyMarket>(`${LOBBY_BASE}/markets/${id}`),
-            'General',
-            eventId ?? '',
-          )
-        } catch (err) {
-          if (!(isAxiosError(err) && err.response?.status === 404)) throw err
-          // Recurring series (e.g. BTC hourly) roll over: the round id is
-          // ephemeral. Resolve the *current* round via the stable event.
-          if (eventId) {
-            const ev = normalizeLobbyEvent(
-              await get<LobbyEvent>(`${LOBBY_BASE}/events/${eventId}`),
-            )
-            const current =
-              ev.markets.find((m) => m.id === id) ??
-              ev.markets.find((m) => m.live) ??
-              ev.markets[0]
-            if (current) return current
-          }
-          // else fall through to the raw catalogue below
-        }
-      }
-
-      try {
-        const m = await get<ApiMarket>(`${MARKET_BASE}/markets/${id}`)
-        return normalizeMarket(m)
-      } catch (err) {
-        // Ids sourced from the events feed 404 on the single-market endpoint;
-        // fall back to locating the market inside its event.
-        if (isAxiosError(err) && err.response?.status === 404) {
-          // 1. Known event (in-app navigation carries ?event=): resolve directly.
-          if (eventId) {
-            const ev = await get<ApiEvent>(`${MARKET_BASE}/events/${eventId}`)
-            const found = (ev.markets ?? []).find((mm) => mm.id === id)
-            if (found) {
-              return normalizeMarket({ ...found, eventId: ev.id }, ev.category)
-            }
-          }
-          // 2. Bare deep link: scan the events feed for the market id.
-          const list = await get<ApiEventListResponse>(`${MARKET_BASE}/events`, {
-            limit: 100,
-          })
-          for (const ev of list.data ?? []) {
-            const found = (ev.markets ?? []).find((mm) => mm.id === id)
-            if (found) {
-              return normalizeMarket({ ...found, eventId: ev.id }, ev.category)
-            }
-          }
-        }
-        throw err
-      }
-    },
+    queryFn: () => fetchMarketById(id as string, eventId),
   })
 
 export interface EventQueryParams extends QueryParams {

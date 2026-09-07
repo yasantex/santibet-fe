@@ -19,6 +19,7 @@ import {
   useMarketChart,
   useLobbyStream,
 } from '../../data_layer/markets'
+import { useFavorites } from '../../hooks/useFavorites'
 import TradePanel from '../../components/markets/TradePanel'
 import { LiveBadge } from '../../components/markets/LiveBits'
 import { useCountdown } from '../../hooks/useCountdown'
@@ -55,6 +56,7 @@ const MarketDetail = () => {
 
   const eventId = searchParams.get('event') ?? undefined
   const { data: market, isLoading, isError } = useMarket(id, eventId)
+  const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
   const selectedOutcome: UiOutcome | undefined = useMemo(() => {
     if (!market) return undefined
@@ -218,8 +220,15 @@ const MarketDetail = () => {
           </button>
           <button
             type='button'
-            aria-label='Save market'
-            className='rounded-full bg-card p-2 text-neutral-10 hover:text-black'
+            aria-label={
+              isFavorite(market.id) ? 'Remove from favorites' : 'Save market'
+            }
+            onClick={() => toggleFavorite(market)}
+            className={`rounded-full p-2 hover:text-black ${
+              isFavorite(market.id)
+                ? 'bg-hover text-black'
+                : 'bg-card text-neutral-10'
+            }`}
           >
             <HugeiconsIcon icon={Bookmark02Icon} size={18} />
           </button>
@@ -353,10 +362,10 @@ const MarketDetail = () => {
                         border: '1px solid var(--color-border)',
                         background: 'var(--color-card)',
                         fontSize: 12,
-                        color: 'var(--color-text-black)',
+                        color: 'var(--color-black)',
                       }}
-                      itemStyle={{ color: 'var(--color-text-black)' }}
-                      labelStyle={{ color: 'var(--color-text-black)' }}
+                      itemStyle={{ color: 'var(--color-black)' }}
+                      labelStyle={{ color: 'var(--color-black)' }}
                     />
                     <Area
                       type='monotone'
@@ -381,16 +390,19 @@ const MarketDetail = () => {
               {market.outcomes.map((o) => {
                 const active = o.id === selectedOutcome?.id
                 const isYes = o.id === market.yes?.id
+                const colorClasses = active
+                  ? isYes
+                    ? 'bg-success text-white'
+                    : 'bg-error text-white'
+                  : isYes
+                    ? 'bg-market-success text-success hover:bg-success hover:text-white'
+                    : 'bg-market-error text-error hover:bg-error hover:text-white'
                 return (
                   <button
                     key={o.id}
                     type='button'
                     onClick={() => setSelectedId(o.id)}
-                    className={`flex items-center justify-between cursor-pointer rounded-lg px-4 py-3 text-sm font-bold transition-all ${
-                      isYes
-                        ? 'bg-market-success text-success hover:bg-market-success/50'
-                        : 'bg-market-error text-error hover:bg-market-error/50'
-                    } ${active ? 'ring-2 ring-brand-green' : ''}`}
+                    className={`flex items-center justify-between cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses}`}
                   >
                     <span className='uppercase'>{o.label}</span>
                     <span>{formatSharePrice(o.cents)}</span>

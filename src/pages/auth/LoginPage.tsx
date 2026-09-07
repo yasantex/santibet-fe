@@ -50,6 +50,11 @@ const LoginPage = () => {
   const [step, setStep] = useState<Step>('identifier')
   const [identifier, setIdentifier] = useState('')
   const [verificationTicket, setVerificationTicket] = useState('')
+  // Set synchronously so the first render already shows the loader instead
+  // of flashing the normal form before the callback effect below runs.
+  const [isGoogleCallback] = useState(
+    () => new URLSearchParams(window.location.search).has('code'),
+  )
 
   const handleAuthSuccess = (data: AuthResponse) => {
     if (data?.mfaRequired) {
@@ -206,6 +211,17 @@ const LoginPage = () => {
     passwordForm.resetForm()
     otpForm.resetForm()
     setPasswordForm.resetForm()
+  }
+
+  if (isGoogleCallback) {
+    return (
+      <div className='flex flex-col items-center justify-center w-full mx-auto mt-10 md:mt-20 max-w-100 px-5 md:max-w-125! gap-4'>
+        <span className='h-8 w-8 animate-spin rounded-full border-2 border-brand-green border-t-transparent' />
+        <p className='text-sm text-center text-neutral-10'>
+          Signing you in with Google…
+        </p>
+      </div>
+    )
   }
 
   return (
