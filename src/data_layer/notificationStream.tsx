@@ -23,6 +23,8 @@ import {
   NotificationStreamContext,
   type DepositListener,
   type DepositSuccessEvent,
+  type DepositFailedListener,
+  type DepositFailedEvent,
 } from './notificationStreamContext'
 import type { NotificationType } from '../types/notification.types'
 
@@ -133,12 +135,23 @@ export const NotificationStreamProvider = ({
   const [connected, setConnected] = useState(false)
 
   const depositListeners = useRef(new Set<DepositListener>())
+  const depositFailedListeners = useRef(new Set<DepositFailedListener>())
 
   const subscribeToDepositSuccess = useCallback(
     (listener: DepositListener) => {
       depositListeners.current.add(listener)
       return () => {
         depositListeners.current.delete(listener)
+      }
+    },
+    [],
+  )
+
+  const subscribeToDepositFailed = useCallback(
+    (listener: DepositFailedListener) => {
+      depositFailedListeners.current.add(listener)
+      return () => {
+        depositFailedListeners.current.delete(listener)
       }
     },
     [],
@@ -241,6 +254,26 @@ export const NotificationStreamProvider = ({
           })
         }
 
+        if (notificationType === 'DEPOSIT_FAILED') {
+          const failedEvent: DepositFailedEvent = {
+            depositId:
+              typeof data?.depositId === 'string' ? data.depositId : undefined,
+            reason:
+              typeof data?.reason === 'string'
+                ? data.reason
+                : typeof data?.failureReason === 'string'
+                  ? data.failureReason
+                  : null,
+          }
+          depositFailedListeners.current.forEach((listener) => {
+            try {
+              listener(failedEvent)
+            } catch (error) {
+              console.error('Deposit failed listener failed', error)
+            }
+          })
+        }
+
         if (title) {
           if (FAILURE_TYPES.includes(notificationType)) {
             showWarningToast(title)
@@ -279,8 +312,8 @@ export const NotificationStreamProvider = ({
   }, [hasSession, queryClient])
 
   const value = useMemo(
-    () => ({ connected, subscribeToDepositSuccess }),
-    [connected, subscribeToDepositSuccess],
+    () => ({ connected, subscribeToDepositSuccess, subscribeToDepositFailed }),
+    [connected, subscribeToDepositSuccess, subscribeToDepositFailed],
   )
 
   return (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import ModalComponent, { type ModalProps } from '../globals/ModalComponent'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -112,8 +113,11 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   const [cryptoNetwork, setCryptoNetwork] = useState<CryptoNetwork | null>(null)
 
   const queryClient = useQueryClient()
-  const { connected: streamConnected, subscribeToDepositSuccess } =
-    useNotificationStream()
+  const {
+    connected: streamConnected,
+    subscribeToDepositSuccess,
+    subscribeToDepositFailed,
+  } = useNotificationStream()
 
   const resetAll = () => {
     setStep('method')
@@ -201,6 +205,17 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     subscribeToDepositSuccess,
     queryClient,
   ])
+
+  // Failure path: a DEPOSIT_FAILED push resolves the waiting screen to a
+  // failure result instead of leaving it waiting indefinitely.
+  useEffect(() => {
+    if (!isAwaitingPayment) return
+    return subscribeToDepositFailed((event) => {
+      if (depositId && event.depositId && event.depositId !== depositId) return
+      setSettled({ status: 'FAILED', reason: event.reason })
+      setStep('result')
+    })
+  }, [isAwaitingPayment, depositId, subscribeToDepositFailed])
 
   // Fallback: poll while the push connection is down, and once the wait has
   // run long enough that a dropped event is the likelier explanation.
@@ -590,6 +605,16 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
                 {cryptoAddress.network} network to this address. Your balance
                 updates automatically once it's confirmed on-chain.
               </p>
+
+              <div className='flex justify-center'>
+                <div className='rounded-xl bg-white p-3'>
+                  <QRCodeSVG
+                    value={cryptoAddress.address}
+                    size={172}
+                    marginSize={0}
+                  />
+                </div>
+              </div>
 
               <div className='flex flex-col gap-2.5 rounded-lg border border-border p-4'>
                 {[
