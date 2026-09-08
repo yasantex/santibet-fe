@@ -38,6 +38,16 @@ const TradePanel = ({
   const [type, setType] = useState<BetType>('market')
   const [amount, setAmount] = useState('')
   const [limitCents, setLimitCents] = useState('')
+  // A server-side rejection to show inline under the amount (e.g. the venue
+  // minimum-bet error). `minStake` is the structured minimum from the API's
+  // error `details`, offered as a one-tap fill.
+  const [betError, setBetError] = useState<string | null>(null)
+  const [minStake, setMinStake] = useState<number | null>(null)
+
+  const clearBetError = () => {
+    if (betError) setBetError(null)
+    if (minStake != null) setMinStake(null)
+  }
 
   const { data: wallet } = useSantiBetQuery<WalletBalance>({
     path: '/wallet',
@@ -66,8 +76,10 @@ const TradePanel = ({
   const potentialReturn = shares // each share settles at 1 unit if it wins
   const toWin = Math.max(potentialReturn, 0)
 
-  const addAmount = (delta: number) =>
+  const addAmount = (delta: number) => {
+    clearBetError()
     setAmount(String((Number(amount) || 0) + delta))
+  }
 
   const handleSubmit = async () => {
     if (!isSignedIn) {
@@ -75,6 +87,7 @@ const TradePanel = ({
       return
     }
     if (!outcome) return
+    clearBetError()
     if (stakeNum <= 0) {
       showWarningToast('Enter an amount to predict')
       return
@@ -92,26 +105,34 @@ const TradePanel = ({
     }
 
     try {
-      const bet = await placeBet({
+      await placeBet({
         marketId: market.id,
         outcomeId: outcome.id,
         stake: String(toMinorUnits(stakeNum)),
         type,
         ...(type === 'limit' ? { limitPrice: Number(limitCents) / 100 } : {}),
       })
-      // const toWinDisplay = bet.potentialReturn
-      //   ? toMajorUnits(bet.potentialReturn.amount).toFixed(0)
-      //   : potentialReturn.toFixed(0)
       showSuccessToast(`Prediction placed · ${symbol}${potentialReturn} to win`)
       setAmount('')
       navigate('/account-portfolio')
     } catch (error) {
+      const fallback = 'Could not place your prediction'
       if (isAxiosError(error)) {
-        showWarningToast(
-          error.response?.data?.message ?? 'Could not place your prediction',
-        )
+        const data = error.response?.data as
+          | {
+              message?: string
+              code?: string
+              details?: { minimumStakeNgn?: number }
+            }
+          | undefined
+        const message = data?.message ?? fallback
+        // Surface the venue minimum-bet rejection inline with a one-tap fill,
+        // reading the structured minimum from the API error `details`.
+        const min = data?.details?.minimumStakeNgn
+        if (typeof min === 'number' && Number.isFinite(min)) setMinStake(min)
+        setBetError(message)
       } else {
-        showWarningToast('Could not place your prediction')
+        setBetError(fallback)
       }
     }
   }
@@ -241,9 +262,10 @@ const TradePanel = ({
                 type='text'
                 inputMode='decimal'
                 value={amount}
-                onChange={(e) =>
+                onChange={(e) => {
+                  clearBetError()
                   setAmount(e.target.value.replace(/[^\d.]/g, ''))
-                }
+                }}
                 placeholder='0.00'
                 className='w-full bg-transparent px-1 text-sm font-bold text-black outline-none'
               />
@@ -270,6 +292,25 @@ const TradePanel = ({
                 </button>
               )}
             </div>
+
+            {betError && (
+              <div className='flex flex-col gap-2 rounded-lg bg-error-bg px-3 py-2.5'>
+                <p className='text-xs font-medium text-error'>{betError}</p>
+                {minStake != null && (
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setAmount(String(minStake))
+                      clearBetError()
+                    }}
+                    className='self-start rounded-full bg-error/15 px-3 py-1 text-xs font-semibold text-error hover:bg-error/25'
+                  >
+                    Use minimum · {symbol}
+                    {minStake.toLocaleString()}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Summary */}
