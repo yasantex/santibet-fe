@@ -119,6 +119,8 @@ export interface RequestWithdrawalRequest {
 }
 
 export interface CryptoAddressResponse {
+  /** READY → address is usable; GENERATING → still provisioning, keep polling. */
+  status?: 'READY' | 'GENERATING'
   address: string
   currency: string
   network: string

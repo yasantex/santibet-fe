@@ -92,6 +92,14 @@ const CategoryPage = () => {
     return map
   }, [topics, byCategory])
 
+  // Only show sub-topics that actually match loaded markets — the topic list
+  // is a curated superset, so hiding the empties keeps the sidebar honest
+  // (e.g. Business shows only the topics with markets, not all six).
+  const visibleTopics = useMemo(
+    () => topics.filter((topic) => (topicCounts.get(topic) ?? 0) > 0),
+    [topics, topicCounts],
+  )
+
   const byTopic = useMemo(
     () =>
       activeTopic
@@ -118,7 +126,7 @@ const CategoryPage = () => {
       {/* Topic sidebar — the markets *within* the active category (e.g. Trump,
           Midterms under Politics). Hidden on mobile and on the "All" view,
           since topics only make sense scoped to one category. */}
-      {active !== 'All' && topics.length > 0 && (
+      {active !== 'All' && visibleTopics.length > 0 && (
         <aside className='hidden w-46 shrink-0 md:block'>
           <nav className='flex flex-col gap-0.5'>
             <button
@@ -135,7 +143,7 @@ const CategoryPage = () => {
                 {byCategory.length}
               </span>
             </button>
-            {topics.map((topic) => (
+            {visibleTopics.map((topic) => (
               <button
                 key={topic}
                 type='button'

@@ -377,6 +377,28 @@ export const useEvents = (params: EventQueryParams = {}, enabled = true) =>
     queryFn: () => fetchEvents(params),
   })
 
+/**
+ * Set of category names (lower-cased) that currently have at least one open,
+ * tradeable market. Used to hide the "ahead-of-catalogue" nav entries and
+ * empty sub-topic filters so browse only surfaces categories with markets.
+ * Falls back to `null` until the feed loads so callers can show their full
+ * list rather than flashing an empty nav.
+ */
+export const useAvailableCategories = (): Set<string> | null => {
+  const { data } = useEvents({ limit: 100 })
+  return useMemo(() => {
+    if (!data) return null
+    const set = new Set<string>()
+    for (const ev of data.events) {
+      const hasOpenMarket = ev.markets.some(
+        (m) => m.status !== 'closed' && m.yes,
+      )
+      if (hasOpenMarket && ev.category) set.add(ev.category.toLowerCase())
+    }
+    return set
+  }, [data])
+}
+
 export const useEventsInfinite = (params: EventQueryParams = {}) =>
   useInfiniteQuery<
     { events: UiEvent[]; cursor: string | null },

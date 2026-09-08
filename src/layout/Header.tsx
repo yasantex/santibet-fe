@@ -7,7 +7,7 @@ import SearchInput from '../components/globals/SearchInput'
 import Deposit from '../components/appModals/Deposit'
 import { useModalControl } from '../hooks/useModalControl'
 import { primaryNavLinks, type SearchResult } from '../utils/constants'
-import { useMarketSearch } from '../data_layer/markets'
+import { useMarketSearch, useAvailableCategories } from '../data_layer/markets'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft01Icon,
@@ -56,6 +56,21 @@ const CategoryRow = () => {
   const scrollByAmount = (delta: number) =>
     scrollRef.current?.scrollBy({ left: delta, behavior: 'smooth' })
 
+  // Only surface category tabs that actually have markets behind them. Live /
+  // Trending (non-`/category/` hrefs) always show; category links are kept
+  // while the feed is still loading (`available === null`) to avoid flashing a
+  // near-empty nav, then filtered to categories with open markets once loaded.
+  const available = useAvailableCategories()
+  const visibleLinks = useMemo(() => {
+    if (!available) return primaryNavLinks
+    return primaryNavLinks.filter((link) => {
+      const category = link.href.startsWith('/category/')
+        ? link.href.slice('/category/'.length)
+        : null
+      return !category || available.has(category.toLowerCase())
+    })
+  }, [available])
+
   return (
     <div className='relative flex items-center'>
       {canScrollLeft && (
@@ -72,7 +87,7 @@ const CategoryRow = () => {
         ref={scrollRef}
         className='hide-scroll-bar flex items-center gap-6 overflow-x-auto scroll-smooth px-4 text-sm font-semibold md:px-6'
       >
-        {primaryNavLinks.map((link) => (
+        {visibleLinks.map((link) => (
           <NavLink
             key={link.label}
             to={link.href}
