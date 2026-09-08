@@ -130,10 +130,14 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     setCryptoNetwork(null)
   }
 
-  useEffect(() => {
-    if (!open) return
-    resetAll()
-  }, [open])
+  // Reset to a clean slate each time the modal transitions closed → open.
+  // Done at render time (not in an effect) per react.dev/learn/you-might-not-
+  // need-an-effect, so the fresh state is ready on the first opened render.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) resetAll()
+  }
 
   // ---------- Bank transfer ----------
 
@@ -283,7 +287,17 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     path: `/wallet/crypto/address?currency=${cryptoCurrency}&network=${cryptoNetwork}`,
     queryKey: ['crypto-address', cryptoCurrency, cryptoNetwork],
     enabled: step === 'crypto-address' && !!cryptoCurrency && !!cryptoNetwork,
+    queryOptions: {
+      // While the provider is still provisioning the address, keep polling
+      // (it's not an error) until the backend returns status READY.
+      refetchInterval: (query) =>
+        query.state.data?.status === 'GENERATING' ? 4000 : false,
+    },
   })
+
+  const isGeneratingAddress =
+    cryptoAddress?.status === 'GENERATING' ||
+    (!!cryptoAddress && !cryptoAddress.address)
 
   const handleSelectMethod = (id: DepositMethod) => {
     if (id === 'crypto' && !userProfile?.emailVerified) {
@@ -585,10 +599,15 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
       {step === 'crypto-address' && (
         <div className='flex flex-col gap-4'>
-          {isLoadingAddress && (
-            <p className='text-sm text-center text-neutral-10 py-6'>
-              Fetching your deposit address…
-            </p>
+          {(isLoadingAddress || isGeneratingAddress) && (
+            <div className='flex flex-col items-center gap-3 py-8'>
+              <span className='h-6 w-6 animate-spin rounded-full border-2 border-brand-green border-t-transparent' />
+              <p className='text-sm text-center text-neutral-10'>
+                {isGeneratingAddress
+                  ? `Generating your ${cryptoNetwork?.toUpperCase()} address…`
+                  : 'Fetching your deposit address…'}
+              </p>
+            </div>
           )}
 
           {isCryptoError && !isLoadingAddress && (
@@ -598,7 +617,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
             </p>
           )}
 
-          {cryptoAddress && (
+          {cryptoAddress && !isGeneratingAddress && (
             <>
               <p className='text-sm text-left text-neutral-10'>
                 Send only {cryptoAddress.currency} on the{' '}
