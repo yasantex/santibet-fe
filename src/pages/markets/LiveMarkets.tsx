@@ -18,7 +18,7 @@ const LiveMarkets = () => {
     navigate(marketHref(m, o.id))
 
   return (
-    <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-4 pb-20 md:px-8'>
+    <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-10 pb-20 md:px-8'>
       <div className='flex items-center gap-3'>
         <h1 className='text-lg font-bold text-black md:text-2xl'>Live now</h1>
         <LiveBadge />
