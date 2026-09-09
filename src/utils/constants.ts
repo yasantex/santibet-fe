@@ -52,16 +52,6 @@ export const primaryNavLinks: NavLink[] = [
   { label: 'Entertainment', href: '/category/Entertainment' },
   { label: 'Tech', href: '/category/Tech' },
   { label: 'General', href: '/category/General' },
-  // These don't have live markets behind them yet — added ahead of the
-  // backend catalogue so the header already reads like the target design.
-  { label: 'Esports', href: '/category/Esports' },
-  { label: 'Finance', href: '/category/Finance' },
-  { label: 'Geopolitics', href: '/category/Geopolitics' },
-  { label: 'Culture', href: '/category/Culture' },
-  { label: 'Economy', href: '/category/Economy' },
-  { label: 'Weather', href: '/category/Weather' },
-  { label: 'Elections', href: '/category/Elections' },
-  { label: 'Art', href: '/category/Art' },
 ]
 
 /**
@@ -107,14 +97,6 @@ export const categoryTopics: Record<string, string[]> = {
   Entertainment: ['Movies', 'Music', 'Awards', 'TV', 'Celebrity', 'Streaming'],
   Tech: ['AI', 'Apple', 'Google', 'Meta', 'Space', 'Gadgets'],
   General: ['Trending', 'Featured', 'New'],
-  Esports: ['League of Legends', 'CS2', 'Valorant', 'Dota 2', 'Overwatch'],
-  Finance: ['Fed Rates', 'Inflation', 'Recession', 'Markets', 'Banks'],
-  Geopolitics: ['Russia', 'China', 'Middle East', 'Ukraine', 'Trade War'],
-  Culture: ['Internet', 'Viral', 'Social Media', 'Fashion'],
-  Economy: ['GDP', 'Jobs', 'Inflation', 'Housing', 'Trade'],
-  Weather: ['Hurricanes', 'Temperature', 'Storms', 'Climate'],
-  Elections: ['Presidential', 'Senate', 'Governor', 'Midterms'],
-  Art: ['Auctions', 'NFT Art', 'Exhibitions'],
 }
 
 export type DepositOption = {
@@ -127,7 +109,6 @@ export type DepositOption = {
 export type WithdrawalOption = {
   id: string
   heading: string
-
   label: string
   icon: any
   mostPopular?: boolean
