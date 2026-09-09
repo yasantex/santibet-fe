@@ -132,7 +132,9 @@ const Header = () => {
   const { count: unreadNotifications } = useUnreadNotificationCount()
 
   const { data: openPositions } = useBetPositions('OPEN', 100)
-  const portfolioValue = useMemo(
+  // Portfolio = unspent cash + the live market value of open positions;
+  // cash alone (shown separately below) is just the available balance.
+  const openPositionsValue = useMemo(
     () =>
       (openPositions?.pages ?? [])
         .flatMap((page) => page?.data ?? [])
@@ -142,6 +144,7 @@ const Header = () => {
         ),
     [openPositions],
   )
+  const portfolioValue = toMajorUnits(wallet?.total ?? 0) + openPositionsValue
 
   const [searchTerm, setSearchTerm] = useState('')
 
