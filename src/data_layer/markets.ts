@@ -385,18 +385,31 @@ export const useEvents = (params: EventQueryParams = {}, enabled = true) =>
  * list rather than flashing an empty nav.
  */
 export const useAvailableCategories = (): Set<string> | null => {
-  const { data } = useEvents({ limit: 100 })
+  // Authoritative per-category counts (covers small categories that a single
+  // event page would miss). Lobby-only; empty on the raw fallback feed.
+  const { data: lobbyCats } = useQuery({
+    queryKey: ['lobby-categories-nav'],
+    queryFn: () =>
+      get<LobbyCategory[]>(`${LOBBY_BASE}/categories`).catch(() => []),
+    staleTime: 5 * 60_000,
+  })
+  // Event sample — the feed-agnostic signal, and the only one on the raw feed.
+  const { data: events } = useEvents({ limit: 100 })
+
   return useMemo(() => {
-    if (!data) return null
+    if (!lobbyCats && !events) return null
     const set = new Set<string>()
-    for (const ev of data.events) {
+    for (const c of lobbyCats ?? []) {
+      if (c.eventCount > 0) set.add(c.slug.toLowerCase())
+    }
+    for (const ev of events?.events ?? []) {
       const hasOpenMarket = ev.markets.some(
         (m) => m.status !== 'closed' && m.yes,
       )
       if (hasOpenMarket && ev.category) set.add(ev.category.toLowerCase())
     }
     return set
-  }, [data])
+  }, [lobbyCats, events])
 }
 
 export const useEventsInfinite = (params: EventQueryParams = {}) =>
@@ -719,6 +732,28 @@ export const useMarketChart = (
 // The events endpoint ignores `q` server-side, so we fetch a batch once and
 // filter client-side. Results are mapped into the shared SearchResult shape.
 
+/** Lower-case + strip diacritics so "koln" matches "Köln", "munchen" ↔ "München". */
+export const normalizeText = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+
+/**
+ * True when the query hits any searchable part of a market — its title,
+ * subtitle (league/context), category, or an outcome label (participants /
+ * options like team names, "Over 2.5", "Draw"). `q` must be pre-normalized.
+ */
+export const marketMatchesQuery = (m: UiMarket, q: string): boolean => {
+  if (!q) return true
+  return (
+    normalizeText(m.title ?? '').includes(q) ||
+    normalizeText(m.subtitle ?? '').includes(q) ||
+    normalizeText(m.category ?? '').includes(q) ||
+    m.outcomes.some((o) => normalizeText(o.label ?? '').includes(q))
+  )
+}
+
 const marketToSearchResult = (m: UiMarket): SearchResult => ({
   id: m.id,
   title: m.title,
@@ -746,14 +781,9 @@ export const useMarketSearch = (term: string, limit = 12) => {
     const markets = (data?.events ?? [])
       .flatMap((e) => e.markets)
       .filter((m) => m.yes)
-    const q = debounced.trim().toLowerCase()
+    const q = normalizeText(debounced.trim())
     const pool = q
-      ? markets.filter(
-          (m) =>
-            (m.title ?? '').toLowerCase().includes(q) ||
-            (m.subtitle ?? '').toLowerCase().includes(q) ||
-            (m.category ?? '').toLowerCase().includes(q),
-        )
+      ? markets.filter((m) => marketMatchesQuery(m, q))
       : [...markets].sort((a, b) => b.volume - a.volume)
     return pool.slice(0, limit).map(marketToSearchResult)
   }, [data, debounced, limit])
