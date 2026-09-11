@@ -6,8 +6,9 @@ import MarketCard from '../components/markets/MarketCard'
 import LiveEventCard from '../components/markets/LiveEventCard'
 import { LiveBadge } from '../components/markets/LiveBits'
 import { MarketCardSkeleton } from '../components/globals/ReusedText'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { FilterIcon } from '@hugeicons/core-free-icons'
+import FilterComponent, {
+  type FilterCategory,
+} from '../components/globals/FilterComponent'
 import {
   useEvents,
   useLiveEvents,
@@ -19,9 +20,37 @@ import { marketHref } from '../utils/marketDisplay'
 import type { UiEvent, UiMarket, UiOutcome } from '../types/market.types'
 import { formatNairaCompact } from '../utils/functions'
 
+type MarketFilters = Record<'status' | 'sort', string[]>
+
+const marketFilterCategories: FilterCategory[] = [
+  {
+    key: 'status',
+    label: 'Status',
+    multiple: false,
+    options: [
+      { label: 'Open', value: 'open' },
+      { label: 'Closed', value: 'closed' },
+      { label: 'Settled', value: 'settled' },
+    ],
+  },
+  {
+    key: 'sort',
+    label: 'Sort by',
+    multiple: false,
+    options: [
+      { label: 'Most volume', value: 'volume' },
+      { label: 'Closing soon', value: 'closing_soon' },
+    ],
+  },
+]
+
 const MarketsDashboard = () => {
   const navigate = useNavigate()
   const [activeCategory, setActiveCategory] = useState('All')
+  const [filters, setFilters] = useState<MarketFilters>({
+    status: [],
+    sort: [],
+  })
 
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
@@ -68,12 +97,28 @@ const MarketsDashboard = () => {
   )
 
   const gridMarkets = useMemo(() => {
-    const list =
+    let list =
       activeCategory === 'All'
         ? allMarkets
         : allMarkets.filter((m) => m.category === activeCategory)
+
+    const status = filters.status[0]
+    if (status) {
+      list = list.filter((m) => m.status === status)
+    }
+
+    const sort = filters.sort[0]
+    if (sort === 'closing_soon') {
+      list = [...list].sort(
+        (a, b) =>
+          new Date(a.closeTime).getTime() - new Date(b.closeTime).getTime(),
+      )
+    } else if (sort === 'volume') {
+      list = [...list].sort((a, b) => b.volume - a.volume)
+    }
+
     return list
-  }, [allMarkets, activeCategory])
+  }, [allMarkets, activeCategory, filters])
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
@@ -184,28 +229,33 @@ const MarketsDashboard = () => {
       )}
 
       {categories.length > 1 && (
-        <div className='hide-scroll-bar flex items-center gap-2 overflow-x-auto'>
-          {categories.map((category) => (
-            <button
-              key={category}
-              type='button'
-              onClick={() => setActiveCategory(category)}
-              className={`shrink-0 rounded-full cursor-pointer px-4 py-1.5 text-sm font-semibold transition-colors ${
-                activeCategory === category
-                  ? 'bg-brand-green text-black dark:text-text-black!'
-                  : 'bg-card text-black hover:text-black/60'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
-          <button
-            type='button'
-            aria-label='Filter markets'
-            className='shrink-0 rounded-full bg-card p-2 text-neutral-10 hover:text-black'
-          >
-            <HugeiconsIcon icon={FilterIcon} size={18} />
-          </button>
+        <div className='flex items-center gap-2'>
+          <div className='hide-scroll-bar flex items-center gap-2 overflow-x-auto'>
+            {categories.map((category) => (
+              <button
+                key={category}
+                type='button'
+                onClick={() => setActiveCategory(category)}
+                className={`shrink-0 rounded-full cursor-pointer px-4 py-1.5 text-sm font-semibold transition-colors ${
+                  activeCategory === category
+                    ? 'bg-brand-green text-black dark:text-text-black!'
+                    : 'bg-card text-black hover:text-black/60'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+          <div className='shrink-0'>
+            <FilterComponent
+              categories={marketFilterCategories}
+              initialFilters={filters}
+              onApply={(next) =>
+                setFilters({ status: next.status ?? [], sort: next.sort ?? [] })
+              }
+              onReset={() => setFilters({ status: [], sort: [] })}
+            />
+          </div>
         </div>
       )}
 
