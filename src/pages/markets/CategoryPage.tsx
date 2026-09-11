@@ -9,6 +9,8 @@ import Dropdown from '../../components/globals/Dropdown'
 import SearchInput from '../../components/globals/SearchInput'
 import {
   useEventsInfinite,
+  marketMatchesQuery,
+  normalizeText,
   type EventQueryParams,
 } from '../../data_layer/markets'
 import { useFavorites } from '../../hooks/useFavorites'
@@ -32,23 +34,63 @@ const matchesTopic = (market: UiMarket, topic: string) => {
   )
 }
 
+// Sports events carry the sport in `seriesKey` (e.g. "apisports:football") and
+// the league/competition in `subtitle` (e.g. "Bundesliga"). These drive the
+// data-driven sport → league sub-navigation on the Sports page.
+const SPORT_LABELS: Record<string, string> = {
+  football: 'Football',
+  basketball: 'Basketball',
+  baseball: 'Baseball',
+  hockey: 'Ice Hockey',
+  'american-football': 'American Football',
+  'nfl': 'American Football',
+  rugby: 'Rugby',
+  tennis: 'Tennis',
+  cricket: 'Cricket',
+  volleyball: 'Volleyball',
+  handball: 'Handball',
+  mma: 'MMA',
+  boxing: 'Boxing',
+}
+
+const marketSport = (market: UiMarket): string | null => {
+  const key = market.seriesKey ?? ''
+  if (!key.startsWith('apisports:')) return null
+  const raw = key.slice('apisports:'.length).toLowerCase()
+  return (
+    SPORT_LABELS[raw] ??
+    raw.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  )
+}
+
+const OTHER = 'Other'
+const marketLeague = (market: UiMarket): string =>
+  (market.subtitle ?? '').trim() || OTHER
+
 const CategoryPage = () => {
   const { category: routeCategory } = useParams<{ category?: string }>()
   const navigate = useNavigate()
   const active = routeCategory ?? 'All'
 
+  const isSports = active.toLowerCase() === 'sports'
+
   const [sort, setSort] = useState<SortOption>('trending')
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTopic, setActiveTopic] = useState<string | null>(null)
+  // Sports sub-navigation: pick a sport type, then a league within it.
+  const [activeSport, setActiveSport] = useState<string | null>(null)
+  const [activeLeague, setActiveLeague] = useState<string | null>(null)
 
-  // Topics are scoped to whichever category is active — reset the topic
-  // filter whenever the category itself changes (render-time reset, per
+  // Sub-filters are scoped to whichever category is active — reset them
+  // whenever the category itself changes (render-time reset, per
   // react.dev/learn/you-might-not-need-an-effect).
   const [topicResetKey, setTopicResetKey] = useState(active)
   if (topicResetKey !== active) {
     setTopicResetKey(active)
     setActiveTopic(null)
+    setActiveSport(null)
+    setActiveLeague(null)
   }
 
   const {
@@ -58,7 +100,13 @@ const CategoryPage = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useEventsInfinite({ limit: 100, sort })
+  } = useEventsInfinite({
+    limit: 100,
+    sort,
+    // Filter server-side by category slug (lower-case) so a busy category like
+    // Sports paginates within itself instead of over the whole catalogue.
+    ...(active !== 'All' ? { category: active.toLowerCase() } : {}),
+  })
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
   const allMarkets = useMemo<UiMarket[]>(() => {
@@ -100,22 +148,46 @@ const CategoryPage = () => {
     [topics, topicCounts],
   )
 
-  const byTopic = useMemo(
-    () =>
-      activeTopic
-        ? byCategory.filter((m) => matchesTopic(m, activeTopic))
-        : byCategory,
-    [byCategory, activeTopic],
-  )
+  // Sports: group loaded markets into sport → league with live counts.
+  const sportsGroups = useMemo(() => {
+    if (!isSports) return []
+    const sports = new Map<string, Map<string, number>>()
+    for (const m of byCategory) {
+      const sport = marketSport(m) ?? OTHER
+      const league = marketLeague(m)
+      if (!sports.has(sport)) sports.set(sport, new Map())
+      const leagues = sports.get(sport)!
+      leagues.set(league, (leagues.get(league) ?? 0) + 1)
+    }
+    return [...sports.entries()]
+      .map(([sport, leagues]) => ({
+        sport,
+        count: [...leagues.values()].reduce((a, b) => a + b, 0),
+        leagues: [...leagues.entries()]
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count),
+      }))
+      .sort((a, b) => b.count - a.count)
+  }, [isSports, byCategory])
+
+  const byTopic = useMemo(() => {
+    if (isSports) {
+      return byCategory.filter((m) => {
+        if (activeSport && (marketSport(m) ?? OTHER) !== activeSport)
+          return false
+        if (activeLeague && marketLeague(m) !== activeLeague) return false
+        return true
+      })
+    }
+    return activeTopic
+      ? byCategory.filter((m) => matchesTopic(m, activeTopic))
+      : byCategory
+  }, [isSports, byCategory, activeSport, activeLeague, activeTopic])
 
   const filtered = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase()
+    const q = normalizeText(searchTerm.trim())
     if (!q) return byTopic
-    return byTopic.filter(
-      (m) =>
-        m.title.toLowerCase().includes(q) ||
-        m.subtitle?.toLowerCase().includes(q),
-    )
+    return byTopic.filter((m) => marketMatchesQuery(m, q))
   }, [byTopic, searchTerm])
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
@@ -123,10 +195,82 @@ const CategoryPage = () => {
 
   return (
     <main className='mx-auto flex w-full max-w-8xl flex-col gap-5 px-5 pt-10 pb-20 md:flex-row md:px-8'>
+      {/* Sports sub-navigation — pick a sport type, then a league within it.
+          Data-driven from the loaded feed (seriesKey → sport, subtitle →
+          league) rather than a curated topic list. */}
+      {isSports && sportsGroups.length > 0 && (
+        <aside className='hidden w-52 shrink-0 md:block'>
+          <nav className='flex flex-col gap-0.5'>
+            <button
+              type='button'
+              onClick={() => {
+                setActiveSport(null)
+                setActiveLeague(null)
+              }}
+              className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm text-black/60 hover:bg-hover ${
+                !activeSport && !activeLeague ? 'bg-hover' : ''
+              }`}
+            >
+              All sports
+              <span className='text-xs text-neutral-10'>
+                {byCategory.length}
+              </span>
+            </button>
+            {sportsGroups.map((group) => {
+              const expanded =
+                activeSport === group.sport || sportsGroups.length === 1
+              return (
+                <div key={group.sport} className='flex flex-col gap-0.5'>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setActiveSport(group.sport)
+                      setActiveLeague(null)
+                    }}
+                    className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold text-black/70 hover:bg-hover ${
+                      activeSport === group.sport && !activeLeague
+                        ? 'bg-hover'
+                        : ''
+                    }`}
+                  >
+                    {group.sport}
+                    <span className='text-xs font-normal text-neutral-10'>
+                      {group.count}
+                    </span>
+                  </button>
+                  {expanded &&
+                    group.leagues.map((league) => (
+                      <button
+                        key={league.name}
+                        type='button'
+                        onClick={() => {
+                          setActiveSport(group.sport)
+                          setActiveLeague(league.name)
+                        }}
+                        className={`flex cursor-pointer items-center justify-between rounded-md py-1.5 pr-3 pl-6 text-left text-sm text-black/60 hover:bg-hover ${
+                          activeLeague === league.name &&
+                          activeSport === group.sport
+                            ? 'bg-hover'
+                            : ''
+                        }`}
+                      >
+                        <span className='truncate'>{league.name}</span>
+                        <span className='shrink-0 text-xs text-neutral-10'>
+                          {league.count}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+              )
+            })}
+          </nav>
+        </aside>
+      )}
+
       {/* Topic sidebar — the markets *within* the active category (e.g. Trump,
           Midterms under Politics). Hidden on mobile and on the "All" view,
           since topics only make sense scoped to one category. */}
-      {active !== 'All' && visibleTopics.length > 0 && (
+      {!isSports && active !== 'All' && visibleTopics.length > 0 && (
         <aside className='hidden w-46 shrink-0 md:block'>
           <nav className='flex flex-col gap-0.5'>
             <button
@@ -167,7 +311,10 @@ const CategoryPage = () => {
       <div className='flex min-w-0 flex-1 flex-col gap-5'>
         <div className='flex items-center justify-between gap-3'>
           <h1 className='text-lg font-bold text-black md:text-2xl'>
-            {active === 'All' ? 'Browse markets' : active}
+            {active === 'All'
+              ? 'Browse markets'
+              : (activeLeague ??
+                (isSports ? (activeSport ?? active) : active))}
           </h1>
 
           <div className='flex shrink-0 items-center gap-2'>
@@ -252,8 +399,11 @@ const CategoryPage = () => {
               <p className='py-12 text-center text-sm text-neutral-10'>
                 {searchTerm
                   ? `No markets match "${searchTerm}".`
-                  : `No open markets in ${active}${
-                      activeTopic ? ` / ${activeTopic}` : ''
+                  : `No open markets in ${
+                      activeLeague ??
+                      (isSports ? (activeSport ?? active) : active)
+                    }${
+                      !isSports && activeTopic ? ` / ${activeTopic}` : ''
                     }. Try loading more or another category.`}
               </p>
             )}
