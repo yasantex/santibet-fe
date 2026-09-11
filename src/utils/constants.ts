@@ -43,8 +43,8 @@ export type SearchResult = {
 }
 
 export const primaryNavLinks: NavLink[] = [
-  { label: 'Live', href: '/live' },
   { label: 'Trending', href: '/' },
+  { label: 'Live', href: '/live' },
   { label: 'Politics', href: '/category/Politics' },
   { label: 'Sports', href: '/category/Sports' },
   { label: 'Crypto', href: '/category/Crypto' },
