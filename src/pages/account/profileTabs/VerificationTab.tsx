@@ -1,4 +1,8 @@
+import { useState } from 'react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { ArrowRight01Icon, LockIcon } from '@hugeicons/core-free-icons'
 import { Button } from '../../../components/globals/Button'
+import ModalComponent from '../../../components/globals/ModalComponent'
 import { useFormik } from 'formik'
 import type {
   BaseApiResponse,
@@ -44,6 +48,10 @@ const VerificationTab = ({
   onVerifyEmail,
   onVerifyPhone,
 }: VerificationTabProps) => {
+  const [kycModalOpen, setKycModalOpen] = useState(false)
+  const isKycVerified =
+    !!kycStatus?.status && kycStatus.status !== 'NOT_STARTED'
+
   const { mutateAsync: postVerify, isPending } = useSantiBetMutation<
     BaseApiResponse,
     KycPayload
@@ -150,14 +158,126 @@ const VerificationTab = ({
       <section className='flex flex-col gap-2.5'>
         <div>
           <h2 className='text-sm font-semibold text-black'>
-            KYC verification
+            Verification levels
           </h2>
           <p className='text-xs text-placeholder'>
-            Your verified legal name will be used to secure future
-            withdrawals and payout accounts.
+            Complete verification to unlock higher deposit and withdrawal
+            limits.
           </p>
         </div>
 
+        <div className='flex flex-col gap-3'>
+          {/* Basic — verified automatically on sign up */}
+          <div className='flex flex-col gap-3 rounded-2xl border border-border bg-card p-4'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <span className='h-2 w-2 rounded-full bg-neutral-10' />
+                <span className='text-sm font-semibold text-black'>Basic</span>
+              </div>
+              <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
+                Auto-verified
+              </span>
+            </div>
+            <p className='text-xs text-placeholder'>
+              Email or phone — confirmed automatically when you sign up.
+            </p>
+            <div className='grid grid-cols-2 gap-3 rounded-lg p-3'>
+              <div>
+                <p className='text-[11px] text-placeholder'>Deposit</p>
+                <p className='text-sm font-medium text-black'>No minimum</p>
+              </div>
+              <div>
+                <p className='text-[11px] text-placeholder'>Max withdrawal</p>
+                <p className='text-sm font-medium text-black'>500,000</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Standard — government ID verification */}
+          <button
+            type='button'
+            onClick={() => setKycModalOpen(true)}
+            className='flex flex-col gap-3 rounded-2xl cursor-pointer border border-border bg-card p-4 text-left transition-colors hover:bg-hover'
+          >
+            <div className='flex items-center justify-between gap-2'>
+              <div className='flex items-center gap-2'>
+                <span className='h-2 w-2 rounded-full bg-brand-green' />
+                <span className='text-sm font-semibold text-black'>
+                  Standard
+                </span>
+              </div>
+              <div className='flex items-center gap-2'>
+                {kycLoading ? (
+                  <span className='h-5 w-16 animate-pulse rounded-full bg-neutral-10/20' />
+                ) : isKycVerified ? (
+                  <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
+                    Verified
+                  </span>
+                ) : (
+                  <span className='w-fit rounded-full bg-surface-error px-2.5 py-0.5 text-xs font-semibold text-error'>
+                    Not verified
+                  </span>
+                )}
+                <HugeiconsIcon
+                  icon={ArrowRight01Icon}
+                  size={18}
+                  className='shrink-0 text-neutral-10'
+                />
+              </div>
+            </div>
+            <p className='text-xs text-placeholder'>
+              Government ID, full name and date of birth.
+            </p>
+            <div className='grid grid-cols-2 gap-3 rounded-lg p-3'>
+              <div>
+                <p className='text-[11px] text-placeholder'>Deposit</p>
+                <p className='text-sm font-medium text-black'>No minimum</p>
+              </div>
+              <div>
+                <p className='text-[11px] text-placeholder'>Max withdrawal</p>
+                <p className='text-sm font-medium text-black'>-</p>
+              </div>
+            </div>
+          </button>
+
+          {/* Advanced — not implemented yet */}
+          <div className='flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 opacity-60'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <span className='h-2 w-2 rounded-full bg-warning' />
+                <span className='text-sm font-semibold text-black'>
+                  Advanced
+                </span>
+              </div>
+              <div className='flex items-center gap-1.5 text-xs font-semibold text-placeholder'>
+                <HugeiconsIcon icon={LockIcon} size={14} />
+                Coming soon
+              </div>
+            </div>
+            <p className='text-xs text-placeholder'>
+              Bank statement or payslip.
+            </p>
+            <div className='grid grid-cols-2 gap-3 rounded-lg p-3'>
+              <div>
+                <p className='text-[11px] text-placeholder'>Deposit</p>
+                <p className='text-sm font-medium text-black'>No minimum</p>
+              </div>
+              <div>
+                <p className='text-[11px] text-placeholder'>Max withdrawal</p>
+                <p className='text-sm font-medium text-black'>-</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <ModalComponent
+        open={kycModalOpen}
+        handleClose={() => setKycModalOpen(false)}
+        title='Standard verification'
+        subtitle='Verify your identity to unlock withdrawals.'
+        className='max-w-125! w-[90%]!'
+      >
         {kycLoading ? (
           <div className='h-11 w-full animate-pulse rounded-lg bg-neutral-10/20' />
         ) : kycStatus?.status === 'NOT_STARTED' ? (
@@ -237,7 +357,7 @@ const VerificationTab = ({
             </span>
           </div>
         )}
-      </section>
+      </ModalComponent>
     </div>
   )
 }

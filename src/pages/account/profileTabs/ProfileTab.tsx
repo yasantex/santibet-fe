@@ -137,7 +137,7 @@ const ProfileTab = ({ user, refetch }: ProfileTabProps) => {
         /> */}
 
         <div>
-          <h2 className='text-sm text-neutral-10 mb-2'>Date of birth</h2>
+          <h2 className='text-sm text-neutral-10 mb-0.5'>Date of birth</h2>
           <DateInput
             value={(values.dateOfBirth ?? '') as unknown as string}
             onChange={(date) => setFieldValue('dateOfBirth', date)}
