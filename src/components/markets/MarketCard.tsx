@@ -5,7 +5,7 @@ import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
 import { categoryIcon, marketDisplayTitle } from '../../utils/marketDisplay'
 import { MarketCountdown } from '../globals/ReusedText'
 
-type OutcomeTone = 'yes' | 'no' | 'neutral'
+type OutcomeTone = 'yes' | 'no' | 'mid'
 
 const TONE_STYLES: Record<
   OutcomeTone,
@@ -21,10 +21,11 @@ const TONE_STYLES: Record<
     bar: 'bg-error',
     button: 'bg-market-error text-error hover:bg-error hover:text-white',
   },
-  neutral: {
-    percent: 'text-black/70',
-    bar: 'bg-neutral-10/60',
-    button: 'bg-hover text-black hover:bg-black hover:text-white',
+  // Middle outcome(s) of a 3+ way market (e.g. the Draw in a 1X2 game).
+  mid: {
+    percent: 'text-warning',
+    bar: 'bg-warning',
+    button: 'bg-market-warning text-warning hover:bg-warning hover:text-white',
   },
 }
 
@@ -95,12 +96,17 @@ const MarketCard = ({
   // 3+ outcomes (e.g. a 1X2 match) lists each outcome, capped at 3 with a
   // "+N more outcomes" affordance that opens the full market.
   const isBinary = !!market.yes && !!market.no && outcomes.length <= 2
+  const capped = outcomes.slice(0, 3)
   const shownOutcomes: { outcome: UiOutcome; tone: OutcomeTone }[] = isBinary
     ? [
         { outcome: market.yes!, tone: 'yes' },
         { outcome: market.no!, tone: 'no' },
       ]
-    : outcomes.slice(0, 3).map((outcome) => ({ outcome, tone: 'neutral' }))
+    : capped.map((outcome, i) => ({
+        // First outcome green, last red, anything between amber.
+        outcome,
+        tone: i === 0 ? 'yes' : i === capped.length - 1 ? 'no' : 'mid',
+      }))
   const moreCount = isBinary ? 0 : Math.max(0, outcomes.length - 3)
 
   return (
