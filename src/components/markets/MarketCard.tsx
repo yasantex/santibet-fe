@@ -2,8 +2,31 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Bookmark02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
-import { categoryIcon } from '../../utils/marketDisplay'
+import { categoryIcon, marketDisplayTitle } from '../../utils/marketDisplay'
 import { MarketCountdown } from '../globals/ReusedText'
+
+type OutcomeTone = 'yes' | 'no' | 'neutral'
+
+const TONE_STYLES: Record<
+  OutcomeTone,
+  { percent: string; bar: string; button: string }
+> = {
+  yes: {
+    percent: 'text-success',
+    bar: 'bg-success',
+    button: 'bg-market-success text-success hover:bg-success hover:text-white',
+  },
+  no: {
+    percent: 'text-error',
+    bar: 'bg-error',
+    button: 'bg-market-error text-error hover:bg-error hover:text-white',
+  },
+  neutral: {
+    percent: 'text-black/70',
+    bar: 'bg-neutral-10/60',
+    button: 'bg-hover text-black hover:bg-black hover:text-white',
+  },
+}
 
 const OutcomeRow = ({
   outcome,
@@ -11,27 +34,25 @@ const OutcomeRow = ({
   onClick,
 }: {
   outcome?: UiOutcome
-  tone: 'yes' | 'no'
+  tone: OutcomeTone
   onClick?: () => void
 }) => {
   if (!outcome) return null
-  const isYes = tone === 'yes'
+  const style = TONE_STYLES[tone]
   return (
     <div className='flex items-center gap-3'>
       <div className='min-w-0 flex-1'>
-        <div className='mb-1.5 flex items-baseline justify-between text-sm'>
-          <span className='font-bold text-black uppercase'>
+        <div className='mb-1.5 flex items-baseline justify-between gap-2 text-sm'>
+          <span className='truncate font-bold text-black uppercase'>
             {outcome.label}
           </span>
-          <span
-            className={`font-bold ${isYes ? 'text-success' : 'text-error'}`}
-          >
+          <span className={`shrink-0 font-bold ${style.percent}`}>
             {outcome.percent}%
           </span>
         </div>
         <div className='h-1 w-full overflow-hidden rounded-full bg-border/40'>
           <div
-            className={`h-full rounded-full ${isYes ? 'bg-success' : 'bg-error'}`}
+            className={`h-full rounded-full ${style.bar}`}
             style={{ width: `${outcome.percent}%` }}
           />
         </div>
@@ -42,11 +63,7 @@ const OutcomeRow = ({
           e.stopPropagation()
           onClick?.()
         }}
-        className={`shrink-0 rounded-lg px-4 cursor-pointer py-2.5 text-xs font-bold ${
-          isYes
-            ? 'bg-market-success text-success hover:bg-success hover:text-white'
-            : 'bg-market-error text-error hover:bg-error hover:text-white'
-        }`}
+        className={`shrink-0 rounded-lg px-4 cursor-pointer py-2.5 text-xs font-bold ${style.button}`}
       >
         {formatSharePrice(outcome.cents)}
       </button>
@@ -73,6 +90,19 @@ const MarketCard = ({
   isSaved = false,
   live = false,
 }: MarketCardProps) => {
+  const outcomes = market.outcomes ?? []
+  // Binary yes/no markets keep the familiar green/no red split. Anything with
+  // 3+ outcomes (e.g. a 1X2 match) lists each outcome, capped at 3 with a
+  // "+N more outcomes" affordance that opens the full market.
+  const isBinary = !!market.yes && !!market.no && outcomes.length <= 2
+  const shownOutcomes: { outcome: UiOutcome; tone: OutcomeTone }[] = isBinary
+    ? [
+        { outcome: market.yes!, tone: 'yes' },
+        { outcome: market.no!, tone: 'no' },
+      ]
+    : outcomes.slice(0, 3).map((outcome) => ({ outcome, tone: 'neutral' }))
+  const moreCount = isBinary ? 0 : Math.max(0, outcomes.length - 3)
+
   return (
     <div
       role='button'
@@ -120,19 +150,29 @@ const MarketCard = ({
       </div>
 
       <h3 className='line-clamp-2 min-h-11 text-base leading-snug font-bold text-black'>
-        {market.title}
+        {marketDisplayTitle(market)}
       </h3>
       <div className='flex flex-col gap-4'>
-        <OutcomeRow
-          outcome={market.yes}
-          tone='yes'
-          onClick={() => market.yes && onSelectOutcome?.(market, market.yes)}
-        />
-        <OutcomeRow
-          outcome={market.no}
-          tone='no'
-          onClick={() => market.no && onSelectOutcome?.(market, market.no)}
-        />
+        {shownOutcomes.map(({ outcome, tone }) => (
+          <OutcomeRow
+            key={outcome.id}
+            outcome={outcome}
+            tone={tone}
+            onClick={() => onSelectOutcome?.(market, outcome)}
+          />
+        ))}
+        {moreCount > 0 && (
+          <button
+            type='button'
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect?.(market)
+            }}
+            className='self-start text-xs font-semibold text-neutral-10 hover:text-black'
+          >
+            +{moreCount} more outcome{moreCount > 1 ? 's' : ''}
+          </button>
+        )}
       </div>
 
       <div className='flex items-center justify-between pt-1'>
