@@ -78,6 +78,7 @@ body {
   --color-placeholder: #6b706d;
   --color-market-success: #ecf9f1;
   --color-market-error: #fcebeb;
+  --color-market-warning: #fdf1e5;
 }
 
 :root {
