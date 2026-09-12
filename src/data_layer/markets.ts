@@ -60,6 +60,7 @@ export const normalizeOutcome = (o: ApiMarket['outcomes'][number]): UiOutcome =>
 export const normalizeMarket = (
   m: ApiMarket,
   category = 'General',
+  eventTitle?: string,
 ): UiMarket => {
   const outcomes = (m.outcomes ?? []).map(normalizeOutcome)
   const yes =
@@ -83,6 +84,7 @@ export const normalizeMarket = (
     eventId: m.eventId,
     provider: m.provider,
     title: m.title,
+    eventTitle,
     subtitle: m.subtitle ?? '',
     category,
     status: m.status,
@@ -108,7 +110,7 @@ export const normalizeEvent = (e: ApiEvent): UiEvent => ({
   // than the flat /market/markets feed. Stamp the parent event id so the detail
   // page can resolve the market back through /market/events/{id}.
   markets: (e.markets ?? []).map((m) =>
-    normalizeMarket({ ...m, eventId: m.eventId || e.id }, e.category),
+    normalizeMarket({ ...m, eventId: m.eventId || e.id }, e.category, e.title),
   ),
 })
 
@@ -129,6 +131,7 @@ export const normalizeLobbyMarket = (
   category = 'General',
   eventId = '',
   imageUrl: string | null = null,
+  eventTitle?: string,
 ): UiMarket => {
   const outcomes = (m.outcomes ?? []).map((o) => ({
     id: o.id,
@@ -147,6 +150,7 @@ export const normalizeLobbyMarket = (
     eventId,
     provider: 'polymarket',
     title: m.title,
+    eventTitle,
     subtitle: m.subtitle ?? '',
     category,
     status: LOBBY_STATUS[m.status] ?? 'unknown',
@@ -180,7 +184,7 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
     live: e.live ?? false,
     liveState: e.liveState ?? null,
     markets: (e.markets ?? []).map((m) =>
-      normalizeLobbyMarket(m, category, e.id, e.imageUrl),
+      normalizeLobbyMarket(m, category, e.id, e.imageUrl, e.title),
     ),
   }
 }
