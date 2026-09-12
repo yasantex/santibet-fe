@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Clock01Icon } from '@hugeicons/core-free-icons'
 import { LiveBadge, ScoreBoard } from './LiveBits'
-import { categoryIcon } from '../../utils/marketDisplay'
+import { categoryIcon, marketDisplayTitle } from '../../utils/marketDisplay'
 import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
 import { useCountdown } from '../../hooks/useCountdown'
 import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
@@ -49,7 +49,7 @@ const LiveEventCard = ({
         onClick={() => onSelectMarket(market)}
         className='line-clamp-2 min-h-10 text-left text-base font-bold leading-snug text-black hover:underline'
       >
-        {market.title}
+        {marketDisplayTitle({ title: market.title, eventTitle: event.title })}
       </button>
 
       {event.liveState ? (
