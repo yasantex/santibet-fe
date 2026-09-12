@@ -173,6 +173,10 @@ export interface UiMarket {
   eventId: string
   provider: MarketProvider
   title: string
+  /** Parent event title (e.g. "Hamburger SV vs 1. FC Köln"). Present when the
+   *  market was normalized from an event feed; used to give generic market
+   *  titles ("Match Winner") their game/event context on cards. */
+  eventTitle?: string
   subtitle: string
   category: string
   status: MarketStatus
