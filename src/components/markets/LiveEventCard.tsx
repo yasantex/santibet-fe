@@ -1,7 +1,11 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Clock01Icon } from '@hugeicons/core-free-icons'
 import { LiveBadge, ScoreBoard } from './LiveBits'
-import { categoryIcon, marketDisplayTitle } from '../../utils/marketDisplay'
+import {
+  categoryIcon,
+  marketDisplayTitle,
+  TONE_STYLES,
+} from '../../utils/marketDisplay'
 import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
 import { useCountdown } from '../../hooks/useCountdown'
 import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
@@ -63,21 +67,27 @@ const LiveEventCard = ({
         )
       )}
 
-      <div className='grid grid-cols-2 gap-2'>
-        {market.outcomes.slice(0, 2).map((o) => {
-          const isYes = o.id === market.yes?.id
+      <div className='flex items-stretch gap-2'>
+        {market.outcomes.slice(0, 3).map((o, i, shown) => {
+          // Binary keeps yes/no by identity; 3-way goes green-first/red-last/amber-mid.
+          const isBinary = !!market.yes && !!market.no && shown.length <= 2
+          const tone = isBinary
+            ? o.id === market.yes?.id
+              ? 'yes'
+              : 'no'
+            : i === 0
+              ? 'yes'
+              : i === shown.length - 1
+                ? 'no'
+                : 'mid'
           return (
             <button
               key={o.id}
               type='button'
               onClick={() => onSelectOutcome(market, o)}
-              className={`flex items-center justify-between rounded-lg cursor-pointer px-3 py-2.5 text-sm font-bold ${
-                isYes
-                  ? 'bg-market-success text-success hover:bg-success hover:text-white'
-                  : 'bg-market-error text-error hover:bg-error hover:text-white'
-              }`}
+              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg cursor-pointer px-2 py-2.5 text-sm font-bold ${TONE_STYLES[tone].button}`}
             >
-              <span className='uppercase'>{o.label}</span>
+              <span className='w-full truncate uppercase'>{o.label}</span>
               <span>{formatSharePrice(o.cents)}</span>
             </button>
           )

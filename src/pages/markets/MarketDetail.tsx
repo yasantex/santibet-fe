@@ -18,12 +18,14 @@ import {
   useMarket,
   useMarketChart,
   useLobbyStream,
+  useEvent,
 } from '../../data_layer/markets'
 import { useFavorites } from '../../hooks/useFavorites'
 import TradePanel from '../../components/markets/TradePanel'
-import { LiveBadge } from '../../components/markets/LiveBits'
+import { LiveBadge, ScoreBoard } from '../../components/markets/LiveBits'
+import ChartTooltip from '../../components/markets/ChartTooltip'
 import { useCountdown } from '../../hooks/useCountdown'
-import { categoryIcon } from '../../utils/marketDisplay'
+import { categoryIcon, outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
 import {
   formatCloseTimer,
   formatCompact,
@@ -32,6 +34,7 @@ import {
 } from '../../utils/functions'
 import { showSuccessToast } from '../../utils/toastUtils'
 import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
+import type { OutcomeTone } from '../../utils/marketDisplay'
 
 // How often the Live view extends its tail / pulls a fresh quote.
 const LIVE_TICK_MS = 3000
@@ -42,6 +45,13 @@ const CHART_PERIODS: { label: string; mode: ChartMode }[] = [
   { label: '6H', mode: '6h' },
   { label: '1D', mode: '1d' },
 ]
+
+// Solid fill for the selected outcome button, matching each tone's color.
+const ACTIVE_OUTCOME_CLASSES: Record<OutcomeTone, string> = {
+  yes: 'bg-success text-white',
+  no: 'bg-error text-white',
+  mid: 'bg-warning text-white',
+}
 
 const MarketDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -57,6 +67,9 @@ const MarketDetail = () => {
   const eventId = searchParams.get('event') ?? undefined
   const { data: market, isLoading, isError } = useMarket(id, eventId)
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
+  // Live score/period/clock (team crests aren't in the feed, only names) — only
+  // fetched for live markets, where the event's liveState actually has data.
+  const { data: event } = useEvent(market?.live ? eventId : undefined)
 
   const selectedOutcome: UiOutcome | undefined = useMemo(() => {
     if (!market) return undefined
@@ -253,6 +266,7 @@ const MarketDetail = () => {
                 )}
               </div>
             </div>
+            {event?.liveState && <ScoreBoard state={event.liveState} />}
             <div className='flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-10'>
               {market.live ? (
                 <LiveBadge />
@@ -353,19 +367,13 @@ const MarketDetail = () => {
                       axisLine={false}
                     />
                     <Tooltip
-                      formatter={(v) => [
-                        formatCompact(Number(v)),
-                        selectedOutcome?.label ?? '',
-                      ]}
-                      contentStyle={{
-                        borderRadius: 8,
-                        border: '1px solid var(--color-border)',
-                        background: 'var(--color-card)',
-                        fontSize: 12,
-                        color: 'var(--color-black)',
-                      }}
-                      itemStyle={{ color: 'var(--color-black)' }}
-                      labelStyle={{ color: 'var(--color-black)' }}
+                      content={(props) => (
+                        <ChartTooltip
+                          {...props}
+                          seriesLabel={selectedOutcome?.label ?? ''}
+                          baseValue={chartData[0]?.value}
+                        />
+                      )}
                     />
                     <Area
                       type='monotone'
@@ -386,26 +394,22 @@ const MarketDetail = () => {
             </div>
 
             {/* Outcome quick buttons */}
-            <div className='grid grid-cols-2 gap-3'>
-              {market.outcomes.map((o) => {
+            <div className='flex items-stretch gap-3'>
+              {market.outcomes.map((o, i) => {
                 const active = o.id === selectedOutcome?.id
-                const isYes = o.id === market.yes?.id
+                const tone = outcomeTone(market, o.id, i)
                 const colorClasses = active
-                  ? isYes
-                    ? 'bg-success text-white'
-                    : 'bg-error text-white'
-                  : isYes
-                    ? 'bg-market-success text-success hover:bg-success hover:text-white'
-                    : 'bg-market-error text-error hover:bg-error hover:text-white'
+                  ? ACTIVE_OUTCOME_CLASSES[tone]
+                  : TONE_STYLES[tone].button
                 return (
                   <button
                     key={o.id}
                     type='button'
                     onClick={() => setSelectedId(o.id)}
-                    className={`flex items-center justify-between cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses}`}
+                    className={`flex min-w-0 flex-1 items-center justify-between cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses}`}
                   >
-                    <span className='uppercase'>{o.label}</span>
-                    <span>{formatSharePrice(o.cents)}</span>
+                    <span className='truncate uppercase'>{o.label}</span>
+                    <span className='shrink-0'>{formatSharePrice(o.cents)}</span>
                   </button>
                 )
               })}
