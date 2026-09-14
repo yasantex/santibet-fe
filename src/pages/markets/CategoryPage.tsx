@@ -15,7 +15,8 @@ import {
 } from '../../data_layer/markets'
 import { useFavorites } from '../../hooks/useFavorites'
 import { marketHref } from '../../utils/marketDisplay'
-import { categoryTopics } from '../../utils/constants'
+import { formatCompact } from '../../utils/functions'
+import { categoryTopics, mockSportsTree } from '../../utils/constants'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 
 type SortOption = NonNullable<EventQueryParams['sort']>
@@ -134,17 +135,25 @@ const CategoryPage = () => {
   )
   const topicCounts = useMemo(() => {
     const map = new Map<string, number>()
-    topics.forEach((topic) =>
-      map.set(topic, byCategory.filter((m) => matchesTopic(m, topic)).length),
-    )
+    topics.forEach((topic) => {
+      const live = byCategory.filter((m) => matchesTopic(m, topic.name)).length
+      map.set(
+        topic.name,
+        topic.mockCount != null ? Math.max(live, topic.mockCount) : live,
+      )
+    })
     return map
   }, [topics, byCategory])
 
   // Only show sub-topics that actually match loaded markets — the topic list
   // is a curated superset, so hiding the empties keeps the sidebar honest
-  // (e.g. Business shows only the topics with markets, not all six).
+  // (e.g. Business shows only the topics with markets, not all six). Topics
+  // with a fixed mockCount always show, standing in until real data arrives.
   const visibleTopics = useMemo(
-    () => topics.filter((topic) => (topicCounts.get(topic) ?? 0) > 0),
+    () =>
+      topics.filter(
+        (topic) => topic.mockCount != null || (topicCounts.get(topic.name) ?? 0) > 0,
+      ),
     [topics, topicCounts],
   )
 
@@ -158,6 +167,16 @@ const CategoryPage = () => {
       if (!sports.has(sport)) sports.set(sport, new Map())
       const leagues = sports.get(sport)!
       leagues.set(league, (leagues.get(league) ?? 0) + 1)
+    }
+    // Merge in mock leagues/sports the live feed doesn't cover yet (e.g.
+    // NFL, MLB) — skipped wherever a real league of the same name already
+    // has markets, so mock data never overrides a live count.
+    for (const mock of mockSportsTree) {
+      if (!sports.has(mock.sport)) sports.set(mock.sport, new Map())
+      const leagues = sports.get(mock.sport)!
+      for (const league of mock.leagues) {
+        if (!leagues.has(league.name)) leagues.set(league.name, league.count)
+      }
     }
     return [...sports.entries()]
       .map(([sport, leagues]) => ({
@@ -213,7 +232,7 @@ const CategoryPage = () => {
             >
               All sports
               <span className='text-xs text-neutral-10'>
-                {byCategory.length}
+                {formatCompact(byCategory.length)}
               </span>
             </button>
             {sportsGroups.map((group) => {
@@ -235,7 +254,7 @@ const CategoryPage = () => {
                   >
                     {group.sport}
                     <span className='text-xs font-normal text-neutral-10'>
-                      {group.count}
+                      {formatCompact(group.count)}
                     </span>
                   </button>
                   {expanded &&
@@ -256,7 +275,7 @@ const CategoryPage = () => {
                       >
                         <span className='truncate'>{league.name}</span>
                         <span className='shrink-0 text-xs text-neutral-10'>
-                          {league.count}
+                          {formatCompact(league.count)}
                         </span>
                       </button>
                     ))}
@@ -284,23 +303,23 @@ const CategoryPage = () => {
             >
               All
               <span className='text-xs text-neutral-10'>
-                {byCategory.length}
+                {formatCompact(byCategory.length)}
               </span>
             </button>
             {visibleTopics.map((topic) => (
               <button
-                key={topic}
+                key={topic.name}
                 type='button'
-                onClick={() => setActiveTopic(topic)}
+                onClick={() => setActiveTopic(topic.name)}
                 className={`flex items-center text-black/60 cursor-pointer hover:bg-hover justify-between rounded-md px-3 py-2 text-left text-sm ${
-                  activeTopic === topic
+                  activeTopic === topic.name
                     ? 'bg-hover'
                     : ''
                 }`}
               >
-                {topic}
+                {topic.name}
                 <span className='text-xs text-neutral-10'>
-                  {topicCounts.get(topic)}
+                  {formatCompact(topicCounts.get(topic.name) ?? 0)}
                 </span>
               </button>
             ))}

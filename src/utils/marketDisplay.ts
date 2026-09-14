@@ -1,3 +1,51 @@
+export type OutcomeTone = 'yes' | 'no' | 'mid'
+
+/**
+ * Color styling per outcome tone, shared between MarketCard and TradePanel so
+ * the draw/mid color always matches wherever a market's outcomes are shown.
+ */
+export const TONE_STYLES: Record<
+  OutcomeTone,
+  { percent: string; bar: string; button: string; active: string }
+> = {
+  yes: {
+    percent: 'text-success',
+    bar: 'bg-success',
+    button: 'bg-market-success text-success hover:bg-success hover:text-white',
+    active: 'border-success bg-market-success text-success',
+  },
+  no: {
+    percent: 'text-error',
+    bar: 'bg-error',
+    button: 'bg-market-error text-error hover:bg-error hover:text-white',
+    active: 'border-error bg-market-error text-error',
+  },
+  // Middle outcome(s) of a 3+ way market (e.g. the Draw in a 1X2 game).
+  mid: {
+    percent: 'text-warning',
+    bar: 'bg-warning',
+    button: 'bg-market-warning text-warning hover:bg-warning hover:text-white',
+    active: 'border-warning bg-market-warning text-warning',
+  },
+}
+
+/**
+ * Tone for one outcome of a market: binary yes/no markets keep the familiar
+ * green/red split; 3+ outcome markets (e.g. a 1X2 match) go green for the
+ * first, red for the last, and amber for anything in between (the draw).
+ */
+export const outcomeTone = (
+  market: { yes?: { id: string }; no?: { id: string }; outcomes: { id: string }[] },
+  outcomeId: string,
+  index: number,
+): OutcomeTone => {
+  const isBinary = !!market.yes && !!market.no && market.outcomes.length <= 2
+  if (isBinary) return outcomeId === market.yes?.id ? 'yes' : 'no'
+  if (index === 0) return 'yes'
+  if (index === market.outcomes.length - 1) return 'no'
+  return 'mid'
+}
+
 export const categoryIcons: Record<string, string> = {
   Politics: '🏛️',
   Sports: '🏴',
