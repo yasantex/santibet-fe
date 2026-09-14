@@ -9,6 +9,7 @@ import SellPanel from './SellPanel'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import {
   NAIRA,
+  formatCurrency,
   formatSharePrice,
   toMajorUnits,
   toMinorUnits,
@@ -16,6 +17,7 @@ import {
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { BetType } from '../../types/bet.types'
+import { outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
 
 const QUICK_ADDS = [100, 200, 500, 1000]
 
@@ -112,7 +114,9 @@ const TradePanel = ({
         type,
         ...(type === 'limit' ? { limitPrice: Number(limitCents) / 100 } : {}),
       })
-      showSuccessToast(`Prediction placed · ${symbol}${potentialReturn} to win`)
+      showSuccessToast(
+        `Prediction placed · ${formatCurrency(potentialReturn)} to win`,
+      )
       setAmount('')
       navigate('/account-portfolio')
     } catch (error) {
@@ -203,21 +207,22 @@ const TradePanel = ({
           </div>
 
           {/* Outcome selector */}
-          <div className='grid grid-cols-2 gap-2'>
-            {market.outcomes.map((o) => {
+          <div className='flex items-stretch gap-2'>
+            {market.outcomes.map((o, i) => {
               const active = o.id === outcome?.id
+              const tone = outcomeTone(market, o.id, i)
               return (
                 <button
                   key={o.id}
                   type='button'
                   onClick={() => onSelectOutcome(o)}
-                  className={`flex flex-col items-center rounded-lg border py-2 text-sm font-bold transition-colors ${
+                  className={`flex flex-1 flex-col items-center rounded-lg border py-2 text-sm font-bold transition-colors ${
                     active
-                      ? 'border-brand-green bg-brand-green/10 text-black'
+                      ? TONE_STYLES[tone].active
                       : 'border-border text-neutral-10 hover:text-black'
                   }`}
                 >
-                  <span className='uppercase'>{o.label}</span>
+                  <span className='truncate uppercase'>{o.label}</span>
                   <span>{formatSharePrice(o.cents)}</span>
                 </button>
               )

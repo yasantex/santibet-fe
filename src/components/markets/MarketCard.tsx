@@ -2,33 +2,15 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Bookmark02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
-import { categoryIcon, marketDisplayTitle } from '../../utils/marketDisplay'
+import {
+  categoryIcon,
+  marketDisplayTitle,
+  TONE_STYLES,
+  type OutcomeTone,
+} from '../../utils/marketDisplay'
 import { MarketCountdown } from '../globals/ReusedText'
 
-type OutcomeTone = 'yes' | 'no' | 'mid'
-
-const TONE_STYLES: Record<
-  OutcomeTone,
-  { percent: string; bar: string; button: string }
-> = {
-  yes: {
-    percent: 'text-success',
-    bar: 'bg-success',
-    button: 'bg-market-success text-success hover:bg-success hover:text-white',
-  },
-  no: {
-    percent: 'text-error',
-    bar: 'bg-error',
-    button: 'bg-market-error text-error hover:bg-error hover:text-white',
-  },
-  // Middle outcome(s) of a 3+ way market (e.g. the Draw in a 1X2 game).
-  mid: {
-    percent: 'text-warning',
-    bar: 'bg-warning',
-    button: 'bg-market-warning text-warning hover:bg-warning hover:text-white',
-  },
-}
-
+/** Binary (Yes/No) markets: one full stat row per side, price button inline. */
 const OutcomeRow = ({
   outcome,
   tone,
@@ -72,6 +54,54 @@ const OutcomeRow = ({
   )
 }
 
+/** 3+ outcome markets (e.g. a 1X2 match): name + percent only, no button. */
+const OutcomeStatRow = ({
+  outcome,
+  tone,
+}: {
+  outcome: UiOutcome
+  tone: OutcomeTone
+}) => {
+  const style = TONE_STYLES[tone]
+  return (
+    <div className='flex items-baseline justify-between gap-2 text-sm'>
+      <span className='truncate font-bold text-black uppercase'>
+        {outcome.label}
+      </span>
+      <span className={`shrink-0 font-bold ${style.percent}`}>
+        {outcome.percent}%
+      </span>
+    </div>
+  )
+}
+
+/** Shared single-line row of pill buttons, one per outcome — used for 3+ way
+ *  markets so every side sits on the same line regardless of outcome count. */
+const OutcomeButtonRow = ({
+  outcomes,
+  onClick,
+}: {
+  outcomes: { outcome: UiOutcome; tone: OutcomeTone }[]
+  onClick?: (outcome: UiOutcome) => void
+}) => (
+  <div className='flex items-stretch gap-2'>
+    {outcomes.map(({ outcome, tone }) => (
+      <button
+        key={outcome.id}
+        type='button'
+        onClick={(e) => {
+          e.stopPropagation()
+          onClick?.(outcome)
+        }}
+        className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 cursor-pointer py-2 text-xs font-bold ${TONE_STYLES[tone].button}`}
+      >
+        <span className='w-full truncate uppercase'>{outcome.label}</span>
+        <span>{formatSharePrice(outcome.cents)}</span>
+      </button>
+    ))}
+  </div>
+)
+
 interface MarketCardProps {
   market: UiMarket
   onSelect?: (market: UiMarket) => void
@@ -103,11 +133,13 @@ const MarketCard = ({
         { outcome: market.no!, tone: 'no' },
       ]
     : capped.map((outcome, i) => ({
-        // First outcome green, last red, anything between amber.
+        // First outcome green, last (of those shown) red, anything between amber.
         outcome,
         tone: i === 0 ? 'yes' : i === capped.length - 1 ? 'no' : 'mid',
       }))
   const moreCount = isBinary ? 0 : Math.max(0, outcomes.length - 3)
+  const handleOutcomeClick = (outcome: UiOutcome) =>
+    onSelectOutcome?.(market, outcome)
 
   return (
     <div
@@ -117,7 +149,7 @@ const MarketCard = ({
       onKeyDown={(e) => {
         if (e.key === 'Enter') onSelect?.(market)
       }}
-      className='flex cursor-pointer flex-col gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:border-brand-green/60'
+      className='flex h-full cursor-pointer flex-col gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:border-brand-green/60'
     >
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2'>
@@ -158,15 +190,29 @@ const MarketCard = ({
       <h3 className='line-clamp-2 min-h-11 text-base leading-snug font-bold text-black'>
         {marketDisplayTitle(market)}
       </h3>
-      <div className='flex flex-col gap-4'>
-        {shownOutcomes.map(({ outcome, tone }) => (
-          <OutcomeRow
-            key={outcome.id}
-            outcome={outcome}
-            tone={tone}
-            onClick={() => onSelectOutcome?.(market, outcome)}
-          />
-        ))}
+      <div className='flex flex-1 flex-col justify-end gap-2'>
+        {isBinary ? (
+          <div className='flex flex-col gap-4'>
+            {shownOutcomes.map(({ outcome, tone }) => (
+              <OutcomeRow
+                key={outcome.id}
+                outcome={outcome}
+                tone={tone}
+                onClick={() => onSelectOutcome?.(market, outcome)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className='flex flex-col gap-2'>
+            {shownOutcomes.map(({ outcome, tone }) => (
+              <OutcomeStatRow key={outcome.id} outcome={outcome} tone={tone} />
+            ))}
+            <OutcomeButtonRow
+              outcomes={shownOutcomes}
+              onClick={handleOutcomeClick}
+            />
+          </div>
+        )}
         {moreCount > 0 && (
           <button
             type='button'
@@ -181,7 +227,7 @@ const MarketCard = ({
         )}
       </div>
 
-      <div className='flex items-center justify-between pt-1'>
+      <div className='mt-auto flex items-center justify-between pt-1'>
         {live ? (
           <MarketCountdown
             openTime={market.openTime}

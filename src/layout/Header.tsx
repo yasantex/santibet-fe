@@ -64,6 +64,9 @@ const CategoryRow = () => {
   const visibleLinks = useMemo(() => {
     if (!available) return primaryNavLinks
     return primaryNavLinks.filter((link) => {
+      // Mock categories (no backend data yet) always show — they're not
+      // subject to the "hide if zero open markets" rule real ones get.
+      if (link.isMock) return true
       const category = link.href.startsWith('/category/')
         ? link.href.slice('/category/'.length)
         : null

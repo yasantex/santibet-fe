@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
-import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts'
+import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from 'recharts'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
 import { categoryIcon } from '../../utils/marketDisplay'
+import ChartTooltip from './ChartTooltip'
 
 interface FeaturedMarketCardProps {
   market: UiMarket
@@ -59,6 +60,16 @@ const FeaturedMarketCard = ({
         <ResponsiveContainer width='100%' height='100%'>
           <LineChart data={series}>
             <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
+            <Tooltip
+              content={(props) => (
+                <ChartTooltip
+                  {...props}
+                  seriesLabel={yes?.label ?? 'Chance'}
+                  baseValue={series[0]?.value}
+                />
+              )}
+              cursor={{ stroke: 'var(--color-border)', strokeWidth: 1 }}
+            />
             <Line
               type='monotone'
               dataKey='value'
