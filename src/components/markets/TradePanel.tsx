@@ -9,6 +9,7 @@ import SellPanel from './SellPanel'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import {
   NAIRA,
+  formatCurrency,
   formatSharePrice,
   toMajorUnits,
   toMinorUnits,
@@ -113,7 +114,9 @@ const TradePanel = ({
         type,
         ...(type === 'limit' ? { limitPrice: Number(limitCents) / 100 } : {}),
       })
-      showSuccessToast(`Prediction placed · ${symbol}${potentialReturn} to win`)
+      showSuccessToast(
+        `Prediction placed · ${formatCurrency(potentialReturn)} to win`,
+      )
       setAmount('')
       navigate('/account-portfolio')
     } catch (error) {
