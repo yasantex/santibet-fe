@@ -61,7 +61,7 @@ export default function Dropdown({
   if (disabled) return <>{children}</>
 
   return (
-    <div className={classNames('relative z-30! w-fit inline-block', className)}>
+    <div className={classNames('relative w-fit inline-block', className)}>
       <div ref={triggerRef} onClick={handleToggle}>
         {children}
       </div>
@@ -70,7 +70,7 @@ export default function Dropdown({
         <div
           ref={menuRef}
           className={classNames(
-            'absolute border-[0.5px] z-80 bg-white dark:bg-card border-border',
+            'absolute border-[0.5px] z-100! bg-white dark:bg-card border-border',
             alignmentClass,
             menuClassName
           )}

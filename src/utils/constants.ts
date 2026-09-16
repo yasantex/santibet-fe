@@ -47,23 +47,51 @@ export type SearchResult = {
   direction: 'up' | 'down' | 'neutral'
 }
 
+/**
+ * Order and labels follow the GLOBAL row of the platform's taxonomy doc:
+ * Home | Trending | Sports | Finance | Crypto | Economics | Politics |
+ * Tech & AI | Culture | Climate | Science | Entertainment | Weather | More.
+ * Esports moved out of this list — the doc lists it as a Sports
+ * subcategory (see `mockSportsTree`), not a sibling domain.
+ * Categories not in the doc's primary row (Business, Geopolitics, General)
+ * live in `moreNavLinks` instead, under a "More" dropdown.
+ * "Perps" and "Live" are NOT here — like Kalshi's "Markets | Perps | Live |
+ * Pro", they're distinct products/states rather than market categories, so
+ * they're surfaced in the header's top row instead; see `Header.tsx`.
+ */
 export const primaryNavLinks: NavLink[] = [
   { label: 'Trending', href: '/' },
-  { label: 'Live', href: '/live' },
-  { label: 'Politics', href: '/category/Politics' },
   { label: 'Sports', href: '/category/Sports' },
-  { label: 'Crypto', href: '/category/Crypto' },
-  { label: 'Esports', href: '/category/Esports', isMock: true },
-  { label: 'Business', href: '/category/Business' },
   { label: 'Finance', href: '/category/Finance', isMock: true },
-  { label: 'Geopolitics', href: '/category/Geopolitics', isMock: true },
-  { label: 'Entertainment', href: '/category/Entertainment' },
-  { label: 'Tech', href: '/category/Tech' },
+  { label: 'Crypto', href: '/category/Crypto' },
+  { label: 'Economics', href: '/category/Economics', isMock: true },
+  { label: 'Politics', href: '/category/Politics' },
+  { label: 'Tech & AI', href: '/category/Tech' },
   { label: 'Culture', href: '/category/Culture', isMock: true },
-  { label: 'Economy', href: '/category/Economy', isMock: true },
+  { label: 'Climate', href: '/category/Climate', isMock: true },
+  { label: 'Science', href: '/category/Science', isMock: true },
+  { label: 'Entertainment', href: '/category/Entertainment' },
   { label: 'Weather', href: '/category/Weather', isMock: true },
+]
+
+/** Overflow categories shown in the nav's "More" dropdown — real categories
+ *  the doc's GLOBAL row doesn't call out by name, plus the catch-all. */
+export const moreNavLinks: NavLink[] = [
+  { label: 'Business', href: '/category/Business' },
+  { label: 'Geopolitics', href: '/category/Geopolitics', isMock: true },
   { label: 'General', href: '/category/General' },
 ]
+
+/**
+ * Display label for a category route slug (e.g. "Tech" -> "Tech & AI"),
+ * looked up from the nav links so the category-page heading matches
+ * whatever the nav pill says. Falls back to the raw slug for categories
+ * reachable only by direct URL (not in either nav list).
+ */
+export const categoryLabel = (slug: string): string =>
+  [...primaryNavLinks, ...moreNavLinks].find(
+    (link) => link.href.toLowerCase() === `/category/${slug}`.toLowerCase(),
+  )?.label ?? slug
 
 export type CategoryTopic = {
   name: string
@@ -79,53 +107,39 @@ export type CategoryTopic = {
 }
 
 /**
- * Sub-topics shown in the category-page sidebar (e.g. "Trump", "Midterms"
- * under Politics). The backend doesn't expose per-market tags yet, so this
- * is a curated placeholder list per category — swap for real tag data once
- * the API returns it. Counts shown against topics without `mockCount` are
- * computed live from loaded market titles, so they stay honest even though
- * the topic list itself is mocked.
+ * Sub-topics shown in the category-page sidebar (e.g. "Elections",
+ * "Legislation" under Politics). Every GLOBAL-row domain's list here is
+ * taken verbatim from the "Example subcategories" column of the platform's
+ * taxonomy doc, so the sidebar structure matches it domain-for-domain. The
+ * backend doesn't expose per-market tags yet, so this is a curated
+ * placeholder list — swap for real tag data once the API returns it.
+ * Counts shown against topics without `mockCount` are computed live from
+ * loaded market titles, so they stay honest even though the topic list
+ * itself is mocked.
  */
 export const categoryTopics: Record<string, CategoryTopic[]> = {
   Politics: [
-    { name: 'Trump' },
-    { name: 'Midterms', mockCount: 1200 },
-    { name: 'Global Elections', mockCount: 673 },
-    { name: 'Congress' },
-    { name: 'Senate' },
-    { name: 'White House' },
-    { name: 'Elections' },
-    { name: 'Courts', mockCount: 24 },
-    { name: 'Primaries', mockCount: 14 },
-    { name: 'Trump Daily', mockCount: 3 },
-    { name: 'Russia Election', mockCount: 12 },
-    { name: 'UK Elections', mockCount: 1 },
-    { name: 'Israel Election', mockCount: 40 },
-    { name: 'Sweden Elections', mockCount: 57 },
-    { name: 'German Elections', mockCount: 69 },
-    { name: 'French Elections', mockCount: 4 },
-    { name: 'US Election', mockCount: 666 },
+    { name: 'Elections', mockCount: 312 },
+    { name: 'Government', mockCount: 58 },
+    { name: 'Legislation', mockCount: 27 },
+    { name: 'Courts', mockCount: 19 },
+    { name: 'Parties', mockCount: 41 },
+    { name: 'Leaders', mockCount: 64 },
   ],
-  Sports: [
-    { name: 'Football' },
-    { name: 'Basketball' },
-    { name: 'Baseball' },
-    { name: 'Soccer' },
-    { name: 'Tennis' },
-    { name: 'Boxing' },
-    { name: 'MMA' },
-    { name: 'Olympics' },
-  ],
+  // Sports doesn't use this list — its sidebar is the data-driven sport →
+  // league tree in CategoryPage (`sportsGroups` + `mockSportsTree`) instead.
+  // `mockCount` acts as a floor here (real count still grows past it via
+  // `Math.max`), since these generic doc labels rarely substring-match a
+  // market title the way specific coin names ("Bitcoin") used to.
   Crypto: [
-    { name: 'Bitcoin' },
-    { name: 'Ethereum' },
-    { name: 'Solana' },
-    { name: 'Altcoins' },
-    { name: 'ETF' },
-    { name: 'Regulation' },
-    { name: 'DeFi' },
-    { name: 'NFT' },
+    { name: 'Assets', mockCount: 64 },
+    { name: 'DeFi', mockCount: 22 },
+    { name: 'NFTs', mockCount: 11 },
+    { name: 'Protocols', mockCount: 18 },
+    { name: 'Stablecoins', mockCount: 9 },
   ],
+  // Not in the doc's 11-domain table — a real backend category, so its
+  // topic list stays as its own curated set rather than following the doc.
   Business: [
     { name: 'Earnings' },
     { name: 'IPO' },
@@ -134,48 +148,31 @@ export const categoryTopics: Record<string, CategoryTopic[]> = {
     { name: 'Startups' },
     { name: 'Layoffs' },
   ],
-  // Mock category — Business already covers earnings/IPO/etc.; Finance
-  // mirrors Polymarket's separate markets-trading vertical (rates, indices,
-  // forex). Delete once the backend ships a real Finance category.
   Finance: [
-    { name: 'Daily', mockCount: 101 },
-    { name: 'Weekly', mockCount: 54 },
-    { name: 'Monthly', mockCount: 124 },
-    { name: 'Stocks', mockCount: 151 },
-    { name: 'Earnings', mockCount: 9 },
-    { name: 'Indices', mockCount: 18 },
+    { name: 'Equities', mockCount: 151 },
     { name: 'Commodities', mockCount: 21 },
     { name: 'Forex', mockCount: 34 },
-    { name: 'Privates', mockCount: 46 },
-    { name: 'Acquisitions', mockCount: 11 },
-    { name: 'IPOs', mockCount: 46 },
-    { name: 'Fed Rates', mockCount: 36 },
+    { name: 'Rates', mockCount: 36 },
+    { name: 'Bonds', mockCount: 19 },
   ],
   Entertainment: [
-    { name: 'Movies' },
-    { name: 'Music' },
-    { name: 'Awards' },
-    { name: 'TV' },
-    { name: 'Celebrity' },
-    { name: 'Streaming' },
+    { name: 'Film', mockCount: 26 },
+    { name: 'TV', mockCount: 18 },
+    { name: 'Music', mockCount: 14 },
+    { name: 'Gaming', mockCount: 21 },
+    { name: 'Awards', mockCount: 33 },
+    { name: 'Celebrity', mockCount: 17 },
   ],
   Tech: [
-    { name: 'AI' },
-    { name: 'Apple' },
-    { name: 'Google' },
-    { name: 'Meta' },
-    { name: 'Space' },
-    { name: 'Gadgets' },
+    { name: 'AI', mockCount: 47 },
+    { name: 'Software', mockCount: 19 },
+    { name: 'Hardware', mockCount: 12 },
+    { name: 'Cybersecurity', mockCount: 15 },
+    { name: 'Robotics', mockCount: 9 },
+    { name: 'Startups', mockCount: 23 },
   ],
   // Mock categories below — no backend data at all yet, so every topic
   // carries a fixed mockCount. Delete each block once the category ships.
-  Esports: [
-    { name: 'League of Legends', mockCount: 42 },
-    { name: 'CS2', mockCount: 35 },
-    { name: 'Dota 2', mockCount: 21 },
-    { name: 'Valorant', mockCount: 18 },
-    { name: 'Overwatch', mockCount: 9 },
-  ],
   Geopolitics: [
     { name: 'Russia-Ukraine War', mockCount: 58 },
     { name: 'Middle East', mockCount: 47 },
@@ -184,24 +181,41 @@ export const categoryTopics: Record<string, CategoryTopic[]> = {
     { name: 'Sanctions', mockCount: 12 },
   ],
   Culture: [
-    { name: 'Awards', mockCount: 30 },
+    { name: 'Music', mockCount: 22 },
+    { name: 'Movies', mockCount: 30 },
+    { name: 'TV', mockCount: 18 },
     { name: 'Books', mockCount: 14 },
-    { name: 'Fashion', mockCount: 11 },
-    { name: 'Internet', mockCount: 26 },
-    { name: 'Viral', mockCount: 19 },
+    { name: 'Art', mockCount: 11 },
+    { name: 'Internet Culture', mockCount: 26 },
   ],
-  Economy: [
+  Economics: [
     { name: 'Inflation', mockCount: 41 },
-    { name: 'Jobs Report', mockCount: 27 },
+    { name: 'Employment', mockCount: 27 },
     { name: 'GDP', mockCount: 16 },
-    { name: 'Recession', mockCount: 22 },
-    { name: 'Interest Rates', mockCount: 33 },
+    { name: 'Rates', mockCount: 33 },
+    { name: 'Trade', mockCount: 19 },
+    { name: 'Housing', mockCount: 14 },
   ],
   Weather: [
-    { name: 'Hurricanes', mockCount: 12 },
-    { name: 'Temperature Records', mockCount: 9 },
-    { name: 'Snowfall', mockCount: 7 },
-    { name: 'Wildfires', mockCount: 8 },
+    { name: 'Temperature', mockCount: 12 },
+    { name: 'Rain', mockCount: 9 },
+    { name: 'Storms', mockCount: 7 },
+    { name: 'Wind', mockCount: 5 },
+    { name: 'Severe Weather', mockCount: 8 },
+  ],
+  Climate: [
+    { name: 'Climate Change', mockCount: 24 },
+    { name: 'Energy', mockCount: 31 },
+    { name: 'Environment', mockCount: 17 },
+    { name: 'Natural Events', mockCount: 13 },
+  ],
+  Science: [
+    { name: 'Space', mockCount: 28 },
+    { name: 'Biology', mockCount: 11 },
+    { name: 'Medicine', mockCount: 19 },
+    { name: 'Physics', mockCount: 9 },
+    { name: 'Chemistry', mockCount: 6 },
+    { name: 'Earth Science', mockCount: 8 },
   ],
   General: [{ name: 'Trending' }, { name: 'Featured' }, { name: 'New' }],
 }
@@ -236,6 +250,27 @@ export const mockSportsTree: MockSportGroup[] = [
     leagues: [{ name: 'College Football', count: 141 }],
   },
   { sport: 'MMA', leagues: [{ name: 'UFC', count: 30 }] },
+  // Basketball, Tennis, Cricket, Hockey, Golf and Motorsport are named
+  // explicitly as Sports subcategories in the taxonomy doc, alongside
+  // Football/Baseball/Esports above — added here so the sidebar covers the
+  // doc's full list even though the sports-data provider has no markets
+  // for them yet.
+  { sport: 'Basketball', leagues: [{ name: 'NBA', count: 89 }] },
+  { sport: 'Tennis', leagues: [{ name: 'Wimbledon', count: 24 }] },
+  { sport: 'Cricket', leagues: [{ name: 'ICC World Cup', count: 17 }] },
+  { sport: 'Hockey', leagues: [{ name: 'NHL', count: 45 }] },
+  { sport: 'Golf', leagues: [{ name: 'PGA Tour', count: 12 }] },
+  { sport: 'Motorsport', leagues: [{ name: 'Formula 1', count: 20 }] },
+  {
+    sport: 'Esports',
+    leagues: [
+      { name: 'League of Legends', count: 42 },
+      { name: 'CS2', count: 35 },
+      { name: 'Dota 2', count: 21 },
+      { name: 'Valorant', count: 18 },
+      { name: 'Overwatch', count: 9 },
+    ],
+  },
 ]
 
 export type DepositOption = {
