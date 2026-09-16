@@ -47,7 +47,7 @@ const SearchResultsList = ({
   }
 
   return (
-    <ul className='flex flex-col'>
+    <ul className='flex flex-col '>
       {results.map((result) => (
         <li key={result.id}>
           <button

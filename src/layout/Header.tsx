@@ -6,12 +6,23 @@ import Dropdown from '../components/globals/Dropdown'
 import SearchInput from '../components/globals/SearchInput'
 import Deposit from '../components/appModals/Deposit'
 import { useModalControl } from '../hooks/useModalControl'
-import { primaryNavLinks, type SearchResult } from '../utils/constants'
-import { useMarketSearch, useAvailableCategories } from '../data_layer/markets'
+import {
+  moreNavLinks,
+  primaryNavLinks,
+  type NavLink as NavLinkConfig,
+  type SearchResult,
+} from '../utils/constants'
+import {
+  useMarketSearch,
+  useAvailableCategories,
+  useLiveEvents,
+} from '../data_layer/markets'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
+  ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  Home01Icon,
   Menu01FreeIcons,
   Notification03Icon,
 } from '@hugeicons/core-free-icons'
@@ -57,64 +68,120 @@ const CategoryRow = () => {
     scrollRef.current?.scrollBy({ left: delta, behavior: 'smooth' })
 
   // Only surface category tabs that actually have markets behind them. Live /
-  // Trending (non-`/category/` hrefs) always show; category links are kept
-  // while the feed is still loading (`available === null`) to avoid flashing a
-  // near-empty nav, then filtered to categories with open markets once loaded.
-  const available = useAvailableCategories()
-  const visibleLinks = useMemo(() => {
-    if (!available) return primaryNavLinks
-    return primaryNavLinks.filter((link) => {
-      // Mock categories (no backend data yet) always show — they're not
-      // subject to the "hide if zero open markets" rule real ones get.
-      if (link.isMock) return true
+  // Trending (non-`/category/` hrefs) and mock categories (no backend data
+  // yet) always show; category links are kept while the feed is still
+  // loading (`available === null`) to avoid flashing a near-empty nav, then
+  // filtered to categories with open markets once loaded.
+  const isLinkVisible = useCallback(
+    (link: NavLinkConfig, availableSet: Set<string> | null) => {
+      if (!availableSet || link.isMock) return true
       const category = link.href.startsWith('/category/')
         ? link.href.slice('/category/'.length)
         : null
-      return !category || available.has(category.toLowerCase())
-    })
-  }, [available])
+      return !category || availableSet.has(category.toLowerCase())
+    },
+    [],
+  )
+  const available = useAvailableCategories()
+  const visibleLinks = useMemo(
+    () => primaryNavLinks.filter((link) => isLinkVisible(link, available)),
+    [available, isLinkVisible],
+  )
+  const visibleMoreLinks = useMemo(
+    () => moreNavLinks.filter((link) => isLinkVisible(link, available)),
+    [available, isLinkVisible],
+  )
 
   return (
-    <div className='relative flex items-center'>
-      {canScrollLeft && (
-        <button
-          type='button'
-          aria-label='Scroll categories left'
-          onClick={() => scrollByAmount(-160)}
-          className='absolute left-0 z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-neutral-10 shadow-sm hover:text-black'
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
-        </button>
-      )}
-      <div
-        ref={scrollRef}
-        className='hide-scroll-bar flex items-center gap-6 overflow-x-auto scroll-smooth px-4 text-sm font-semibold md:px-6'
+    <div className='flex items-center w-full gap-6'>
+      {/* Doc's GLOBAL row starts with a standalone Home icon before Trending. */}
+      <NavLink
+        to='/'
+        end
+        aria-label='Home'
+        className={({ isActive }) =>
+          `flex shrink-0 items-center ${
+            isActive ? 'text-black' : 'text-black/60 hover:text-black'
+          }`
+        }
       >
-        {visibleLinks.map((link) => (
-          <NavLink
-            key={link.label}
-            to={link.href}
-            end={link.href === '/'}
-            className={({ isActive }) =>
-              `flex shrink-0 items-center gap-1.5 py-1 ${
-                isActive ? 'text-black' : 'text-black/60 hover:text-black'
-              }`
-            }
+        <HugeiconsIcon icon={Home01Icon} size={18} />
+      </NavLink>
+      <div className='relative flex min-w-0 flex-1 items-center'>
+        {canScrollLeft && (
+          <button
+            type='button'
+            aria-label='Scroll categories left'
+            onClick={() => scrollByAmount(-160)}
+            className='absolute left-0 z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-neutral-10 shadow-sm hover:text-black'
           >
-            {link.label}
-          </NavLink>
-        ))}
-      </div>
-      {canScrollRight && (
-        <button
-          type='button'
-          aria-label='Scroll categories right'
-          onClick={() => scrollByAmount(160)}
-          className='absolute right-0 z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-neutral-10 shadow-sm hover:text-black'
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+          </button>
+        )}
+        <div
+          ref={scrollRef}
+          className='hide-scroll-bar flex items-center gap-6 overflow-x-auto scroll-smooth text-sm font-semibold'
         >
-          <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
-        </button>
-      )}
+          {visibleLinks.map((link) => (
+            <NavLink
+              key={link.label}
+              to={link.href}
+              end={link.href === '/'}
+              className={({ isActive }) =>
+                `flex shrink-0 items-center gap-1.5 py-1 ${
+                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
+                }`
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </div>
+        {/* Rendered outside the scrollable row (not as its last item) — that
+            row's `overflow-x-auto` implicitly clips vertical overflow too
+            (an axis can't stay `visible` once the other isn't), which was
+            hiding this dropdown's menu even though it was in the DOM. */}
+        {visibleMoreLinks.length > 0 && (
+          <Dropdown
+            align='end'
+            className='ml-6 shrink-0'
+            menuClassName='w-44 rounded-lg py-1'
+            menu={({ close }) => (
+              <div className='flex flex-col'>
+                {visibleMoreLinks.map((link) => (
+                  <NavLink
+                    key={link.label}
+                    to={link.href}
+                    onClick={close}
+                    className={({ isActive }) =>
+                      `px-3 py-2 text-left text-sm hover:bg-hover ${
+                        isActive ? 'font-semibold text-black' : 'text-black/60'
+                      }`
+                    }
+                  >
+                    {link.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          >
+            <span className='flex cursor-pointer items-center gap-1 py-1 text-sm font-semibold text-black/60 hover:text-black'>
+              More
+              <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+            </span>
+          </Dropdown>
+        )}
+        {canScrollRight && (
+          <button
+            type='button'
+            aria-label='Scroll categories right'
+            onClick={() => scrollByAmount(160)}
+            className='absolute right-0 z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-neutral-10 shadow-sm hover:text-black'
+          >
+            <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -133,6 +200,11 @@ const Header = () => {
   })
 
   const { count: unreadNotifications } = useUnreadNotificationCount()
+
+  // Live count badge next to the nav's "Live" link, Kalshi-style ("LIVE 81").
+  // Approximate — one page of the live feed, not a dedicated count endpoint.
+  const { data: liveEventsData } = useLiveEvents({ limit: 100 })
+  const liveCount = liveEventsData?.events.length ?? 0
 
   const { data: openPositions } = useBetPositions('OPEN', 100)
   // Portfolio = unspent cash + the live market value of open positions;
@@ -158,7 +230,7 @@ const Header = () => {
   }
 
   return (
-    <header className='sticky top-0 z-50 px-3 md:px-6 bg-white border-b border-border shadow-md py-2.5'>
+    <header className='sticky top-0 z-50 px-3 md:px-6 bg-white border-b border-border py-2.5'>
       <div className='flex items-center justify-between! gap-5 w-full mb-2.5'>
         <div className='flex items-center gap-5 w-full'>
           <Link to='/'>
@@ -168,10 +240,50 @@ const Header = () => {
               className='w-25 h-10'
             />
           </Link>
+          {/* Perps (leveraged perpetuals) and Live are distinct products/
+              states rather than market categories — kept out of CategoryRow
+              and placed next to the logo, same as Kalshi's top-row
+              "Markets | Perps | Live | Pro". Perps has no backend support
+              yet, so it links to a "coming soon" page. */}
+          <div className='hidden shrink-0 items-center gap-4 text-sm font-semibold lg:flex'>
+            <NavLink
+              to='/browse'
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
+                }`
+              }
+            >
+              Markets
+            </NavLink>
+            <NavLink
+              to='/perps'
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
+                }`
+              }
+            >
+              Perps
+            </NavLink>
+            <NavLink
+              to='/live'
+              className={({ isActive }) =>
+                `flex items-center gap-1 ${
+                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
+                }`
+              }
+            >
+              Live
+              {liveCount > 0 && <span className='text-error'>{liveCount}</span>}
+            </NavLink>
+          </div>
+        </div>
+        <div className='flex items-center justify-end gap-5 w-full'>
           <main className='lg:flex items-center  gap-2.5 hidden'>
             <Dropdown
-              className='flex-1 w-55! md:w-105!'
-              menuClassName='w-[400px] max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
+              className='flex-1 w-55! md:w-75!'
+              menuClassName='w-[350px] max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
               menu={({ close }) => (
                 <SearchResultsList
                   results={filteredResults}
@@ -189,8 +301,6 @@ const Header = () => {
               />
             </Dropdown>
           </main>
-        </div>
-        <div className='flex items-center justify-end gap-5 w-full'>
           {user ? (
             <div className='flex items-center gap-2.5'>
               <Link
