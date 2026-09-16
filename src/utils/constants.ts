@@ -55,7 +55,6 @@ export type SearchResult = {
  * subcategory (see `mockSportsTree`), not a sibling domain.
  * Categories not in the doc's primary row (Business, Geopolitics, General)
  * live in `moreNavLinks` instead, under a "More" dropdown.
- * "Perps" and "Live" are NOT here — like Kalshi's "Markets | Perps | Live |
  * Pro", they're distinct products/states rather than market categories, so
  * they're surfaced in the header's top row instead; see `Header.tsx`.
  */
