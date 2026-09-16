@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon, Search01Icon } from '@hugeicons/core-free-icons'
 import MarketCard from '../../components/markets/MarketCard'
@@ -26,6 +26,9 @@ const SORT_OPTIONS: { label: string; value: SortOption }[] = [
   { label: 'Newest', value: 'newest' },
   { label: 'Closing soon', value: 'closing_soon' },
 ]
+
+const isSortOption = (value: string | null): value is SortOption =>
+  SORT_OPTIONS.some((opt) => opt.value === value)
 
 const matchesTopic = (market: UiMarket, topic: string) => {
   const q = topic.toLowerCase()
@@ -71,11 +74,28 @@ const marketLeague = (market: UiMarket): string =>
 const CategoryPage = () => {
   const { category: routeCategory } = useParams<{ category?: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const active = routeCategory ?? 'All'
 
   const isSports = active.toLowerCase() === 'sports'
 
-  const [sort, setSort] = useState<SortOption>('trending')
+  // Nav links (e.g. Header's New / Breaking / Upcoming) deep-link into a sort
+  // mode via `?sort=`, so the initial value comes from the URL when present.
+  const sortParam = searchParams.get('sort')
+  const [sort, setSort] = useState<SortOption>(
+    isSortOption(sortParam) ? sortParam : 'trending',
+  )
+  const changeSort = (value: SortOption) => {
+    setSort(value)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('sort', value)
+        return next
+      },
+      { replace: true },
+    )
+  }
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTopic, setActiveTopic] = useState<string | null>(null)
@@ -371,7 +391,7 @@ const CategoryPage = () => {
                       key={opt.value}
                       type='button'
                       onClick={() => {
-                        setSort(opt.value)
+                        changeSort(opt.value)
                         close()
                       }}
                       className={`px-3 py-2 text-left text-sm hover:bg-hover ${
