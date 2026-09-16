@@ -67,14 +67,18 @@ const NETWORK_LABELS: Record<CryptoNetwork, { label: string; subtitle: string }>
  */
 const POLL_FALLBACK_DELAY = 3 * 60 * 1000
 
-/** Base Kudipal hosted-checkout link; overridable per environment. */
+/**
+ * FALLBACK base Kudipal link. The backend normally returns the full checkout
+ * URL as `checkoutUrl`; this is only used if that field is missing.
+ */
 const KUDIPAL_PAYMENT_LINK =
   import.meta.env.VITE_APP_KUDIPAL_PAYMENT_LINK ||
   'https://pay.kudipal.co/6aab00b80d7c110022360b2f'
 
 /**
- * Build the Kudipal checkout URL: the base link plus the deposit `reference`
- * (so the webhook can reconcile) and the `amount` to collect in Naira.
+ * Fallback URL builder: the base link plus the deposit `reference` (so the
+ * webhook can reconcile) and the `amount` to collect in Naira. Used only when
+ * the backend response has no `checkoutUrl`.
  */
 const buildKudipalCheckoutUrl = (reference: string, amountNaira: number) => {
   const url = new URL(KUDIPAL_PAYMENT_LINK)
@@ -308,13 +312,18 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
       })
 
       if (isCheckout) {
+        // Prefer the backend-supplied checkout URL (reference + amount appended
+        // server-side, link owned by the backend). Fall back to building it
+        // from the env link + reference only if the field isn't present yet.
         const reference = extractDepositReference(data)
-        if (!reference) {
+        const url =
+          data.checkoutUrl ||
+          (reference ? buildKudipalCheckoutUrl(reference, numeric) : '')
+        if (!url) {
           checkoutTab?.close()
           showWarningToast('Could not start checkout. Please try again.')
           return
         }
-        const url = buildKudipalCheckoutUrl(reference, numeric)
         setCheckoutUrl(url)
         if (checkoutTab) checkoutTab.location.href = url
         else window.open(url, '_blank', 'noopener,noreferrer')

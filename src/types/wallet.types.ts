@@ -68,7 +68,15 @@ export interface DepositInstructions {
 
 export interface StartDepositResponse {
   deposit: DepositRecord
-  instructions: DepositInstructions
+  /** Bank-transfer (virtual account) rail only; absent for hosted checkout. */
+  instructions?: DepositInstructions
+  /**
+   * Hosted-checkout rail (channel: "kudipal") only: the full Kudipal payment
+   * URL with `reference` + `amount` already appended by the backend. The
+   * frontend just opens it — so the link lives server-side and can change
+   * without a frontend deploy.
+   */
+  checkoutUrl?: string
 }
 
 export interface TransferRequest {
