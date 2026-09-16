@@ -237,14 +237,9 @@ const Header = () => {
             <img
               src={isDark ? logoDark : logo}
               alt='Santibet'
-              className='w-25 h-10'
+              className='w-25 h-10 '
             />
           </Link>
-          {/* Perps (leveraged perpetuals) and Live are distinct products/
-              states rather than market categories — kept out of CategoryRow
-              and placed next to the logo, same as Kalshi's top-row
-              "Markets | Perps | Live | Pro". Perps has no backend support
-              yet, so it links to a "coming soon" page. */}
           <div className='hidden shrink-0 items-center gap-4 text-sm font-semibold lg:flex'>
             <NavLink
               to='/browse'
@@ -254,17 +249,7 @@ const Header = () => {
                 }`
               }
             >
-              Markets
-            </NavLink>
-            <NavLink
-              to='/perps'
-              className={({ isActive }) =>
-                `flex items-center ${
-                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
-                }`
-              }
-            >
-              Perps
+              Events
             </NavLink>
             <NavLink
               to='/live'
@@ -276,6 +261,36 @@ const Header = () => {
             >
               Live
               {liveCount > 0 && <span className='text-error'>{liveCount}</span>}
+            </NavLink>
+            <NavLink
+              to='/browse?sort=newest'
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
+                }`
+              }
+            >
+              New
+            </NavLink>
+            <NavLink
+              to='/browse?sort=trending'
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
+                }`
+              }
+            >
+              Breaking
+            </NavLink>
+            <NavLink
+              to='/browse?sort=closing_soon'
+              className={({ isActive }) =>
+                `flex items-center ${
+                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
+                }`
+              }
+            >
+              Upcoming
             </NavLink>
           </div>
         </div>
