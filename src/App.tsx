@@ -14,6 +14,7 @@ const MarketDetail = lazy(() => import('./pages/markets/MarketDetail'))
 const EventDetail = lazy(() => import('./pages/markets/EventDetail'))
 const CategoryPage = lazy(() => import('./pages/markets/CategoryPage'))
 const LiveMarkets = lazy(() => import('./pages/markets/LiveMarkets'))
+const Perps = lazy(() => import('./pages/Perps'))
 const AccountMenu = lazy(() => import('./pages/account/AccountMenu'))
 const Notifications = lazy(() => import('./pages/Notifications'))
 const AccountProfile = lazy(() => import('./pages/account/AccountProfile'))
@@ -56,6 +57,7 @@ function App() {
             <Route path='/markets/:id' element={<MarketDetail />} />
             <Route path='/events/:id' element={<EventDetail />} />
             <Route path='/live' element={<LiveMarkets />} />
+            <Route path='/perps' element={<Perps />} />
             <Route path='/browse' element={<CategoryPage />} />
             <Route path='/category/:category' element={<CategoryPage />} />
             <Route path='/terms-of-service' element={<TermsOfService />} />

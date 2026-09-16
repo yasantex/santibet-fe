@@ -9,10 +9,16 @@ import { Tabs } from '../../components/globals/Tabs'
 import ProfileTab from './profileTabs/ProfileTab'
 import SecurityTab from './profileTabs/SecurityTab'
 import VerificationTab from './profileTabs/VerificationTab'
+import KycTab from './profileTabs/KycTab'
 
-type AccountTab = 'profile' | 'security' | 'verification'
+type AccountTab = 'profile' | 'security' | 'verification' | 'kyc'
 
-const VALID_TABS: AccountTab[] = ['profile', 'security', 'verification']
+const VALID_TABS: AccountTab[] = [
+  'profile',
+  'security',
+  'verification',
+  'kyc',
+]
 
 const AccountProfile = () => {
   const [searchParams] = useSearchParams()
@@ -60,6 +66,7 @@ const AccountProfile = () => {
           { id: 'profile', label: 'Profile' },
           { id: 'security', label: 'Security' },
           { id: 'verification', label: 'Verification' },
+          { id: 'kyc', label: 'KYC' },
         ]}
         activeTab={activeTab}
         onChange={(id) => setActiveTab(id as AccountTab)}
@@ -76,16 +83,24 @@ const AccountProfile = () => {
       {activeTab === 'security' && <SecurityTab />}
 
       {activeTab === 'verification' &&
-        (isLoading || kycLoading ? (
+        (isLoading ? (
           <div className='h-32 animate-pulse rounded-lg bg-card' />
         ) : (
           <VerificationTab
             profile={profile}
+            onVerifyEmail={() => handleModalOpen('verifyEmail')}
+            onVerifyPhone={() => handleModalOpen('verifyPhone')}
+          />
+        ))}
+
+      {activeTab === 'kyc' &&
+        (kycLoading ? (
+          <div className='h-32 animate-pulse rounded-lg bg-card' />
+        ) : (
+          <KycTab
             kycStatus={kycStatus}
             kycLoading={kycLoading}
             refetchKyc={refetchKyc}
-            onVerifyEmail={() => handleModalOpen('verifyEmail')}
-            onVerifyPhone={() => handleModalOpen('verifyPhone')}
           />
         ))}
 

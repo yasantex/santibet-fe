@@ -85,7 +85,7 @@ const LiveEventCard = ({
               key={o.id}
               type='button'
               onClick={() => onSelectOutcome(market, o)}
-              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg cursor-pointer px-2 py-2.5 text-sm font-bold ${TONE_STYLES[tone].button}`}
+              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg cursor-pointer px-1 py-2 text-xs font-bold ${TONE_STYLES[tone].button}`}
             >
               <span className='w-full truncate uppercase'>{o.label}</span>
               <span>{formatSharePrice(o.cents)}</span>

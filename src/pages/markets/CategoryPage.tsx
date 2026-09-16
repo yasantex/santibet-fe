@@ -16,7 +16,7 @@ import {
 import { useFavorites } from '../../hooks/useFavorites'
 import { marketHref } from '../../utils/marketDisplay'
 import { formatCompact } from '../../utils/functions'
-import { categoryTopics, mockSportsTree } from '../../utils/constants'
+import { categoryLabel, categoryTopics, mockSportsTree } from '../../utils/constants'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 
 type SortOption = NonNullable<EventQueryParams['sort']>
@@ -333,7 +333,9 @@ const CategoryPage = () => {
             {active === 'All'
               ? 'Browse markets'
               : (activeLeague ??
-                (isSports ? (activeSport ?? active) : active))}
+                (isSports
+                  ? (activeSport ?? categoryLabel(active))
+                  : categoryLabel(active)))}
           </h1>
 
           <div className='flex shrink-0 items-center gap-2'>
@@ -420,7 +422,9 @@ const CategoryPage = () => {
                   ? `No markets match "${searchTerm}".`
                   : `No open markets in ${
                       activeLeague ??
-                      (isSports ? (activeSport ?? active) : active)
+                      (isSports
+                        ? (activeSport ?? categoryLabel(active))
+                        : categoryLabel(active))
                     }${
                       !isSports && activeTopic ? ` / ${activeTopic}` : ''
                     }. Try loading more or another category.`}
