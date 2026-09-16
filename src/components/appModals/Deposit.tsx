@@ -42,12 +42,13 @@ type DepositStep =
   | 'method'
   | 'amount'
   | 'instructions'
+  | 'checkout-pending'
   | 'result'
   | 'crypto-currency'
   | 'crypto-network'
   | 'crypto-address'
 
-type DepositMethod = 'bank' | 'crypto'
+type DepositMethod = 'bank' | 'crypto' | 'checkout'
 type CryptoCurrency = 'USDC' | 'USDT'
 type CryptoNetwork = CryptoNetworkId
 
@@ -66,6 +67,34 @@ const NETWORK_LABELS: Record<CryptoNetwork, { label: string; subtitle: string }>
  */
 const POLL_FALLBACK_DELAY = 3 * 60 * 1000
 
+/** Base Kudipal hosted-checkout link; overridable per environment. */
+const KUDIPAL_PAYMENT_LINK =
+  import.meta.env.VITE_APP_KUDIPAL_PAYMENT_LINK ||
+  'https://pay.kudipal.co/6aab00b80d7c110022360b2f'
+
+/**
+ * Build the Kudipal checkout URL: the base link plus the deposit `reference`
+ * (so the webhook can reconcile) and the `amount` to collect in Naira.
+ */
+const buildKudipalCheckoutUrl = (reference: string, amountNaira: number) => {
+  const url = new URL(KUDIPAL_PAYMENT_LINK)
+  url.searchParams.set('reference', reference)
+  url.searchParams.set('amount', String(amountNaira))
+  return url.toString()
+}
+
+/**
+ * Pull the reconciliation reference out of the deposit-create response. The
+ * bank rail exposes it as `instructions.reference`; for the Kudipal channel the
+ * backend may instead surface it on the deposit record — try both, then fall
+ * back to the deposit id so the checkout still carries a stable handle.
+ */
+const extractDepositReference = (res: StartDepositResponse): string =>
+  res.instructions?.reference ||
+  res.deposit?.providerRef ||
+  res.deposit?.id ||
+  ''
+
 const DEPOSIT_METHODS: {
   id: DepositMethod
   label: string
@@ -83,8 +112,15 @@ const DEPOSIT_METHODS: {
   {
     id: 'bank' as DepositMethod,
     label: 'Bank Transfer',
-    subtitle: 'Instant · No limit',
+    subtitle: 'Virtual account · Instant',
     icon: BankIcon,
+    available: true,
+  },
+  {
+    id: 'checkout' as DepositMethod,
+    label: 'Card / Checkout',
+    subtitle: 'Card, transfer & more · Instant',
+    icon: CreditCardIcon,
     available: true,
   },
 ]
@@ -99,6 +135,9 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   const [amountError, setAmountError] = useState('')
   const [startResponse, setStartResponse] =
     useState<StartDepositResponse | null>(null)
+  // Kudipal hosted-checkout URL for the current deposit; kept so the pending
+  // screen can re-open it if the payment tab was closed.
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
   // How the deposit finished, whichever path got there first — the pushed
   // DEPOSIT_SUCCESS event or the polled verify call.
   const [settled, setSettled] = useState<{
@@ -125,6 +164,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     setAmount('')
     setAmountError('')
     setStartResponse(null)
+    setCheckoutUrl(null)
     setSettled(null)
     setCryptoCurrency(null)
     setCryptoNetwork(null)
@@ -142,13 +182,14 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   // ---------- Bank transfer ----------
 
   const { mutateAsync: startDeposit, isPending: isStarting } =
-    useSantiBetMutation<StartDepositResponse, { amount: string }>({
+    useSantiBetMutation<
+      StartDepositResponse,
+      { amount: string; channel?: string }
+    >({
       path: '/wallet/deposits',
       mutationOptions: {
-        onSuccess: (data) => {
-          setStartResponse(data)
-          setStep('instructions')
-        },
+        // Success is handled in handleAmountSubmit so the bank and Kudipal
+        // rails can branch on the awaited result.
         onError: (error) => {
           if (isAxiosError(error)) {
             const errorData = error.response?.data
@@ -192,7 +233,9 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   // credited, for both the bank and crypto rails. Crypto has no deposit id up
   // front, so on that screen any success belongs to the address on display.
   const isAwaitingPayment =
-    step === 'instructions' || step === 'crypto-address'
+    step === 'instructions' ||
+    step === 'crypto-address' ||
+    step === 'checkout-pending'
 
   useEffect(() => {
     if (!isAwaitingPayment) return
@@ -224,9 +267,10 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   // Fallback: poll while the push connection is down, and once the wait has
   // run long enough that a dropped event is the likelier explanation.
   useEffect(() => {
-    if (step !== 'instructions' || !depositId) return
+    if ((step !== 'instructions' && step !== 'checkout-pending') || !depositId)
+      return
 
-    const expiresAtStr = startResponse?.instructions.expiresAt
+    const expiresAtStr = startResponse?.instructions?.expiresAt
     const expiresAt = expiresAtStr ? new Date(expiresAtStr).getTime() : null
     const waitingSince = Date.now()
 
@@ -251,9 +295,37 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
       return
     }
     setAmountError('')
+
+    const isCheckout = method === 'checkout'
+    // Open the checkout tab synchronously within the click so pop-up blockers
+    // allow it; we point it at the Kudipal URL once the deposit is created.
+    const checkoutTab = isCheckout ? window.open('', '_blank') : null
+
     try {
-      await startDeposit({ amount: String(toMinorUnits(numeric)) })
+      const data = await startDeposit({
+        amount: String(toMinorUnits(numeric)),
+        ...(isCheckout ? { channel: 'kudipal' } : {}),
+      })
+
+      if (isCheckout) {
+        const reference = extractDepositReference(data)
+        if (!reference) {
+          checkoutTab?.close()
+          showWarningToast('Could not start checkout. Please try again.')
+          return
+        }
+        const url = buildKudipalCheckoutUrl(reference, numeric)
+        setCheckoutUrl(url)
+        if (checkoutTab) checkoutTab.location.href = url
+        else window.open(url, '_blank', 'noopener,noreferrer')
+        setStartResponse(data)
+        setStep('checkout-pending')
+      } else {
+        setStartResponse(data)
+        setStep('instructions')
+      }
     } catch (error) {
+      checkoutTab?.close()
       console.error(error)
     }
   }
@@ -330,7 +402,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
       return
     }
     setMethod(id)
-    setStep(id === 'bank' ? 'amount' : 'crypto-currency')
+    setStep(id === 'crypto' ? 'crypto-currency' : 'amount')
   }
 
   const defaultNetwork =
@@ -372,7 +444,9 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
         ? 'Deposit Funds'
         : step === 'instructions'
           ? 'Complete Your Deposit'
-          : step === 'crypto-currency'
+          : step === 'checkout-pending'
+            ? 'Complete Your Payment'
+            : step === 'crypto-currency'
             ? 'Select Crypto'
             : step === 'crypto-network'
               ? 'Select Network'
@@ -488,6 +562,53 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
             Expires {formatDate(instructions.expiresAt)}{' '}
           </p>
 
+          <Button
+            type='button'
+            text='Close'
+            variation='plain'
+            size='large'
+            className='w-full'
+            onClick={handleDone}
+          />
+        </div>
+      )}
+
+      {step === 'checkout-pending' && (
+        <div className='flex flex-col gap-4'>
+          <p className='text-sm text-left text-neutral-10'>
+            We opened the Kudipal checkout in a new tab. Finish your payment
+            there and we&apos;ll credit your wallet automatically as soon as
+            it&apos;s confirmed — no need to stay on this screen.
+          </p>
+
+          <div className='flex items-center justify-between gap-3 rounded-lg border border-border p-4'>
+            <div className='flex flex-col'>
+              <span className='text-xs text-neutral-10'>Amount</span>
+              <span className='text-sm font-semibold text-black'>
+                {startResponse
+                  ? formatCurrency(toMajorUnits(startResponse.deposit.amount))
+                  : formatCurrency(Number(amount) || 0)}
+              </span>
+            </div>
+          </div>
+
+          <div className='flex items-center justify-center gap-2 text-xs text-neutral-10'>
+            <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-brand-green' />
+            Waiting for your payment to be confirmed…
+          </div>
+
+          {checkoutUrl && (
+            <Button
+              type='button'
+              text='Reopen checkout'
+              variation='primary'
+              size='large'
+              className='w-full'
+              onClick={() =>
+                window.open(checkoutUrl, '_blank', 'noopener,noreferrer')
+              }
+            />
+          )}
           <Button
             type='button'
             text='Close'
