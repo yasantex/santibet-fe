@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
+import ErrorPage from './pages/ErrorPage'
 import ToastNotification from './components/globals/ToastNotification'
 import ScrollToTop from './components/globals/ScrollToTop'
 import AppLayout from './layout/AppLayout'
@@ -105,6 +106,8 @@ function App() {
                 <Route path='/refer-earn' element={<ReferEarn />} />
               </Route>
             </Route>
+
+            <Route path='*' element={<ErrorPage />} />
           </Route>
         </Routes>
       </Suspense>
