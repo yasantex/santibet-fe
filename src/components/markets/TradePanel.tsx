@@ -216,13 +216,15 @@ const TradePanel = ({
                   key={o.id}
                   type='button'
                   onClick={() => onSelectOutcome(o)}
-                  className={`flex flex-1 flex-col items-center rounded-lg border py-2 text-sm font-bold transition-colors ${
+                  className={`flex min-w-0 flex-1 flex-col items-center rounded-lg border py-2 text-sm font-bold transition-colors ${
                     active
                       ? TONE_STYLES[tone].active
                       : 'border-border text-neutral-10 hover:text-black'
                   }`}
                 >
-                  <span className='truncate uppercase'>{o.label}</span>
+                  <span className='w-full min-w-0 truncate text-center uppercase'>
+                    {o.label}
+                  </span>
                   <span>{formatSharePrice(o.cents)}</span>
                 </button>
               )

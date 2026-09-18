@@ -406,9 +406,9 @@ const MarketDetail = () => {
                     key={o.id}
                     type='button'
                     onClick={() => setSelectedId(o.id)}
-                    className={`flex min-w-0 flex-1 items-center justify-between cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses}`}
+                    className={`flex min-w-0 flex-1 items-center justify-between gap-1.5 cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses}`}
                   >
-                    <span className='truncate uppercase'>{o.label}</span>
+                    <span className='min-w-0 truncate uppercase'>{o.label}</span>
                     <span className='shrink-0'>{formatSharePrice(o.cents)}</span>
                   </button>
                 )
