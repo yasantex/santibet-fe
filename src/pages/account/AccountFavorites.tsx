@@ -80,6 +80,7 @@ const AccountFavorites = () => {
               key={market.id}
               market={market}
               isSaved={isFavorite(market.id)}
+              shareable
               onSave={toggleFavorite}
               onSelect={(m) => goToMarket(m)}
               onSelectOutcome={(m, o) => goToMarket(m, o)}

@@ -11,7 +11,6 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft01Icon,
-  Link01Icon,
   Bookmark02Icon,
 } from '@hugeicons/core-free-icons'
 import {
@@ -32,7 +31,7 @@ import {
   formatNairaCompact,
   formatSharePrice,
 } from '../../utils/functions'
-import { showSuccessToast } from '../../utils/toastUtils'
+import ShareMarketButton from '../../components/markets/ShareMarketButton'
 import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
 import type { OutcomeTone } from '../../utils/marketDisplay'
 
@@ -172,11 +171,6 @@ const MarketDetail = () => {
     setChartMode(mode)
   }
 
-  const copyLink = () => {
-    void navigator.clipboard?.writeText(window.location.href)
-    showSuccessToast('Link copied to clipboard')
-  }
-
   if (isLoading) {
     return (
       <main className='mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 pt-4 pb-20 md:px-8'>
@@ -223,14 +217,10 @@ const MarketDetail = () => {
           <span className='font-medium text-black'>{market.category}</span>
         </div>
         <div className='flex items-center gap-2'>
-          <button
-            type='button'
-            aria-label='Copy link'
-            onClick={copyLink}
+          <ShareMarketButton
+            market={market}
             className='rounded-full bg-card p-2 text-neutral-10 hover:text-black'
-          >
-            <HugeiconsIcon icon={Link01Icon} size={18} />
-          </button>
+          />
           <button
             type='button'
             aria-label={

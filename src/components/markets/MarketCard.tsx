@@ -9,6 +9,7 @@ import {
   type OutcomeTone,
 } from '../../utils/marketDisplay'
 import { MarketCountdown } from '../globals/ReusedText'
+import ShareMarketButton from './ShareMarketButton'
 
 /** Binary (Yes/No) markets: one full stat row per side, price button inline. */
 const OutcomeRow = ({
@@ -109,6 +110,8 @@ interface MarketCardProps {
   onSave?: (market: UiMarket) => void
   /** Whether this market is currently saved to favorites. */
   isSaved?: boolean
+  /** Show a share button next to the save button. */
+  shareable?: boolean
   /** Show a LIVE badge + ticking countdown in the header. */
   live?: boolean
 }
@@ -119,6 +122,7 @@ const MarketCard = ({
   onSelectOutcome,
   onSave,
   isSaved = false,
+  shareable = false,
   live = false,
 }: MarketCardProps) => {
   const outcomes = market.outcomes ?? []
@@ -174,17 +178,20 @@ const MarketCard = ({
             </span>
           )}
         </div>
-        <button
-          type='button'
-          aria-label={isSaved ? 'Remove from favorites' : 'Save market'}
-          onClick={(e) => {
-            e.stopPropagation()
-            onSave?.(market)
-          }}
-          className={isSaved ? 'text-black' : 'text-neutral-10 hover:text-black'}
-        >
-          <HugeiconsIcon icon={Bookmark02Icon} size={18} />
-        </button>
+        <div className='flex items-center gap-3'>
+          {shareable && <ShareMarketButton market={market} />}
+          <button
+            type='button'
+            aria-label={isSaved ? 'Remove from favorites' : 'Save market'}
+            onClick={(e) => {
+              e.stopPropagation()
+              onSave?.(market)
+            }}
+            className={isSaved ? 'text-black' : 'text-neutral-10 hover:text-black'}
+          >
+            <HugeiconsIcon icon={Bookmark02Icon} size={18} />
+          </button>
+        </div>
       </div>
 
       <h3 className='line-clamp-2 min-h-11 text-base leading-snug font-bold text-black'>
