@@ -3,15 +3,26 @@ import { useNavigate } from 'react-router'
 import { isAxiosError } from 'axios'
 import ModalComponent from '../globals/ModalComponent'
 import { Button } from '../globals/Button'
+import ShareBetButton from './ShareBetButton'
 import { useMarket } from '../../data_layer/markets'
 import { useCashOut } from '../../data_layer/bets'
-import { formatCurrency, formatSharePrice, toMajorUnits } from '../../utils/functions'
+import {
+  formatCurrency,
+  formatSharePrice,
+  toMajorUnits,
+} from '../../utils/functions'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import type { BetPosition } from '../../types/bet.types'
 
 const YES_LABELS = ['yes', 'up', 'over', 'win', 'true']
 
-const PositionCard = ({ position }: { position: BetPosition }) => {
+type PositionCardProps = {
+  position: BetPosition
+  /** Show the Share button (only on the Open tab). */
+  shareable?: boolean
+}
+
+const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
   const navigate = useNavigate()
   // The API now embeds a market summary; only fetch when it's absent.
   const { data: market } = useMarket(
@@ -31,8 +42,7 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
   const contracts =
     position?.contracts != null ? Number(position?.contracts) : shares / 100
   const avgPrice = Number(position.avgPrice) || 0
-  const currency =
-    position?.stake?.currency ?? position?.currentValue?.currency
+  const currency = position?.stake?.currency ?? position?.currentValue?.currency
   const staked = position?.stake
     ? toMajorUnits(position.stake.amount)
     : shares * avgPrice
@@ -41,7 +51,9 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
 
   // OPEN positions mark-to-market against currentValue/unrealizedPnl; once
   // SETTLED/CLOSED, currentValue goes null and realizedPnl is the source of truth.
-  const value = isOpen ? toMajorUnits(position?.currentValue?.amount ?? 0) : null
+  const value = isOpen
+    ? toMajorUnits(position?.currentValue?.amount ?? 0)
+    : null
   const pnl = isOpen
     ? position.unrealizedPnl
       ? toMajorUnits(position.unrealizedPnl.amount)
@@ -81,61 +93,68 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
   }
 
   return (
-    <div className='flex flex-col gap-4 rounded-lg bg-card p-4'>
-      <div className='flex items-center justify-between'>
-        <span
-          className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${statusMeta.className}`}
-        >
-          {statusMeta.label}
-        </span>
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${
-            isYes ? 'text-success' : 'text-error'
-          }`}
-        >
-          {outcomeLabel || (isYes ? 'YES' : 'NO')}
-        </span>
-      </div>
+    <div className='flex flex-col gap-3 rounded-lg bg-card p-4'>
+      <section className='flex items-center justify-between gap-2.5'>
+        <main className='flex flex-col gap-2.5'>
+          <div className='flex items-center'>
+            <span
+              className={`w-fit shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${statusMeta.className}`}
+            >
+              {statusMeta.label}
+            </span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${
+                isYes ? 'text-success' : 'text-error'
+              }`}
+            >
+              {outcomeLabel || (isYes ? 'YES' : 'NO')}
+            </span>
+          </div>
 
-      <button
-        type='button'
-        onClick={() => navigate(`/markets/${position.marketId}`)}
-        className='h-12 text-left text-sm font-semibold text-black hover:underline'
-      >
-        {title}
-      </button>
-
-      <div className='grid grid-cols-2 gap-2 text-sm'>
-        <div className='flex flex-col rounded-md bg-surface-hover px-3 py-2'>
-          <span className='text-xs text-black/60'>Avg price</span>
-          <span className='font-bold text-black'>
-            {formatSharePrice(avgPrice)}
-          </span>
+          <button
+            type='button'
+            onClick={() => navigate(`/markets/${position.marketId}`)}
+            className='line-clamp-2 text-left text-sm font-semibold text-black hover:underline'
+          >
+            {title}
+          </button>
+        </main>
+        <div className='flex items-center gap-2 text-sm'>
+          <div className='flex gap-1.5 items-center rounded-md bg-surface-hover px-3 py-1.5'>
+            <span className='text-xs shrink-0 text-black/60'>Avg price</span>
+            <span className='font-bold text-black'>
+              {formatSharePrice(avgPrice)}
+            </span>
+          </div>
+          <div className='flex gap-1.5 items-center rounded-md bg-surface-hover px-3 py-1.5'>
+            <span className='text-xs shrink-0 text-black/60'>Shares</span>
+            <span className='font-bold text-black'>
+              {contracts.toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+              })}
+            </span>
+          </div>
         </div>
-        <div className='flex flex-col rounded-md bg-surface-hover px-3 py-2'>
-          <span className='text-xs text-black/60'>Shares</span>
-          <span className='font-bold text-black'>
-            {contracts.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          </span>
-        </div>
-      </div>
+      </section>
 
       <div className='flex items-center justify-between text-xs text-placeholder'>
         <span>Staked {formatCurrency(String(staked), currency)}</span>
-        <span>
-          {isOpen ? 'Value' : 'Payout'}{' '}
-          {formatCurrency(String(isOpen ? (value ?? 0) : payout), currency)}
-        </span>
+        <div className='flex items-center gap-2.5'>
+          <span>
+            {isOpen ? 'Value' : 'Payout'}{' '}
+            {formatCurrency(String(isOpen ? (value ?? 0) : payout), currency)}
+          </span>
+          <span
+            className={`text-sm font-bold ${isProfit ? 'text-success' : 'text-error'}`}
+          >
+            {isOpen && 'Unrealized '}
+            {isProfit ? '+' : '-'}
+            {formatCurrency(String(Math.abs(pnl)), currency)}
+          </span>
+        </div>
       </div>
 
       <div className='flex items-center justify-between'>
-        <span
-          className={`text-sm font-bold ${isProfit ? 'text-success' : 'text-error'}`}
-        >
-          {isOpen && 'Unrealized '}
-          {isProfit ? '+' : '-'}
-          {formatCurrency(String(Math.abs(pnl)), currency)}
-        </span>
         {isOpen && (
           <Button
             type='button'
@@ -144,6 +163,16 @@ const PositionCard = ({ position }: { position: BetPosition }) => {
             size='small'
             className='w-fit!'
             onClick={() => setConfirmOpen(true)}
+          />
+        )}
+        {shareable && (
+          <ShareBetButton
+            marketId={position.marketId}
+            outcomeId={position.outcomeId}
+            title={title}
+            outcomeLabel={outcomeLabel}
+            price={formatSharePrice(avgPrice)}
+            stake={formatCurrency(String(staked), currency)}
           />
         )}
       </div>

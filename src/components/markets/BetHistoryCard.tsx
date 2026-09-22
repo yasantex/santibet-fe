@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router'
+import ShareBetButton from './ShareBetButton'
 import {
   formatCurrency,
   formatDate,
@@ -45,7 +46,7 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
       <button
         type='button'
         onClick={() => navigate(`/markets/${bet.marketId}`)}
-        className='h-10 text-left text-sm font-semibold text-black hover:underline line-clamp-2'
+        className='line-clamp-2 text-left text-sm font-semibold text-black hover:underline'
       >
         {bet.market?.title ?? bet.marketId}
       </button>
@@ -69,9 +70,19 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
         </div>
       </div>
 
-      <span className='text-xs text-placeholder'>
-        {formatDate(bet.createdAt)}
-      </span>
+      <div className='flex items-center justify-between'>
+        <span className='text-xs text-placeholder'>
+          {formatDate(bet.createdAt)}
+        </span>
+        <ShareBetButton
+          marketId={bet.marketId}
+          outcomeId={bet.outcomeId}
+          title={bet.market?.title ?? bet.marketId}
+          outcomeLabel={label}
+          price={formatSharePrice(Number(bet.price))}
+          stake={money(bet.stake)}
+        />
+      </div>
     </div>
   )
 }
