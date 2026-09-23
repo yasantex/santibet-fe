@@ -4,6 +4,7 @@ import { LiveBadge, ScoreBoard } from './LiveBits'
 import {
   categoryIcon,
   marketDisplayTitle,
+  outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
 import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
@@ -67,28 +68,18 @@ const LiveEventCard = ({
         )
       )}
 
-      <div className='flex items-stretch gap-2'>
-        {market.outcomes.slice(0, 3).map((o, i, shown) => {
-          // Binary keeps yes/no by identity; 3-way goes green-first/red-last/amber-mid.
-          const isBinary = !!market.yes && !!market.no && shown.length <= 2
-          const tone = isBinary
-            ? o.id === market.yes?.id
-              ? 'yes'
-              : 'no'
-            : i === 0
-              ? 'yes'
-              : i === shown.length - 1
-                ? 'no'
-                : 'mid'
+      <div className='flex items-stretch gap-1.5'>
+        {market.outcomes.slice(0, 3).map((o, i) => {
+          const tone = outcomeTone(market, o.id, i)
           return (
             <button
               key={o.id}
               type='button'
               onClick={() => onSelectOutcome(market, o)}
-              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg cursor-pointer px-1 py-2 text-xs font-bold ${TONE_STYLES[tone].button}`}
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg cursor-pointer px-1 py-2 text-xs font-bold ${TONE_STYLES[tone].button}`}
             >
-              <span className='w-full truncate uppercase'>{o.label}</span>
-              <span>{formatSharePrice(o.cents)}</span>
+              <span className='min-w-0 truncate uppercase'>{o.label}</span>
+              <span className='shrink-0'>{formatSharePrice(o.cents)}</span>
             </button>
           )
         })}

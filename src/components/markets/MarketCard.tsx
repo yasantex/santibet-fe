@@ -5,6 +5,7 @@ import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
 import {
   categoryIcon,
   marketDisplayTitle,
+  outcomeTone,
   TONE_STYLES,
   type OutcomeTone,
 } from '../../utils/marketDisplay'
@@ -85,7 +86,7 @@ const OutcomeButtonRow = ({
   outcomes: { outcome: UiOutcome; tone: OutcomeTone }[]
   onClick?: (outcome: UiOutcome) => void
 }) => (
-  <div className='flex items-stretch gap-2'>
+  <div className='flex items-stretch gap-1.5'>
     {outcomes.map(({ outcome, tone }) => (
       <button
         key={outcome.id}
@@ -94,10 +95,10 @@ const OutcomeButtonRow = ({
           e.stopPropagation()
           onClick?.(outcome)
         }}
-        className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 cursor-pointer py-2 text-xs font-bold ${TONE_STYLES[tone].button}`}
+        className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-1 cursor-pointer py-2 text-xs font-bold ${TONE_STYLES[tone].button}`}
       >
-        <span className='w-full truncate uppercase'>{outcome.label}</span>
-        <span>{formatSharePrice(outcome.cents)}</span>
+        <span className='min-w-0 truncate uppercase'>{outcome.label}</span>
+        <span className='shrink-0'>{formatSharePrice(outcome.cents)}</span>
       </button>
     ))}
   </div>
@@ -137,9 +138,8 @@ const MarketCard = ({
         { outcome: market.no!, tone: 'no' },
       ]
     : capped.map((outcome, i) => ({
-        // First outcome green, last (of those shown) red, anything between amber.
         outcome,
-        tone: i === 0 ? 'yes' : i === capped.length - 1 ? 'no' : 'mid',
+        tone: outcomeTone(market, outcome.id, i),
       }))
   const moreCount = isBinary ? 0 : Math.max(0, outcomes.length - 3)
   const handleOutcomeClick = (outcome: UiOutcome) =>
