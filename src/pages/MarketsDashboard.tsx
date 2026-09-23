@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Link } from 'react-router'
-import FeaturedMarketCard from '../components/markets/FeaturedMarketCard'
+import FeaturedCarousel from '../components/markets/FeaturedCarousel'
 import MarketCard from '../components/markets/MarketCard'
 import LiveEventCard from '../components/markets/LiveEventCard'
 import { LiveBadge } from '../components/markets/LiveBits'
@@ -13,14 +13,16 @@ import {
   useEvents,
   useLiveEvents,
   useLobbyHome,
-  useMarketChart,
 } from '../data_layer/markets'
 import { useFavorites } from '../hooks/useFavorites'
 import { marketHref } from '../utils/marketDisplay'
 import type { UiEvent, UiMarket, UiOutcome } from '../types/market.types'
 import { formatNairaCompact } from '../utils/functions'
+import { pickHotTopics } from '../utils/topicRelevance'
 
 type MarketFilters = Record<'status' | 'sort', string[]>
+
+const FEATURED_COUNT = 5
 
 const marketFilterCategories: FilterCategory[] = [
   {
@@ -87,13 +89,47 @@ const MarketsDashboard = () => {
     return ['All', ...Array.from(set)]
   }, [data])
 
-  const featured = allMarkets[0]
-  const hotTopics = allMarkets.slice(1, 6)
-  // Real price/odds history for the featured card sparkline.
-  const { data: featuredChart } = useMarketChart(
-    featured?.id,
-    featured?.yes?.id,
-    '1h',
+  // Hero carousel: backend-curated featured events first, then the most
+  // audience-relevant events that actually trade (so each slide has a real
+  // chart); zero-volume local markets surface in Hot Topics instead.
+  const featuredEvents = useMemo<UiEvent[]>(() => {
+    const tradeable = (e: UiEvent) =>
+      e.markets.some((m) => m.yes && m.status === 'open')
+    const contested = (e?: UiEvent) =>
+      !!e?.markets.some((m) => (m.yes?.price ?? 0) >= 0.02 && (m.yes?.price ?? 0) <= 0.98)
+    const picked = new Map<string, UiEvent>()
+    for (const e of home?.featured ?? []) {
+      if (tradeable(e)) picked.set(e.id, e)
+    }
+    const events = data?.events ?? []
+    const eventOf = new Map(
+      events.flatMap((e) => e.markets.map((m) => [m.id, e] as const)),
+    )
+    const ranked = pickHotTopics(
+      events.flatMap((e) => e.markets),
+      FEATURED_COUNT * 3,
+    )
+      // A hero slide needs a live question: real trading and an outcome that
+      // isn't already a near-certainty either way.
+      .filter((m) => m.volume > 0 && contested(eventOf.get(m.id)))
+    for (const m of ranked) {
+      if (picked.size >= FEATURED_COUNT) break
+      const e = eventOf.get(m.id)
+      if (e && !picked.has(e.id)) picked.set(e.id, e)
+    }
+    return Array.from(picked.values()).slice(0, FEATURED_COUNT)
+  }, [home, data])
+
+  // Ranked for our audience (local first, then sport/crypto/global), not raw
+  // volume — otherwise the rail is all US governor races.
+  const hotTopics = useMemo(
+    () =>
+      pickHotTopics(
+        (data?.events ?? []).flatMap((e) => e.markets),
+        5,
+        featuredEvents.map((e) => e.id),
+      ),
+    [data, featuredEvents],
   )
 
   const gridMarkets = useMemo(() => {
@@ -126,13 +162,15 @@ const MarketsDashboard = () => {
   return (
     <main className='mx-auto flex w-full flex-col gap-6 px-3 pt-4 pb-20 md:px-8'>
       <div className='grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]'>
-        {isLoading || !featured ? (
+        {isLoading || !featuredEvents.length ? (
           <div className='h-85 animate-pulse rounded-lg bg-card' />
         ) : (
-          <FeaturedMarketCard
-            market={featured}
-            chartData={featuredChart?.points}
+          <FeaturedCarousel
+            events={featuredEvents}
+            isSaved={isFavorite}
+            onSave={toggleFavorite}
             onSelect={goToMarket}
+            onSelectEvent={(e) => navigate(`/events/${e.id}`)}
             onSelectOutcome={goToTrade}
           />
         )}
@@ -156,7 +194,7 @@ const MarketsDashboard = () => {
                     {topic.title}
                   </span>
                   <span className='shrink-0 text-sm font-semibold text-neutral-10'>
-                    {formatNairaCompact(topic.volume)}
+                    {topic.volume > 0 ? formatNairaCompact(topic.volume) : 'New'}
                   </span>
                 </button>
               ))}

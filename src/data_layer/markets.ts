@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   useInfiniteQuery,
+  useQueries,
   useQuery,
   useQueryClient,
   type InfiniteData,
@@ -17,6 +18,7 @@ import type {
   ApiMarketListResponse,
   ChartInterval,
   ChartMode,
+  ChartPoint,
   LobbyCategory,
   LobbyEvent,
   LobbyEventListResponse,
@@ -645,92 +647,186 @@ export const useMarketTrades = (id?: string, limit = 30, provider?: string) =>
 /** How many most-recent points the Live view keeps (tight window = visible movement). */
 const LIVE_WINDOW_POINTS = 40
 
+const HOUR_MS = 60 * 60 * 1000
+
 /**
- * Price chart for the market detail page. On the lobby feed it uses the real
- * candle history (Polymarket candles for imported markets, internal trades for
- * native ones); on the raw fallback feed it derives points from recent trades.
- * Points carry an epoch `t` and are plotted on a real time axis.
+ * Each chart tab is a look-back window, fetched at the finest candle interval
+ * whose history covers it (the history endpoint returns ~200 candles per
+ * interval, and has no 6h/1d candles at all): 1m ≈ 3h, 5m ≈ 16h, 15m ≈ 2d,
+ * 1h ≈ 8d.
  */
-export const chartTimeLabel = (t: number, interval: ChartInterval): string => {
+export const CHART_RANGES: Record<
+  ChartMode,
+  { interval: ChartInterval; windowMs: number | null }
+> = {
+  live: { interval: '1m', windowMs: null },
+  '1h': { interval: '1m', windowMs: HOUR_MS },
+  '6h': { interval: '5m', windowMs: 6 * HOUR_MS },
+  '1d': { interval: '15m', windowMs: 24 * HOUR_MS },
+  '1w': { interval: '1h', windowMs: 7 * 24 * HOUR_MS },
+}
+
+/** Short x-axis tick label: time of day, or the date on the week view. */
+export const chartTimeLabel = (t: number, mode: ChartMode): string => {
   const d = new Date(t)
   if (Number.isNaN(d.getTime())) return ''
-  return interval === '1d'
+  return mode === '1w'
     ? d.toLocaleDateString([], { month: 'short', day: 'numeric' })
     : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+/** Full date + time for chart tooltips, e.g. "Sep 23, 2026, 09:44". */
+export const chartTooltipLabel = (t: number, withSeconds = false): string => {
+  const d = new Date(t)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(withSeconds ? { second: '2-digit' } : {}),
+  })
+}
+
+const toPoint = (t: number, value: number, mode: ChartMode): ChartPoint => ({
+  t,
+  time: chartTimeLabel(t, mode),
+  value,
+})
+
+/** Probability (0..1) → percent with one decimal, so small moves still show. */
+const toPercentValue = (p: number) => Math.round((Number(p) || 0) * 1000) / 10
+
 const tradesToPoints = (
   trades: MarketTrade[],
-  outcomeId?: string,
-  interval: ChartInterval = '1m',
-): MarketChart['points'] =>
+  outcomeId: string | undefined,
+  mode: ChartMode,
+): ChartPoint[] =>
   [...(outcomeId ? trades.filter((t) => t.outcomeId === outcomeId) : trades)]
     .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
-    .map((t) => {
-      const ms = new Date(t.ts).getTime()
-      return { t: ms, time: chartTimeLabel(ms, interval), value: toCents(t.price) }
-    })
+    .map((t) => toPoint(new Date(t.ts).getTime(), toPercentValue(t.price), mode))
 
+/**
+ * Keep only the points inside the look-back window. The value carried into the
+ * window (last point before it) is re-stamped at the window start, so the line
+ * spans the whole range — and a quiet market still shows a flat line at its
+ * real price instead of an empty chart.
+ */
+const clipToWindow = (
+  points: ChartPoint[],
+  mode: ChartMode,
+): ChartPoint[] => {
+  const { windowMs } = CHART_RANGES[mode]
+  if (!windowMs || !points.length) return points
+  const now = Date.now()
+  const start = now - windowMs
+  const first = points.findIndex((p) => p.t >= start)
+  if (first === 0) return points
+  const carried = points[first === -1 ? points.length - 1 : first - 1]
+  const inside = first === -1 ? [] : points.slice(first)
+  const clipped = [toPoint(start, carried.value, mode), ...inside]
+  return inside.length
+    ? clipped
+    : [...clipped, toPoint(now, carried.value, mode)]
+}
+
+/**
+ * Price/odds history for one outcome. On the lobby feed it uses the real
+ * candle history (Polymarket candles for imported markets, internal trades for
+ * native ones); on the raw fallback feed it derives points from recent trades.
+ * Probability series are returned as percent (0..100); price series (e.g.
+ * "Bitcoin Up or Down") as the asset price, with the strike when there is one.
+ */
+export const fetchMarketChart = async (
+  id: string,
+  outcomeId: string | undefined,
+  mode: ChartMode,
+): Promise<MarketChart> => {
+  const { interval } = CHART_RANGES[mode]
+  const feed = await resolveFeed()
+  if (feed === 'lobby') {
+    const h = await get<MarketHistoryResponse>(
+      `${LOBBY_BASE}/markets/${id}/history`,
+      { outcomeId, interval },
+    )
+    const unit = (h.unit ?? 'PROBABILITY').toUpperCase() === 'PROBABILITY'
+      ? 'percent'
+      : 'usd'
+    const trades: MarketTrade[] = (h.trades ?? []).map((t, i) => ({
+      id: `${t.at}-${i}`,
+      marketId: h.marketId,
+      outcomeId: t.outcomeId,
+      price: t.price,
+      size: t.size,
+      side: 'buy',
+      ts: t.at,
+    }))
+    const candlePoints = (h.candles ?? []).map((c) =>
+      toPoint(
+        new Date(c.at).getTime(),
+        unit === 'percent' ? toPercentValue(c.close) : c.close,
+        mode,
+      ),
+    )
+    // Trade ticks are outcome prices (probability) — only comparable with
+    // candles on probability series.
+    const tradePoints =
+      unit === 'percent' ? tradesToPoints(trades, outcomeId, mode) : []
+    // Live: tight recent window (auto Y-axis zooms in). The detail page
+    // extends a live tail on a ticker so the timeline advances between polls.
+    const points =
+      mode === 'live'
+        ? (tradePoints.length ? tradePoints : candlePoints).slice(
+            -LIVE_WINDOW_POINTS,
+          )
+        : clipToWindow(candlePoints.length ? candlePoints : tradePoints, mode)
+    return { points, trades, unit, strike: h.strike ?? null }
+  }
+
+  // Raw fallback feed: both live and interval views derive from trades.
+  const raw = await get<MarketTrade[]>(`${MARKET_BASE}/markets/${id}/trades`, {
+    limit: 60,
+  })
+  const points = tradesToPoints(raw, outcomeId, mode)
+  return {
+    points: mode === 'live' ? points : clipToWindow(points, mode),
+    trades: raw,
+    unit: 'percent',
+    strike: null,
+  }
+}
+
+const chartQuery = (
+  id: string | undefined,
+  outcomeId: string | undefined,
+  mode: ChartMode,
+) => ({
+  queryKey: ['market-chart', id, outcomeId, mode],
+  enabled: !!id,
+  retry: false,
+  // Live refresh is driven by a component ticker (a plain timer that runs even
+  // when the tab is unfocused); look-back ranges refresh on their own timer.
+  refetchInterval: mode === 'live' ? (false as const) : 30000,
+  queryFn: () => fetchMarketChart(id as string, outcomeId, mode),
+})
 
 export const useMarketChart = (
   id?: string,
   outcomeId?: string,
   mode: ChartMode = 'live',
-) => {
-  // "Live" plots the 1-minute series — its latest candle is the current minute
-  // and updates as price moves, so the fast refetch makes the chart move.
-  const interval: ChartInterval = mode === 'live' ? '1m' : mode
-  return useQuery<MarketChart>({
-    queryKey: ['market-chart', id, outcomeId, mode],
-    enabled: !!id,
-    retry: false,
-    // Live refresh is driven by a component ticker (a plain timer that runs even
-    // when the tab is unfocused); candle intervals refresh on their own timer.
-    refetchInterval: mode === 'live' ? false : 30000,
-    queryFn: async () => {
-      const feed = await resolveFeed()
-      if (feed === 'lobby') {
-        const h = await get<MarketHistoryResponse>(
-          `${LOBBY_BASE}/markets/${id}/history`,
-          { outcomeId, interval },
-        )
-        const trades: MarketTrade[] = (h.trades ?? []).map((t, i) => ({
-          id: `${t.at}-${i}`,
-          marketId: h.marketId,
-          outcomeId: t.outcomeId,
-          price: t.price,
-          size: t.size,
-          side: 'buy',
-          ts: t.at,
-        }))
-        // Candle `close` is the series' own value (e.g. the underlying asset
-        // price for crypto markets) — plot it as-is; the chart auto-scales.
-        // Trade ticks carry outcome price (probability) → 0..100 via toCents.
-        const candlePoints = (h.candles ?? []).map((c) => {
-          const ms = new Date(c.at).getTime()
-          return { t: ms, time: chartTimeLabel(ms, interval), value: c.close }
-        })
-        const tradePoints = tradesToPoints(trades, outcomeId, interval)
-        const base = tradePoints.length ? tradePoints : candlePoints
-        // Live: tight recent window (auto Y-axis zooms in). The detail page
-        // extends a live tail on a ticker so the timeline advances between polls.
-        const points =
-          mode === 'live'
-            ? base.slice(-LIVE_WINDOW_POINTS)
-            : candlePoints.length
-              ? candlePoints
-              : tradePoints
-        return { points, trades }
-      }
+) => useQuery<MarketChart>(chartQuery(id, outcomeId, mode))
 
-      // Raw fallback feed: both live and interval views derive from trades.
-      const raw = await get<MarketTrade[]>(`${MARKET_BASE}/markets/${id}/trades`, {
-        limit: 60,
-      })
-      return { points: tradesToPoints(raw, outcomeId), trades: raw }
-    },
+/** Several outcome histories at once (multi-line charts). Shares the cache
+ *  with `useMarketChart`. */
+export const useMarketCharts = (
+  targets: { marketId: string; outcomeId?: string }[],
+  mode: ChartMode,
+) =>
+  useQueries({
+    queries: targets.map((t) => chartQuery(t.marketId, t.outcomeId, mode)),
   })
-}
+
 
 // ── Search ────────────────────────────────────────────────────────────
 // The events endpoint ignores `q` server-side, so we fetch a batch once and

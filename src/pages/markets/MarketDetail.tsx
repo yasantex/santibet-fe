@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   AreaChart,
   Area,
+  ReferenceLine,
   ResponsiveContainer,
   XAxis,
   YAxis,
@@ -13,18 +14,21 @@ import {
   ArrowLeft01Icon,
   Bookmark02Icon,
 } from '@hugeicons/core-free-icons'
+import { useFavorites } from '../../hooks/useFavorites'
+import TradePanel from '../../components/markets/TradePanel'
+import { LiveBadge, ScoreBoard } from '../../components/markets/LiveBits'
+import ChartTooltip from '../../components/markets/ChartTooltip'
+import ChartRangeTabs from '../../components/markets/ChartRangeTabs'
+import { chartDomain, formatChartTick } from '../../utils/chartFormat'
+import { useCountdown } from '../../hooks/useCountdown'
+import { categoryIcon, outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
 import {
+  chartTimeLabel,
   useMarket,
   useMarketChart,
   useLobbyStream,
   useEvent,
 } from '../../data_layer/markets'
-import { useFavorites } from '../../hooks/useFavorites'
-import TradePanel from '../../components/markets/TradePanel'
-import { LiveBadge, ScoreBoard } from '../../components/markets/LiveBits'
-import ChartTooltip from '../../components/markets/ChartTooltip'
-import { useCountdown } from '../../hooks/useCountdown'
-import { categoryIcon, outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
 import {
   formatCloseTimer,
   formatCompact,
@@ -33,24 +37,9 @@ import {
 } from '../../utils/functions'
 import ShareMarketButton from '../../components/markets/ShareMarketButton'
 import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
-import type { OutcomeTone } from '../../utils/marketDisplay'
 
 // How often the Live view extends its tail / pulls a fresh quote.
 const LIVE_TICK_MS = 3000
-
-const CHART_PERIODS: { label: string; mode: ChartMode }[] = [
-  { label: 'Live', mode: 'live' },
-  { label: '1H', mode: '1h' },
-  { label: '6H', mode: '6h' },
-  { label: '1D', mode: '1d' },
-]
-
-// Solid fill for the selected outcome button, matching each tone's color.
-const ACTIVE_OUTCOME_CLASSES: Record<OutcomeTone, string> = {
-  yes: 'bg-success text-white',
-  no: 'bg-error text-white',
-  mid: 'bg-warning text-white',
-}
 
 const MarketDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -90,6 +79,7 @@ const MarketDetail = () => {
   )
   const basePoints = useMemo(() => chart?.points ?? [], [chart])
   const trades = chart?.trades
+  const chartUnit = chart?.unit ?? 'percent'
 
   // Live tail: a rolling set of "now" points appended on a timer so the Live
   // chart's timeline advances between candle updates. The timer (a plain
@@ -287,7 +277,7 @@ const MarketDetail = () => {
 
           {/* Chart */}
           <div className='flex flex-col gap-3 rounded-2xl border border-border bg-card p-5'>
-            <div className='flex items-center justify-between'>
+            <div className='flex flex-wrap items-center justify-between gap-2'>
               <div className='flex items-baseline gap-2'>
                 <span className='text-2xl font-bold text-black'>
                   {selectedOutcome?.percent ?? 0}%
@@ -296,31 +286,7 @@ const MarketDetail = () => {
                   {selectedOutcome?.label}
                 </span>
               </div>
-              <div className='flex items-center gap-1'>
-                {CHART_PERIODS.map((p) => (
-                  <button
-                    key={p.mode}
-                    type='button'
-                    onClick={() => pickChartMode(p.mode)}
-                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
-                      chartMode === p.mode
-                        ? 'bg-brand-green text-black dark:text-text-black!'
-                        : 'text-neutral-10 hover:text-black'
-                    }`}
-                  >
-                    {p.mode === 'live' && (
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          chartMode === 'live'
-                            ? 'animate-pulse bg-black'
-                            : 'bg-error'
-                        }`}
-                      />
-                    )}
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+              <ChartRangeTabs value={chartMode} onChange={pickChartMode} />
             </div>
             <div className='h-56 w-full'>
               {chartData.length > 1 ? (
@@ -341,17 +307,20 @@ const MarketDetail = () => {
                       </linearGradient>
                     </defs>
                     <XAxis
-                      dataKey='time'
-                      tickFormatter={(v) => String(v).slice(0, 5)}
+                      dataKey='t'
+                      type='number'
+                      scale='time'
+                      domain={['dataMin', 'dataMax']}
+                      tickFormatter={(t) => chartTimeLabel(Number(t), chartMode)}
                       tick={{ fontSize: 11, fill: 'var(--color-neutral-10)' }}
                       tickLine={false}
                       axisLine={false}
                       minTickGap={44}
                     />
                     <YAxis
-                      domain={['auto', 'auto']}
-                      width={44}
-                      tickFormatter={(v) => formatCompact(Number(v))}
+                      domain={chartDomain(chartUnit)}
+                      width={chartUnit === 'usd' ? 64 : 44}
+                      tickFormatter={(v) => formatChartTick(Number(v), chartUnit)}
                       tick={{ fontSize: 11, fill: 'var(--color-neutral-10)' }}
                       tickLine={false}
                       axisLine={false}
@@ -362,9 +331,24 @@ const MarketDetail = () => {
                           {...props}
                           seriesLabel={selectedOutcome?.label ?? ''}
                           baseValue={chartData[0]?.value}
+                          unit={chartUnit}
+                          withSeconds={chartMode === 'live'}
                         />
                       )}
                     />
+                    {chart?.strike != null && (
+                      <ReferenceLine
+                        y={chart.strike}
+                        stroke='var(--color-neutral-10)'
+                        strokeDasharray='4 4'
+                        label={{
+                          value: 'Target',
+                          position: 'insideTopRight',
+                          fontSize: 11,
+                          fill: 'var(--color-neutral-10)',
+                        }}
+                      />
+                    )}
                     <Area
                       type='monotone'
                       dataKey='value'
@@ -389,7 +373,7 @@ const MarketDetail = () => {
                 const active = o.id === selectedOutcome?.id
                 const tone = outcomeTone(market, o.id, i)
                 const colorClasses = active
-                  ? ACTIVE_OUTCOME_CLASSES[tone]
+                  ? TONE_STYLES[tone].solid
                   : TONE_STYLES[tone].button
                 return (
                   <button

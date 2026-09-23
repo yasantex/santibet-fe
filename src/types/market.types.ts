@@ -138,14 +138,22 @@ export interface MarketHistoryTick {
 export interface MarketHistoryResponse {
   marketId: string
   source: string
+  /** What candle values measure: "PROBABILITY" (0..1) or an asset price ("USD"). */
+  unit?: string
+  /** Price-to-beat for up/down price markets (same unit as the candles). */
+  strike?: number | null
   candles: MarketCandle[]
   trades: MarketHistoryTick[]
 }
 
 /** Candle granularities the history endpoint accepts. */
 export type ChartInterval = '1m' | '5m' | '15m' | '1h' | '6h' | '1d'
-/** Chart selection shown as tabs. "live" maps to the 1-minute (near real-time) series. */
-export type ChartMode = 'live' | '1h' | '6h' | '1d'
+/** Chart time range shown as tabs. "live" is the most recent 1-minute ticks;
+ *  the rest are look-back windows (last hour, 6 hours, day, week). */
+export type ChartMode = 'live' | '1h' | '6h' | '1d' | '1w'
+
+/** How chart values should be read: a % chance, or an asset price in USD. */
+export type ChartUnit = 'percent' | 'usd'
 
 export interface ChartPoint {
   t: number // epoch ms — used for ordering / the live tail
@@ -156,6 +164,9 @@ export interface ChartPoint {
 export interface MarketChart {
   points: ChartPoint[]
   trades: MarketTrade[]
+  unit: ChartUnit
+  /** Price-to-beat for up/down price markets, in `unit`. */
+  strike: number | null
 }
 
 // ── Normalized UI shapes (what components render) ─────────────────────
