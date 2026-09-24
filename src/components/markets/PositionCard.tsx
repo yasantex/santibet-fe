@@ -5,7 +5,7 @@ import ModalComponent from '../globals/ModalComponent'
 import { Button } from '../globals/Button'
 import ShareBetButton from './ShareBetButton'
 import { useMarket } from '../../data_layer/markets'
-import { useCashOut } from '../../data_layer/bets'
+import { useCashOut, useCashOutQuote } from '../../data_layer/bets'
 import {
   formatCurrency,
   formatSharePrice,
@@ -30,6 +30,11 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
   )
   const { mutateAsync: cashOut, isPending } = useCashOut(position?.id)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  // Live cash-out quote, fetched only while the confirm dialog is open.
+  const { data: cashOutQuote, isLoading: quoteLoading } = useCashOutQuote(
+    position?.id,
+    confirmOpen,
+  )
 
   const title = position?.market?.title ?? market?.title ?? 'Loading market…'
   const outcome = market?.outcomes.find((o) => o.id === position?.outcomeId)
@@ -64,6 +69,11 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
   const isProfit = pnl >= 0
   // Amount actually returned to the user for a settled/closed position.
   const payout = staked + pnl
+  // Quoted cash-out proceeds (kobo → naira), falling back to live value.
+  const quotedValue = cashOutQuote
+    ? toMajorUnits(cashOutQuote.valueMinor)
+    : (value ?? 0)
+  const quotedCurrency = cashOutQuote?.currency ?? currency
 
   const statusMeta = isOpen
     ? { label: 'In progress', className: 'bg-warning/10 text-warning' }
@@ -185,13 +195,21 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
       >
         <div className='flex flex-col gap-4'>
           <p className='text-sm text-neutral-10'>
-            Cash out your position in{' '}
-            <span className='font-semibold text-black'>{title}</span> at its
-            current value of{' '}
-            <span className='font-semibold text-black'>
-              {formatCurrency(String(value ?? 0), currency)}
-            </span>
-            ?
+            {quoteLoading ? (
+              <>
+                Fetching the latest cash-out value for your position in{' '}
+                <span className='font-semibold text-black'>{title}</span>…
+              </>
+            ) : (
+              <>
+                Cash out your position in{' '}
+                <span className='font-semibold text-black'>{title}</span> for{' '}
+                <span className='font-semibold text-black'>
+                  {formatCurrency(quotedValue, quotedCurrency)}
+                </span>
+                ? The final amount may vary slightly with the market.
+              </>
+            )}
           </p>
           <div className='flex gap-3'>
             <Button
@@ -204,7 +222,11 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
             />
             <Button
               type='button'
-              text='Cash out'
+              text={
+                quoteLoading
+                  ? 'Cash out'
+                  : `Cash out ${formatCurrency(quotedValue, quotedCurrency)}`
+              }
               variation='primary'
               size='large'
               className='w-full'

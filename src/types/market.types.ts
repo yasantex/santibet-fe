@@ -60,6 +60,8 @@ export interface ApiMarket {
   closeTime: string
   resolvedOutcomeId?: string | null
   rules?: string | null
+  /** Minimum stake for this market, in kobo (minor units). */
+  minStakeMinor?: number | string | null
 }
 
 export interface MarketResponse {
@@ -202,6 +204,8 @@ export interface UiMarket {
   durationSeconds?: number | null
   resolvedOutcomeId?: string | null
   rules?: string | null
+  /** Minimum stake for this market, in kobo (minor units). */
+  minStakeMinor?: number | null
   outcomes: UiOutcome[]
   /** Binary-market convenience accessors (derived from outcomes). */
   yes?: UiOutcome
@@ -281,6 +285,8 @@ export interface LobbyMarket {
   seriesKey?: string | null
   durationSeconds?: number | null
   resolvedOutcomeId: string | null
+  /** Minimum stake for this market, in kobo (minor units). */
+  minStakeMinor?: number | string | null
   outcomes: LobbyOutcome[]
 }
 

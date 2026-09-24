@@ -59,6 +59,13 @@ export const normalizeOutcome = (o: ApiMarket['outcomes'][number]): UiOutcome =>
   percent: toPercent(o.price),
 })
 
+/** Coerce a raw min-stake (kobo, possibly a string) to a positive number or null. */
+const toMinStakeMinor = (raw: number | string | null | undefined): number | null => {
+  if (raw == null) return null
+  const n = Number(raw)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
 export const normalizeMarket = (
   m: ApiMarket,
   category = 'General',
@@ -96,6 +103,7 @@ export const normalizeMarket = (
     liquidity: m.liquidity,
     resolvedOutcomeId: m.resolvedOutcomeId,
     rules: m.rules,
+    minStakeMinor: toMinStakeMinor(m.minStakeMinor),
     outcomes,
     yes,
     no,
@@ -167,6 +175,7 @@ export const normalizeLobbyMarket = (
     durationSeconds: m.durationSeconds ?? null,
     resolvedOutcomeId: m.resolvedOutcomeId,
     rules: m.rules,
+    minStakeMinor: toMinStakeMinor(m.minStakeMinor),
     outcomes,
     yes,
     no,

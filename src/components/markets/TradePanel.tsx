@@ -61,6 +61,11 @@ const TradePanel = ({
 
   const symbol = NAIRA
   const cash = toMajorUnits(wallet?.total ?? 0)
+  // Every market now carries its minimum stake (kobo). Shown as a hint and
+  // pre-checked before submit so the user gets instant feedback; the server
+  // STAKE_BELOW_MINIMUM / HEDGE_BELOW_VENUE_MINIMUM checks remain the backstop.
+  const marketMinNaira =
+    market.minStakeMinor != null ? toMajorUnits(market.minStakeMinor) : null
 
   const outcome = selectedOutcome ?? market.yes ?? market.outcomes[0]
   const isOpen = market.status === 'open'
@@ -98,6 +103,13 @@ const TradePanel = ({
       showWarningToast('Amount exceeds your total balance')
       return
     }
+    if (marketMinNaira != null && stakeNum < marketMinNaira) {
+      setMinStake(marketMinNaira)
+      setBetError(
+        `Minimum bet is ${symbol}${marketMinNaira.toLocaleString()} for this market.`,
+      )
+      return
+    }
     if (type === 'limit') {
       const c = Number(limitCents)
       if (!(c > 0 && c < 100)) {
@@ -126,13 +138,22 @@ const TradePanel = ({
           | {
               message?: string
               code?: string
-              details?: { minimumStakeNgn?: number }
+              details?: {
+                minimumStakeNgn?: number
+                minimumStakeMinor?: number
+              }
             }
           | undefined
         const message = data?.message ?? fallback
-        // Surface the venue minimum-bet rejection inline with a one-tap fill,
-        // reading the structured minimum from the API error `details`.
-        const min = data?.details?.minimumStakeNgn
+        // Surface the minimum-bet rejection inline with a one-tap fill, reading
+        // the structured minimum from the API error `details`. Two shapes:
+        // STAKE_BELOW_MINIMUM → minimumStakeMinor (kobo); the venue floor
+        // HEDGE_BELOW_VENUE_MINIMUM → minimumStakeNgn (naira).
+        const min =
+          data?.details?.minimumStakeNgn ??
+          (data?.details?.minimumStakeMinor != null
+            ? toMajorUnits(data.details.minimumStakeMinor)
+            : undefined)
         if (typeof min === 'number' && Number.isFinite(min)) setMinStake(min)
         setBetError(message)
       } else {
@@ -299,6 +320,13 @@ const TradePanel = ({
                 </button>
               )}
             </div>
+
+            {marketMinNaira != null && !betError && (
+              <p className='text-xs text-neutral-10'>
+                Minimum bet {symbol}
+                {marketMinNaira.toLocaleString()}
+              </p>
+            )}
 
             {betError && (
               <div className='flex flex-col gap-2 rounded-lg bg-error-bg px-3 py-2.5'>
