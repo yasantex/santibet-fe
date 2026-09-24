@@ -2,12 +2,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   useSantiBetInfiniteQuery,
   useSantiBetMutation,
+  useSantiBetQuery,
 } from './utils'
 import type {
   Bet,
   BetListResponse,
   BetPosition,
   BetPositionListResponse,
+  CashOutQuote,
   PlaceBetPayload,
 } from '../types/bet.types'
 
@@ -50,6 +52,23 @@ export const useBetPositions = (status?: string, limit = 20) =>
     params: { status, limit },
     enabled: true,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
+  })
+
+/**
+ * Read-only cash-out estimate for a position — same formula as the executed
+ * cash-out, bar a live price move. Fetch it when the confirm UI opens so the
+ * user sees "Cash out ₦X" before committing. Kept fresh (no stale cache) since
+ * it moves with the market.
+ */
+export const useCashOutQuote = (positionId?: string, enabled = true) =>
+  useSantiBetQuery<CashOutQuote>({
+    path: `/bets/positions/${positionId}/cash-out-quote`,
+    queryKey: ['cash-out-quote', positionId],
+    enabled: enabled && !!positionId,
+    queryOptions: {
+      staleTime: 0,
+      gcTime: 0,
+    },
   })
 
 export const useCashOut = (positionId: string) => {
