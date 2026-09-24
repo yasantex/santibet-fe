@@ -9,7 +9,8 @@ export default defineConfig({
     port: 3004,
     proxy: {
       '/api': {
-        target: 'https://api.santibet.com',
+        // target: 'https://api.santibet.com',
+        target: 'https://santibet-8b7dfea9557d.herokuapp.com',
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: 'localhost',

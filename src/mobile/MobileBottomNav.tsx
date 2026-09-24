@@ -4,6 +4,8 @@ import { Button } from '../components/globals/Button'
 import { useAppSelector } from '../utils/hooks'
 import { useLocation, useNavigate } from 'react-router'
 import { useLiveEvents } from '../data_layer/markets'
+import useAccountSuspended from '../hooks/useAccountSuspended'
+import { SUSPENDED_CTA_HINT } from '../utils/constants'
 
 type MobileBottomNavProps = {
   onOpenDeposit: () => void
@@ -15,6 +17,7 @@ const MobileBottomNav = ({
   onOpenSearch,
 }: MobileBottomNavProps) => {
   const { user } = useAppSelector((state) => state.user)
+  const suspended = useAccountSuspended()
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
@@ -70,6 +73,8 @@ const MobileBottomNav = ({
         <Button
           type='button'
           text='Deposit cash'
+          title={suspended ? SUSPENDED_CTA_HINT : undefined}
+          disabled={suspended}
           onClick={onOpenDeposit}
           className='shrink-0 w-fit! mt-1.5!'
         />

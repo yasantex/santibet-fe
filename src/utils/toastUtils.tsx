@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { Icon } from '../components/globals/Icon'
 import { MultiplicationSignIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { ACCOUNT_SUSPENDED_MESSAGE } from './constants'
 
 type ToastType = 'success' | 'error'
 
@@ -11,7 +12,13 @@ export type ToastAction = {
   onClick: () => void
 }
 
+const SUSPENDED_TOAST_ID = 'account-suspended'
+
 const showToast = (message: string, type: ToastType, action?: ToastAction) => {
+  // The apiClient interceptor already toasts ACCOUNT_SUSPENDED and rewrites the
+  // error message to this text, so screens that also toast `error.message` in
+  // their onError update that same toast instead of stacking a duplicate.
+  const isSuspended = message === ACCOUNT_SUSPENDED_MESSAGE
   toast.custom(
     (t): ReactElement => (
       <div
@@ -55,7 +62,11 @@ const showToast = (message: string, type: ToastType, action?: ToastAction) => {
               type === 'success' ? 'text-success' : 'text-error'
             } text-sm font-semibold`}
           >
-            {type === 'success' ? 'Success' : 'Error'}
+            {type === 'success'
+              ? 'Success'
+              : isSuspended
+                ? 'Account suspended'
+                : 'Error'}
           </h1>
         </div>
 
@@ -84,7 +95,8 @@ const showToast = (message: string, type: ToastType, action?: ToastAction) => {
       </div>
     ),
     {
-      duration: 3000,
+      ...(isSuspended ? { id: SUSPENDED_TOAST_ID } : {}),
+      duration: isSuspended ? 6000 : 3000,
       position: 'top-right',
       style: {
         background: 'var(--color-white)',
@@ -101,3 +113,5 @@ export const showSuccessToast = (message: string, action?: ToastAction) =>
   showToast(message, 'success', action)
 export const showWarningToast = (message: string, action?: ToastAction) =>
   showToast(message, 'error', action)
+export const showSuspendedToast = () =>
+  showToast(ACCOUNT_SUSPENDED_MESSAGE, 'error')

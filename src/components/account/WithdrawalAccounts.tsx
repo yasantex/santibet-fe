@@ -19,6 +19,8 @@ import AddWithdrawalAccount from '../appModals/AddWithdrawalAccount'
 import { useModalControl } from '../../hooks/useModalControl'
 import type { BaseApiResponse } from '../../types/types'
 import { Button } from '../globals/Button'
+import useAccountSuspended from '../../hooks/useAccountSuspended'
+import { SUSPENDED_CTA_HINT } from '../../utils/constants'
 
 const AccountRow = ({ account }: { account: WithdrawalAccount }) => {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -207,6 +209,7 @@ const WithdrawalAccounts = () => {
 
   const accounts = data?.data ?? []
   const cryptoAccounts = cryptoData?.data ?? []
+  const suspended = useAccountSuspended()
 
   return (
     <div className='flex flex-col gap-2 w-full rounded-lg bg-card p-4 '>
@@ -220,6 +223,8 @@ const WithdrawalAccounts = () => {
           variation='plain'
           size='medium'
           className='w-fit! border border-black!'
+          title={suspended ? SUSPENDED_CTA_HINT : undefined}
+          disabled={suspended}
           onClick={() => handleModalOpen('add-withdrawal-account')}
         />
       </div>
