@@ -9,6 +9,8 @@ import DateInput from '../../../components/globals/DateInput'
 import { UpdateProfileSchema } from '../../../utils/validations'
 import { setUser } from '../../../redux/userSlice'
 import { useDispatch } from 'react-redux'
+import useAccountSuspended from '../../../hooks/useAccountSuspended'
+import SuspendedHint from '../../../components/globals/SuspendedHint'
 
 type UpdateProfilePayload = {
   firstName: string | null
@@ -27,6 +29,7 @@ type ProfileTabProps = {
 
 const ProfileTab = ({ user, refetch }: ProfileTabProps) => {
   const dispatch = useDispatch()
+  const suspended = useAccountSuspended()
 
   const { mutateAsync: patchProfile, isPending } = useSantiBetMutation<
     UserData,
@@ -158,8 +161,9 @@ const ProfileTab = ({ user, refetch }: ProfileTabProps) => {
           className='mt-2.5'
           size='large'
           loading={isPending}
-          disabled={isPending}
+          disabled={isPending || suspended}
         />
+        {suspended && <SuspendedHint className='text-center' />}
       </form>
     </section>
   )

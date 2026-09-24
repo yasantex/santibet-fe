@@ -22,6 +22,9 @@ export interface UserData {
   hasPassword: boolean
   createdAt: string
   cashBalance?: number
+  // Not returned by the API yet — read if/when /auth/me starts exposing it.
+  suspended?: boolean
+  status?: string
 }
 
 export type AuthResponse = {

@@ -11,6 +11,7 @@ import {
 } from 'redux-persist'
 import userSlice from './userSlice'
 import favoritesSlice from './favoritesSlice'
+import accountStatusSlice from './accountStatusSlice'
 const storage = {
   getItem(key: string) {
     return Promise.resolve(window.localStorage.getItem(key))
@@ -29,11 +30,14 @@ const persistConfig = {
   // You can also specify which reducers to persist:
   // whitelist: ['user'] // only user reducer will be persisted
   //   blacklist: ['betting'], // betting will not be persisted
+  // accountStatus is re-learned from the server each session — see its slice.
+  blacklist: ['accountStatus'],
 }
 
 const rootReducer = combineReducers({
   user: userSlice,
   favorites: favoritesSlice,
+  accountStatus: accountStatusSlice,
 
   // other reducers would go here
 })

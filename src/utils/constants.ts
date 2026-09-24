@@ -466,3 +466,8 @@ export const statusBadgeClass: Record<StatusConfig['color'], string> = {
   orange: 'bg-warning/20 text-warning',
   plain: 'bg-hover/50 text-neutral-10',
 }
+
+export const ACCOUNT_SUSPENDED_CODE = 'ACCOUNT_SUSPENDED'
+export const ACCOUNT_SUSPENDED_MESSAGE =
+  "Your account is suspended — you can browse, but you can't make changes right now. Contact support."
+export const SUSPENDED_CTA_HINT = 'Disabled while your account is suspended'

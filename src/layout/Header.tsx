@@ -33,6 +33,8 @@ import { Button } from '../components/globals/Button'
 import { useAppSelector } from '../utils/hooks'
 import { useTheme } from '../hooks/useTheme'
 import useLogout from '../hooks/useLogout'
+import useAccountSuspended from '../hooks/useAccountSuspended'
+import { SUSPENDED_CTA_HINT } from '../utils/constants'
 import ProfileDropdownMenu from '../components/globals/ProfileDropdownMenu'
 import { useSantiBetQuery } from '../data_layer/utils'
 import { useBetPositions } from '../data_layer/bets'
@@ -193,6 +195,7 @@ const Header = () => {
   const { isDark, toggleTheme } = useTheme()
   const { logout } = useLogout()
   const { user } = useAppSelector((state) => state.user)
+  const suspended = useAccountSuspended()
 
   const { data: wallet } = useSantiBetQuery<WalletBalance>({
     path: '/wallet',
@@ -341,12 +344,18 @@ const Header = () => {
                 </span>
                 <span className='text-[10px] text-neutral-10'>Cash</span>
               </Link>
-              <Button
-                type='button'
-                text='Deposit cash'
-                onClick={() => handleModalOpen('deposit')}
-                className='shrink-0 w-fit! lg:flex! hidden!'
-              />
+              <span
+                title={suspended ? SUSPENDED_CTA_HINT : undefined}
+                className='shrink-0 hidden lg:flex'
+              >
+                <Button
+                  type='button'
+                  text='Deposit cash'
+                  disabled={suspended}
+                  onClick={() => handleModalOpen('deposit')}
+                  className='shrink-0 w-fit!'
+                />
+              </span>
               <Link
                 to='/notifications'
                 className='relative p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'

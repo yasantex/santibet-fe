@@ -23,6 +23,8 @@ import FilterComponent from '../../components/globals/FilterComponent'
 import { filterCategories } from '../../utils/filters'
 import WithdrawalAccounts from '../../components/account/WithdrawalAccounts'
 import { Button } from '../../components/globals/Button'
+import SuspendedHint from '../../components/globals/SuspendedHint'
+import useAccountSuspended from '../../hooks/useAccountSuspended'
 import { useQueryClient } from '@tanstack/react-query'
 
 type TransactionFilterValues = Record<'type' | 'status', string[]>
@@ -76,6 +78,7 @@ const CheckTransactionStatus = ({
 const AccountWallet = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
+  const suspended = useAccountSuspended()
   const [visible, setVisible] = useState(true)
   const [filters, setFilters] = useState<TransactionFilterValues>({
     type: [],
@@ -167,6 +170,7 @@ const AccountWallet = () => {
                   variation='primary'
                   size='medium'
                   className='w-fit!'
+                  disabled={suspended}
                   onClick={() => handleModalOpen('deposit')}
                 />
                 <Button
@@ -175,9 +179,11 @@ const AccountWallet = () => {
                   variation='plain'
                   size='medium'
                   className='w-fit! border border-black!'
+                  disabled={suspended}
                   onClick={() => handleModalOpen('withdraw')}
                 />
               </div>
+              {suspended && <SuspendedHint />}
             </div>
           )}
 
