@@ -13,6 +13,8 @@ import {
 } from '../../utils/functions'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import type { BetPosition } from '../../types/bet.types'
+import useAccountSuspended from '../../hooks/useAccountSuspended'
+import { SUSPENDED_CTA_HINT } from '../../utils/constants'
 
 const YES_LABELS = ['yes', 'up', 'over', 'win', 'true']
 
@@ -29,6 +31,7 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
     position?.market ? undefined : position?.marketId,
   )
   const { mutateAsync: cashOut, isPending } = useCashOut(position?.id)
+  const suspended = useAccountSuspended()
   const [confirmOpen, setConfirmOpen] = useState(false)
   // Live cash-out quote, fetched only while the confirm dialog is open.
   const { data: cashOutQuote, isLoading: quoteLoading } = useCashOutQuote(
@@ -166,14 +169,17 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
 
       <div className='flex items-center justify-between'>
         {isOpen && (
-          <Button
-            type='button'
-            text='Cash out'
-            variation='plain'
-            size='small'
-            className='w-fit!'
-            onClick={() => setConfirmOpen(true)}
-          />
+          <span title={suspended ? SUSPENDED_CTA_HINT : undefined}>
+            <Button
+              type='button'
+              text='Cash out'
+              variation='plain'
+              size='small'
+              className='w-fit!'
+              disabled={suspended}
+              onClick={() => setConfirmOpen(true)}
+            />
+          </span>
         )}
         {shareable && (
           <ShareBetButton

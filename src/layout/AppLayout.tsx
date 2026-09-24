@@ -5,6 +5,7 @@ import CookieConsent, {
 import { useModalControl } from '../hooks/useModalControl'
 import Footer from './Footer'
 import Header from './Header'
+import SuspendedBanner from '../components/globals/SuspendedBanner'
 import { Outlet } from 'react-router'
 
 const AppLayout = () => {
@@ -31,6 +32,7 @@ const AppLayout = () => {
     <div className='flex min-h-screen'>
       <div className='flex w-full flex-1 flex-col '>
         <Header />
+        <SuspendedBanner />
         <main className='w-full flex-1 bg-white pb-20'>
           <Outlet />
         </main>

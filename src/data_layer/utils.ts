@@ -16,6 +16,12 @@ import type { AxiosRequestConfig } from 'axios'
 import { Cookies, useCookies } from 'react-cookie'
 import { store } from '../redux/store'
 import { clearUser } from '../redux/userSlice'
+import { setSuspended } from '../redux/accountStatusSlice'
+import {
+  ACCOUNT_SUSPENDED_CODE,
+  ACCOUNT_SUSPENDED_MESSAGE,
+} from '../utils/constants'
+import { showSuspendedToast } from '../utils/toastUtils'
 
 export type QueryParams = Record<
   string,
@@ -143,9 +149,43 @@ const clearAuthenticatedSession = () => {
 const isSessionRevokedError = (error: unknown) =>
   axios.isAxiosError(error) && error.response?.data?.code === 'SESSION_REVOKED'
 
+const isAccountSuspendedError = (error: unknown) =>
+  axios.isAxiosError(error) &&
+  error.response?.status === 403 &&
+  error.response?.data?.code === ACCOUNT_SUSPENDED_CODE
+
+// Session endpoints stay allowed for suspended accounts, so their success
+// says nothing about whether the account can write again.
+const SESSION_PATHS = ['/auth/login', '/auth/logout', '/auth/refresh']
+
+const isAllowedWhileSuspended = (config: AxiosRequestConfig) =>
+  !config.method ||
+  ['get', 'head', 'options'].includes(config.method.toLowerCase()) ||
+  SESSION_PATHS.some((path) => config.url?.startsWith(path))
+
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // A write went through, so the account is no longer suspended.
+    if (
+      !isAllowedWhileSuspended(response.config) &&
+      store.getState().accountStatus.suspended
+    ) {
+      store.dispatch(setSuspended(false))
+    }
+    return response
+  },
   async (error) => {
+    // Suspension is intentional and read-only, not an auth failure: keep the
+    // session, flag the app as read-only and show a clear message. The
+    // server's message is replaced with ours so any screen that surfaces
+    // `error.response.data.message` shows the same text (and toast dedupes).
+    if (isAccountSuspendedError(error)) {
+      store.dispatch(setSuspended(true))
+      error.response.data.message = ACCOUNT_SUSPENDED_MESSAGE
+      showSuspendedToast()
+      return Promise.reject(error)
+    }
+
     const originalRequest = error.config as AxiosRequestConfig & {
       _retry?: boolean
     }

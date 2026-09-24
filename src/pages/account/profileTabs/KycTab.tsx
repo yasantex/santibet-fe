@@ -1,31 +1,9 @@
 import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon, LockIcon } from '@hugeicons/core-free-icons'
-import { Button } from '../../../components/globals/Button'
-import ModalComponent from '../../../components/globals/ModalComponent'
-import { useFormik } from 'formik'
-import type { BaseApiResponse, KycStatusResponse } from '../../../types/types'
-import { useSantiBetMutation } from '../../../data_layer/utils'
-import { isAxiosError } from 'axios'
-import { showSuccessToast, showWarningToast } from '../../../utils/toastUtils'
-import { FormInput } from '../../../components/globals/FormInput'
-import CustomSelector from '../../../components/globals/CustomSelector'
-import DateInput from '../../../components/globals/DateInput'
-
-type KycPayload = {
-  idType: string
-  idNumber: string
-  firstName: string
-  lastName: string
-  dateOfBirth: string
-}
-
-const idTypeOptions = [
-  { label: 'BVN', value: 'BVN' },
-  { label: 'NIN', value: 'NIN' },
-  { label: "Voter's Card", value: "voter's card" },
-  { label: "Driver's Licence", value: "driver's licence" },
-]
+import type { KycStatusResponse } from '../../../types/types'
+import { kycStatusBadge } from '../../../utils/status'
+import StandardVerification from '../../../components/appModals/StandardVerification'
 
 type KycTabProps = {
   kycStatus: KycStatusResponse | undefined
@@ -35,55 +13,7 @@ type KycTabProps = {
 
 const KycTab = ({ kycStatus, kycLoading, refetchKyc }: KycTabProps) => {
   const [kycModalOpen, setKycModalOpen] = useState(false)
-  const isKycVerified =
-    !!kycStatus?.status && kycStatus.status !== 'NOT_STARTED'
-
-  const { mutateAsync: postVerify, isPending } = useSantiBetMutation<
-    BaseApiResponse,
-    KycPayload
-  >({
-    path: '/kyc/verify',
-    mutationOptions: {
-      onError: (error) => {
-        if (isAxiosError(error)) {
-          const errorData = error.response?.data
-          showWarningToast(errorData?.message)
-        } else {
-          showWarningToast(error.message)
-        }
-      },
-      onSuccess: (data) => {
-        showSuccessToast(data?.message)
-        refetchKyc()
-      },
-    },
-  })
-
-  const {
-    values,
-    errors,
-    touched,
-    handleSubmit,
-    handleChange,
-    handleBlur,
-    setFieldValue,
-  } = useFormik<KycPayload>({
-    initialValues: {
-      idType: '',
-      idNumber: '',
-      firstName: '',
-      lastName: '',
-      dateOfBirth: '',
-    },
-
-    onSubmit: async (vals) => {
-      try {
-        await postVerify(vals)
-      } catch {
-        // Already surfaced via the mutation's onError toast above.
-      }
-    },
-  })
+  const badge = kycStatusBadge(kycStatus?.status)
 
   return (
     <div className='flex flex-col gap-5'>
@@ -141,13 +71,11 @@ const KycTab = ({ kycStatus, kycLoading, refetchKyc }: KycTabProps) => {
               <div className='flex items-center gap-2'>
                 {kycLoading ? (
                   <span className='h-5 w-16 animate-pulse rounded-full bg-neutral-10/20' />
-                ) : isKycVerified ? (
-                  <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
-                    Verified
-                  </span>
                 ) : (
-                  <span className='w-fit rounded-full bg-surface-error px-2.5 py-0.5 text-xs font-semibold text-error'>
-                    Not verified
+                  <span
+                    className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}
+                  >
+                    {badge.label}
                   </span>
                 )}
                 <HugeiconsIcon
@@ -203,93 +131,13 @@ const KycTab = ({ kycStatus, kycLoading, refetchKyc }: KycTabProps) => {
         </div>
       </section>
 
-      <ModalComponent
+      <StandardVerification
         open={kycModalOpen}
         handleClose={() => setKycModalOpen(false)}
-        title='Standard verification'
-        subtitle='Verify your identity to unlock withdrawals.'
-        className='max-w-125! w-[90%]!'
-      >
-        {kycLoading ? (
-          <div className='h-11 w-full animate-pulse rounded-lg bg-neutral-10/20' />
-        ) : kycStatus?.status === 'NOT_STARTED' ? (
-          <form
-            onSubmit={handleSubmit}
-            className='w-full flex flex-col gap-2.5'
-          >
-            <CustomSelector
-              options={idTypeOptions}
-              value={values.idType}
-              onChange={(value) => setFieldValue('idType', value)}
-              placeholder='Select ID type'
-              containerClassName='w-full'
-            />
-
-            <FormInput
-              type='text'
-              name='idNumber'
-              value={values.idNumber}
-              placeholder='Enter ID number'
-              onChange={handleChange}
-              onBlur={handleBlur}
-              errors={
-                errors.idNumber && touched.idNumber ? errors.idNumber : ''
-              }
-            />
-
-            <FormInput
-              type='text'
-              name='firstName'
-              value={values.firstName}
-              placeholder='Enter first name'
-              onChange={handleChange}
-              onBlur={handleBlur}
-              errors={
-                errors.firstName && touched.firstName ? errors.firstName : ''
-              }
-            />
-
-            <FormInput
-              type='text'
-              name='lastName'
-              value={values.lastName}
-              placeholder='Enter last name'
-              onChange={handleChange}
-              onBlur={handleBlur}
-              errors={
-                errors.lastName && touched.lastName ? errors.lastName : ''
-              }
-            />
-            <DateInput
-              value={values.dateOfBirth}
-              onChange={(date) => setFieldValue('dateOfBirth', date)}
-              placeholder='select date'
-              errors={
-                errors.dateOfBirth && touched.dateOfBirth
-                  ? errors.dateOfBirth
-                  : ''
-              }
-              containerClassName='w-full'
-            />
-
-            <Button
-              type='submit'
-              text='Verify KYC'
-              variation='primary'
-              className='mt-2.5'
-              size='large'
-              loading={isPending}
-              disabled={isPending}
-            />
-          </form>
-        ) : (
-          <div className='flex items-center rounded-lg bg-card p-4'>
-            <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
-              Verified
-            </span>
-          </div>
-        )}
-      </ModalComponent>
+        kycStatus={kycStatus}
+        kycLoading={kycLoading}
+        refetchKyc={refetchKyc}
+      />
     </div>
   )
 }

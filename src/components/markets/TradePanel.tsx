@@ -18,6 +18,8 @@ import type { UiMarket, UiOutcome } from '../../types/market.types'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { BetType } from '../../types/bet.types'
 import { outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
+import useAccountSuspended from '../../hooks/useAccountSuspended'
+import SuspendedHint from '../globals/SuspendedHint'
 
 const QUICK_ADDS = [100, 200, 500, 1000]
 
@@ -35,6 +37,7 @@ const TradePanel = ({
   const navigate = useNavigate()
   const [cookies] = useCookies(['token'])
   const isSignedIn = !!cookies?.token
+  const suspended = useAccountSuspended()
 
   const [side, setSide] = useState<'buy' | 'sell'>('buy')
   const [type, setType] = useState<BetType>('market')
@@ -384,9 +387,12 @@ const TradePanel = ({
             size='large'
             className='w-full'
             loading={isPending}
-            disabled={isSignedIn && !isOpen}
+            disabled={isSignedIn && (!isOpen || suspended)}
             onClick={handleSubmit}
           />
+          {isSignedIn && suspended && (
+            <SuspendedHint className='-mt-2 text-center' />
+          )}
         </>
       )}
     </div>

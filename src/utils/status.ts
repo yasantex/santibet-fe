@@ -30,3 +30,22 @@ export const WithdrawalStatusConfig: StatusConfig[] = [
     color: 'red',
   },
 ]
+
+// Label + badge classes for a KYC status (NOT_STARTED, PENDING, APPROVED, …).
+// Unknown non-empty statuses read as verified, matching the original UI.
+export const kycStatusBadge = (status: string | undefined) => {
+  switch (status) {
+    case undefined:
+    case '':
+    case 'NOT_STARTED':
+      return { label: 'Not verified', className: 'bg-surface-error text-error' }
+    case 'PENDING':
+      return { label: 'Under review', className: 'bg-warning/10 text-warning' }
+    case 'REJECTED':
+      return { label: 'Rejected', className: 'bg-surface-error text-error' }
+    case 'MORE_INFO_REQUIRED':
+      return { label: 'Action needed', className: 'bg-warning/10 text-warning' }
+    default:
+      return { label: 'Verified', className: 'bg-surface-success text-success' }
+  }
+}

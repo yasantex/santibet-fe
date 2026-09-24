@@ -11,6 +11,8 @@ import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import { formatCurrency, formatSharePrice, toMajorUnits } from '../../utils/functions'
 import type { UiMarket } from '../../types/market.types'
 import type { BetPosition } from '../../types/bet.types'
+import useAccountSuspended from '../../hooks/useAccountSuspended'
+import { SUSPENDED_CTA_HINT } from '../../utils/constants'
 
 const SellPositionRow = ({
   position,
@@ -26,6 +28,7 @@ const SellPositionRow = ({
     position.id,
     confirmOpen,
   )
+  const suspended = useAccountSuspended()
 
   const outcome = market.outcomes.find((o) => o.id === position.outcomeId)
   const isYes = market.yes?.id === position.outcomeId
@@ -86,14 +89,17 @@ const SellPositionRow = ({
             {formatCurrency(String(Math.abs(pnl)), currency)}
           </span>
         </div>
-        <Button
-          type='button'
-          text='Cash out'
-          variation='primary'
-          size='medium'
-          className='w-fit!'
-          onClick={() => setConfirmOpen(true)}
-        />
+        <span title={suspended ? SUSPENDED_CTA_HINT : undefined}>
+          <Button
+            type='button'
+            text='Cash out'
+            variation='primary'
+            size='medium'
+            className='w-fit!'
+            disabled={suspended}
+            onClick={() => setConfirmOpen(true)}
+          />
+        </span>
       </div>
 
       <ConfirmationModal
