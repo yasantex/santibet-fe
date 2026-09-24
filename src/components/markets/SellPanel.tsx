@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { Button } from '../globals/Button'
 import ConfirmationModal from '../globals/ConfirmationModal'
-import { useBetPositions, useCashOut } from '../../data_layer/bets'
+import {
+  useBetPositions,
+  useCashOut,
+  useCashOutQuote,
+} from '../../data_layer/bets'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import { formatCurrency, formatSharePrice, toMajorUnits } from '../../utils/functions'
 import type { UiMarket } from '../../types/market.types'
@@ -17,6 +21,11 @@ const SellPositionRow = ({
 }) => {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const { mutateAsync: cashOut, isPending } = useCashOut(position.id)
+  // Fetch a live cash-out quote once the confirm dialog opens.
+  const { data: quote, isLoading: quoteLoading } = useCashOutQuote(
+    position.id,
+    confirmOpen,
+  )
 
   const outcome = market.outcomes.find((o) => o.id === position.outcomeId)
   const isYes = market.yes?.id === position.outcomeId
@@ -28,6 +37,9 @@ const SellPositionRow = ({
   const value = toMajorUnits(position.currentValue?.amount ?? 0)
   const pnl = value - staked
   const currency = position.currentValue?.currency
+  // Quoted proceeds (kobo → naira), falling back to mark-to-market value.
+  const quotedValue = quote ? toMajorUnits(quote.valueMinor) : value
+  const quotedCurrency = quote?.currency ?? currency
 
   const handleCashOut = async () => {
     try {
@@ -87,8 +99,16 @@ const SellPositionRow = ({
       <ConfirmationModal
         open={confirmOpen}
         title='Cash out position'
-        description={`Cash out your ${outcome?.label ?? ''} position in "${market.title}" at its current value of ${formatCurrency(value, currency)}?`}
-        confirmText='Cash out'
+        description={
+          quoteLoading
+            ? `Fetching the latest cash-out value for your ${outcome?.label ?? ''} position in "${market.title}"…`
+            : `Cash out your ${outcome?.label ?? ''} position in "${market.title}" for ${formatCurrency(quotedValue, quotedCurrency)}? The final amount may vary slightly with the market.`
+        }
+        confirmText={
+          quoteLoading
+            ? 'Cash out'
+            : `Cash out ${formatCurrency(quotedValue, quotedCurrency)}`
+        }
         isConfirming={isPending}
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleCashOut}

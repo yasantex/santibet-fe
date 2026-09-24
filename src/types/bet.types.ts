@@ -88,3 +88,14 @@ export interface BetPositionListResponse {
   data: BetPosition[]
   nextCursor: string | null
 }
+
+/** Read-only estimate of what a position would return if cashed out now. */
+export interface CashOutQuote {
+  /** Contracts/quantity being sold. */
+  quantity: string | number
+  /** Price the position would sell at. */
+  sellPrice: string | number
+  /** Estimated proceeds, in kobo (minor units). */
+  valueMinor: string | number
+  currency: string
+}
