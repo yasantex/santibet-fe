@@ -24,6 +24,10 @@ type MarketFilters = Record<'status' | 'sort', string[]>
 
 const FEATURED_COUNT = 5
 
+// Rolling "<Coin> <interval> — Up or Down" series that always get a hero slide.
+// pickHotTopics skips short-interval series, so they're picked separately.
+const FEATURED_CRYPTO = ['Bitcoin', 'Ethereum', 'Litecoin']
+
 const marketFilterCategories: FilterCategory[] = [
   {
     key: 'status',
@@ -102,6 +106,24 @@ const MarketsDashboard = () => {
       if (tradeable(e)) picked.set(e.id, e)
     }
     const events = data?.events ?? []
+    // One slide per coin: its longest open interval, so the slide doesn't
+    // settle out from under the viewer mid-rotation.
+    for (const coin of FEATURED_CRYPTO) {
+      const series = events
+        .filter(
+          (e) =>
+            e.title.startsWith(`${coin} `) &&
+            tradeable(e) &&
+            e.markets.some((m) => m.durationSeconds),
+        )
+        .sort(
+          (a, b) =>
+            Math.max(...b.markets.map((m) => m.durationSeconds ?? 0)) -
+            Math.max(...a.markets.map((m) => m.durationSeconds ?? 0)),
+        )[0]
+      if (series && !picked.has(series.id)) picked.set(series.id, series)
+    }
+    const featuredLimit = picked.size + FEATURED_COUNT
     const eventOf = new Map(
       events.flatMap((e) => e.markets.map((m) => [m.id, e] as const)),
     )
@@ -113,11 +135,11 @@ const MarketsDashboard = () => {
       // isn't already a near-certainty either way.
       .filter((m) => m.volume > 0 && contested(eventOf.get(m.id)))
     for (const m of ranked) {
-      if (picked.size >= FEATURED_COUNT) break
+      if (picked.size >= featuredLimit) break
       const e = eventOf.get(m.id)
       if (e && !picked.has(e.id)) picked.set(e.id, e)
     }
-    return Array.from(picked.values()).slice(0, FEATURED_COUNT)
+    return Array.from(picked.values())
   }, [home, data])
 
   // Ranked for our audience (local first, then sport/crypto/global), not raw
