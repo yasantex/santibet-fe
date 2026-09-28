@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import LiveEventCard from '../../components/markets/LiveEventCard'
 import {
   LiveBadge,
+  LiveCategoryFilter,
   LiveIntervalFilter,
 } from '../../components/markets/LiveBits'
 import { MarketCardSkeleton } from '../../components/globals/ReusedText'
@@ -17,16 +18,47 @@ import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
 const LiveMarkets = () => {
   const navigate = useNavigate()
   const { events: allEvents, isLoading, isError } = useLiveBets({ limit: 40 })
-  // Round-length filter (seconds); null = everything in-play.
+  // Category sub-filter (Crypto / Sports …); null = every category.
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  // Round-length filter (seconds); null = everything in-play. Only meaningful
+  // for crypto rounds, so it's hidden for non-crypto categories.
   const [intervalFilter, setIntervalFilter] = useState<number | null>(null)
+
+  // Categories actually present in the live feed, with Crypto/Sports first.
+  const categories = useMemo<string[]>(() => {
+    const present = new Set<string>()
+    for (const e of allEvents) if (e.category) present.add(e.category)
+    const preferred = ['Crypto', 'Sports']
+    return [
+      ...preferred.filter((c) => present.has(c)),
+      ...[...present].filter((c) => !preferred.includes(c)).sort(),
+    ]
+  }, [allEvents])
+
+  // Round intervals only apply to the crypto up/down rounds.
+  const showIntervalFilter =
+    categoryFilter === null || categoryFilter === 'Crypto'
 
   const events = useMemo<UiEvent[]>(
     () =>
-      intervalFilter == null
-        ? allEvents
-        : allEvents.filter((e) => eventIntervalSeconds(e) === intervalFilter),
-    [allEvents, intervalFilter],
+      allEvents.filter((e) => {
+        if (categoryFilter && e.category !== categoryFilter) return false
+        if (
+          showIntervalFilter &&
+          intervalFilter != null &&
+          eventIntervalSeconds(e) !== intervalFilter
+        )
+          return false
+        return true
+      }),
+    [allEvents, categoryFilter, intervalFilter, showIntervalFilter],
   )
+
+  const handleCategoryChange = (category: string | null) => {
+    setCategoryFilter(category)
+    // Interval only applies to crypto — clear it when leaving that lane.
+    if (category !== null && category !== 'Crypto') setIntervalFilter(null)
+  }
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToOutcome = (m: UiMarket, o: UiOutcome) =>
@@ -43,11 +75,21 @@ const LiveMarkets = () => {
         events.
       </p>
 
-      <LiveIntervalFilter
-        intervals={LIVE_INTERVALS}
-        value={intervalFilter}
-        onChange={setIntervalFilter}
-      />
+      {categories.length > 1 && (
+        <LiveCategoryFilter
+          categories={categories}
+          value={categoryFilter}
+          onChange={handleCategoryChange}
+        />
+      )}
+
+      {showIntervalFilter && (
+        <LiveIntervalFilter
+          intervals={LIVE_INTERVALS}
+          value={intervalFilter}
+          onChange={setIntervalFilter}
+        />
+      )}
 
       {isError ? (
         <p className='py-16 text-center text-sm text-neutral-10'>
@@ -73,9 +115,11 @@ const LiveMarkets = () => {
       ) : (
         <div className='flex flex-col items-center gap-2 rounded-2xl border border-border bg-card py-16 text-center'>
           <p className='text-sm text-neutral-10'>
-            {intervalFilter != null
-              ? `No ${LIVE_INTERVALS.find((i) => i.seconds === intervalFilter)?.label} rounds live right now.`
-              : 'Nothing in-play right now.'}{' '}
+            {categoryFilter
+              ? `No ${categoryFilter} markets live right now.`
+              : intervalFilter != null
+                ? `No ${LIVE_INTERVALS.find((i) => i.seconds === intervalFilter)?.label} rounds live right now.`
+                : 'Nothing in-play right now.'}{' '}
             Check back soon — new rounds open continuously.
           </p>
           <button

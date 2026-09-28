@@ -39,6 +39,36 @@ export const ScoreBoard = ({ state }: { state: LiveState }) => {
   )
 }
 
+/** All / Crypto / Sports … chips separating the live feed by category. */
+export const LiveCategoryFilter = ({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: readonly string[]
+  value: string | null
+  onChange: (category: string | null) => void
+}) => (
+  <div className='hide-scroll-bar flex gap-2 overflow-x-auto'>
+    {[{ label: 'All', value: null }, ...categories.map((c) => ({ label: c, value: c }))].map(
+      (opt) => (
+        <button
+          key={opt.label}
+          type='button'
+          onClick={() => onChange(opt.value)}
+          className={`shrink-0 cursor-pointer rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+            value === opt.value
+              ? 'bg-brand-green text-black'
+              : 'bg-card text-neutral-10 hover:text-black'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ),
+    )}
+  </div>
+)
+
 /** All / 5 mins / 15 mins / 1 hour chips for filtering live bets. */
 export const LiveIntervalFilter = ({
   intervals,
