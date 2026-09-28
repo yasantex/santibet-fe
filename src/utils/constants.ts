@@ -103,6 +103,13 @@ export type CategoryTopic = {
    * count then falls back to the honest live count automatically.
    */
   mockCount?: number
+  /**
+   * Words that place a market in this topic, matched whole-word against the
+   * market/event title and subtitle. Defaults to the topic name itself —
+   * set this when the label is a grouping ("Stablecoins") rather than a
+   * word that shows up in market titles.
+   */
+  keywords?: string[]
 }
 
 /**
@@ -127,15 +134,70 @@ export const categoryTopics: Record<string, CategoryTopic[]> = {
   ],
   // Sports doesn't use this list — its sidebar is the data-driven sport →
   // league tree in CategoryPage (`sportsGroups` + `mockSportsTree`) instead.
-  // `mockCount` acts as a floor here (real count still grows past it via
-  // `Math.max`), since these generic doc labels rarely substring-match a
-  // market title the way specific coin names ("Bitcoin") used to.
+  // Crypto topics are keyword-driven (see `keywords`) since the labels are
+  // groupings that never appear in market titles. Topics can overlap (a
+  // Hyperliquid airdrop is both DeFi and an Airdrop); empty ones are hidden.
   Crypto: [
-    { name: 'Assets', mockCount: 0 },
-    { name: 'DeFi', mockCount: 0 },
-    { name: 'NFTs', mockCount: 0 },
-    { name: 'Protocols', mockCount: 0 },
-    { name: 'Stablecoins', mockCount: 0 },
+    {
+      name: 'Assets',
+      keywords: [
+        'bitcoin',
+        'btc',
+        'ethereum',
+        'eth',
+        'litecoin',
+        'ltc',
+        'solana',
+        'xrp',
+        'dogecoin',
+        'doge',
+        'bnb',
+        'cardano',
+      ],
+    },
+    {
+      name: 'Token launches',
+      keywords: ['launch a token', 'token launch', 'tge', 'fdv'],
+    },
+    { name: 'Airdrops', keywords: ['airdrop'] },
+    {
+      name: 'DeFi',
+      keywords: [
+        'defi',
+        'dex',
+        'hyperliquid',
+        'pump.fun',
+        'uniswap',
+        'aave',
+        'felix protocol',
+        'ostium',
+        'lending',
+        'yield',
+        'tvl',
+      ],
+    },
+    {
+      name: 'Protocols',
+      keywords: [
+        'protocol',
+        'metamask',
+        'base',
+        'abstract',
+        'megaeth',
+        'layer 2',
+        'l2',
+        'mainnet',
+      ],
+    },
+    {
+      name: 'Stablecoins',
+      keywords: ['stablecoin', 'usdt', 'usdc', 'tether', 'dai', 'cngn'],
+    },
+    { name: 'NFTs', keywords: ['nft', 'nfts', 'opensea', 'ordinals'] },
+    {
+      name: 'Exchanges',
+      keywords: ['kraken', 'coinbase', 'binance', 'bybit', 'exchange'],
+    },
   ],
   // Not in the doc's 11-domain table — a real backend category, so its
   // topic list stays as its own curated set rather than following the doc.

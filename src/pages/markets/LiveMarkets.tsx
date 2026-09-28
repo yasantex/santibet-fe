@@ -1,17 +1,32 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import LiveEventCard from '../../components/markets/LiveEventCard'
-import { LiveBadge } from '../../components/markets/LiveBits'
+import {
+  LiveBadge,
+  LiveIntervalFilter,
+} from '../../components/markets/LiveBits'
 import { MarketCardSkeleton } from '../../components/globals/ReusedText'
-import { useLiveEvents } from '../../data_layer/markets'
+import {
+  eventIntervalSeconds,
+  LIVE_INTERVALS,
+  useLiveBets,
+} from '../../data_layer/markets'
 import { marketHref } from '../../utils/marketDisplay'
 import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
 
 const LiveMarkets = () => {
   const navigate = useNavigate()
-  const { data, isLoading, isError } = useLiveEvents({ limit: 40 })
+  const { events: allEvents, isLoading, isError } = useLiveBets({ limit: 40 })
+  // Round-length filter (seconds); null = everything in-play.
+  const [intervalFilter, setIntervalFilter] = useState<number | null>(null)
 
-  const events = useMemo<UiEvent[]>(() => data?.events ?? [], [data])
+  const events = useMemo<UiEvent[]>(
+    () =>
+      intervalFilter == null
+        ? allEvents
+        : allEvents.filter((e) => eventIntervalSeconds(e) === intervalFilter),
+    [allEvents, intervalFilter],
+  )
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToOutcome = (m: UiMarket, o: UiOutcome) =>
@@ -27,6 +42,12 @@ const LiveMarkets = () => {
         In-play markets you can trade right now — short-duration crypto and live
         events.
       </p>
+
+      <LiveIntervalFilter
+        intervals={LIVE_INTERVALS}
+        value={intervalFilter}
+        onChange={setIntervalFilter}
+      />
 
       {isError ? (
         <p className='py-16 text-center text-sm text-neutral-10'>
@@ -52,8 +73,10 @@ const LiveMarkets = () => {
       ) : (
         <div className='flex flex-col items-center gap-2 rounded-2xl border border-border bg-card py-16 text-center'>
           <p className='text-sm text-neutral-10'>
-            Nothing in-play right now. Check back soon — new rounds open
-            continuously.
+            {intervalFilter != null
+              ? `No ${LIVE_INTERVALS.find((i) => i.seconds === intervalFilter)?.label} rounds live right now.`
+              : 'Nothing in-play right now.'}{' '}
+            Check back soon — new rounds open continuously.
           </p>
           <button
             type='button'

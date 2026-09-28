@@ -1,40 +1,56 @@
 import {
-  DiscordIcon,
   Facebook01Icon,
   InstagramIcon,
+  Linkedin01Icon,
   NewTwitterIcon,
-  TelegramIcon,
   TiktokIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Link } from 'react-router'
 
 const socialLinks = [
-  { name: 'X', href: 'https://x.com', icon: NewTwitterIcon },
-  { name: 'Discord', href: 'https://discord.com', icon: DiscordIcon },
-  { name: 'Telegram', href: 'https://telegram.org', icon: TelegramIcon },
-  { name: 'Instagram', href: 'https://instagram.com', icon: InstagramIcon },
-  { name: 'Facebook', href: 'https://facebook.com', icon: Facebook01Icon },
-  { name: 'TikTok', href: 'https://tiktok.com', icon: TiktokIcon },
+  {
+    name: 'Instagram',
+    href: 'https://www.instagram.com/santibetng',
+    icon: InstagramIcon,
+  },
+  { name: 'X', href: 'https://x.com/santibetng', icon: NewTwitterIcon },
+  {
+    name: 'TikTok',
+    href: 'https://www.tiktok.com/@santibetng',
+    icon: TiktokIcon,
+  },
+  {
+    name: 'Facebook',
+    href: 'https://www.facebook.com/santibetng',
+    icon: Facebook01Icon,
+  },
+  {
+    name: 'LinkedIn',
+    href: 'https://www.linkedin.com/company/santibet/',
+    icon: Linkedin01Icon,
+  },
 ]
 
 const footerLinks = [
   { label: 'About', href: '/about-us' },
   { label: 'Cookie Policy', href: '#' },
-  { label: 'Privacy Policy', href: '/privacy-policy' },
-  { label: 'Terms & Conditions', href: '/terms-of-service' },
   { label: 'Responsible Gambling', href: '/responsible-gambling' },
   { label: 'Contact Support', href: '/contact-us' },
+]
+
+const footerLinksTwo = [
+  { label: 'Privacy Policy', href: '/privacy-policy' },
+  { label: 'Terms & Conditions', href: '/terms-of-service' },
   { label: 'FAQs', href: '/faqs' },
 ]
 const Footer = () => {
   return (
     <footer className='w-full bg-background text-neutral-10 py-10 border-t border-border'>
       <div className='mx-auto max-w-8xl px-6 py-12 sm:px-8 lg:px-12'>
-        <div className='flex flex-col gap-10 lg:flex-row lg:justify-between'>
-
+        <div className='flex flex-col gap-10 xl:flex-row xl:justify-between'>
           <div className='max-w-md space-y-4 text-sm leading-relaxed text-neutral-10'>
-               <p>
+            <p>
               SantiBet is operated by AWA LAWA LIMITED, a company registered in
               Nigeria, with its registered office at Adegite House, Adegite
               Close, Off Iyin-Ado Road, Iyin-Ekiti, Ekiti State, Nigeria. AWA
@@ -53,10 +69,39 @@ const Footer = () => {
               </a>
               . You accept its use by continuing the navigation.
             </p>
-         
+            <div className='flex h-fit flex-wrap gap-3'>
+              {socialLinks.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  aria-label={social.name}
+                  className='flex h-9 w-9 items-center justify-center rounded-full bg-white text-neutral-10 transition-colors hover:bg-hover hover:text-black'
+                >
+                  <HugeiconsIcon
+                    icon={social.icon}
+                    size={18}
+                    strokeWidth={1.5}
+                  />
+                </a>
+              ))}
+            </div>
           </div>
-          <ul className='space-y-4 text-sm'>
+          <ul className='space-y-4 text-sm max-w-md'>
             {footerLinks.map((link) => (
+              <li key={link.label}>
+                <Link
+                  to={link.href}
+                  className='text-neutral-10 text-left hover:underline hover:underline-offset-2 hover:text-black'
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <ul className='space-y-4 text-sm max-w-md min-w-md'>
+            {footerLinksTwo.map((link) => (
               <li key={link.label}>
                 <Link
                   to={link.href}
@@ -67,19 +112,6 @@ const Footer = () => {
               </li>
             ))}
           </ul>
-
-          <div className='flex h-fit flex-wrap gap-3 sm:justify-end'>
-            {socialLinks.map((social) => (
-              <a
-                key={social.name}
-                href={social.href}
-                aria-label={social.name}
-                className='flex h-9 w-9 items-center justify-center rounded-full bg-white text-neutral-10 transition-colors hover:bg-hover hover:text-black'
-              >
-                <HugeiconsIcon icon={social.icon} size={18} strokeWidth={1.5} />
-              </a>
-            ))}
-          </div>
         </div>
 
         <div className='my-10 h-px w-full bg-border' />

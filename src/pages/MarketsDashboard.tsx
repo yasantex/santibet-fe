@@ -9,11 +9,7 @@ import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import FilterComponent, {
   type FilterCategory,
 } from '../components/globals/FilterComponent'
-import {
-  useEvents,
-  useLiveEvents,
-  useLobbyHome,
-} from '../data_layer/markets'
+import { useEvents, useLiveEvents, useLobbyHome } from '../data_layer/markets'
 import { useFavorites } from '../hooks/useFavorites'
 import { marketHref } from '../utils/marketDisplay'
 import type { UiEvent, UiMarket, UiOutcome } from '../types/market.types'
@@ -23,6 +19,7 @@ import { pickHotTopics } from '../utils/topicRelevance'
 type MarketFilters = Record<'status' | 'sort', string[]>
 
 const FEATURED_COUNT = 5
+const HOT_PICKS_COUNT = 5
 
 // Rolling "<Coin> <interval> — Up or Down" series that always get a hero slide.
 // pickHotTopics skips short-interval series, so they're picked separately.
@@ -61,7 +58,9 @@ const MarketsDashboard = () => {
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
   const { data, isLoading, isError, refetch } = useEvents({ limit: 60 })
-  const { data: home } = useLobbyHome()
+  const { data: home, isLoading: isHomeLoading } = useLobbyHome()
+  // Every admin-featured event, not just the few /lobby/home returns.
+  const { data: featuredData } = useEvents({ featured: true, limit: 50 })
   const { data: liveData } = useLiveEvents({ limit: 8 })
   const liveEvents = useMemo<UiEvent[]>(
     () => liveData?.events ?? [],
@@ -93,19 +92,32 @@ const MarketsDashboard = () => {
     return ['All', ...Array.from(set)]
   }, [data])
 
-  // Hero carousel: backend-curated featured events first, then the most
+  // Hero carousel: every admin-featured event first, then the most
   // audience-relevant events that actually trade (so each slide has a real
-  // chart); zero-volume local markets surface in Hot Topics instead.
+  // chart).
   const featuredEvents = useMemo<UiEvent[]>(() => {
     const tradeable = (e: UiEvent) =>
       e.markets.some((m) => m.yes && m.status === 'open')
+    // Featured is an operator decision, so keep paused markets too — only
+    // drop events with nothing left to trade or chart.
+    const showable = (e: UiEvent) =>
+      e.markets.some(
+        (m) => m.yes && m.status !== 'closed' && m.status !== 'settled',
+      )
     const contested = (e?: UiEvent) =>
-      !!e?.markets.some((m) => (m.yes?.price ?? 0) >= 0.02 && (m.yes?.price ?? 0) <= 0.98)
+      !!e?.markets.some(
+        (m) => (m.yes?.price ?? 0) >= 0.02 && (m.yes?.price ?? 0) <= 0.98,
+      )
     const picked = new Map<string, UiEvent>()
-    for (const e of home?.featured ?? []) {
-      if (tradeable(e)) picked.set(e.id, e)
-    }
     const events = data?.events ?? []
+    // The flag check guards the raw fallback feed, which ignores ?featured.
+    for (const e of [
+      ...(home?.featured ?? []),
+      ...(featuredData?.events ?? []).filter((e) => e.featured),
+      ...events.filter((e) => e.featured),
+    ]) {
+      if (!picked.has(e.id) && showable(e)) picked.set(e.id, e)
+    }
     // One slide per coin: its longest open interval, so the slide doesn't
     // settle out from under the viewer mid-rotation.
     for (const coin of FEATURED_CRYPTO) {
@@ -140,18 +152,20 @@ const MarketsDashboard = () => {
       if (e && !picked.has(e.id)) picked.set(e.id, e)
     }
     return Array.from(picked.values())
-  }, [home, data])
+  }, [home, featuredData, data])
 
-  // Ranked for our audience (local first, then sport/crypto/global), not raw
-  // volume — otherwise the rail is all US governor races.
-  const hotTopics = useMemo(
+  // Operator-curated in admin (Events → Hot pick), served by /lobby/home in
+  // the order the API returns them.
+  const hotPicks = useMemo(
     () =>
-      pickHotTopics(
-        (data?.events ?? []).flatMap((e) => e.markets),
-        5,
-        featuredEvents.map((e) => e.id),
-      ),
-    [data, featuredEvents],
+      (home?.hotPicks ?? [])
+        .filter((e) => e.markets.length > 0)
+        .slice(0, HOT_PICKS_COUNT)
+        .map((e) => ({
+          event: e,
+          volume: e.markets.reduce((sum, m) => sum + m.volume, 0),
+        })),
+    [home],
   )
 
   const gridMarkets = useMemo(() => {
@@ -180,11 +194,16 @@ const MarketsDashboard = () => {
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
+  // A single-market event goes straight to its market; otherwise the event page.
+  const goToEvent = (e: UiEvent) =>
+    e.markets.length === 1
+      ? goToMarket(e.markets[0])
+      : navigate(`/events/${e.id}`)
 
   return (
     <main className='mx-auto flex w-full flex-col gap-6 px-3 pt-4 pb-20 md:px-8'>
       <div className='grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]'>
-        {isLoading || !featuredEvents.length ? (
+        {!featuredEvents.length ? (
           <div className='h-85 animate-pulse rounded-lg bg-card' />
         ) : (
           <FeaturedCarousel
@@ -197,32 +216,32 @@ const MarketsDashboard = () => {
           />
         )}
 
-        {isLoading ? (
+        {isHomeLoading ? (
           <div className='h-85 animate-pulse rounded-lg bg-card' />
         ) : (
           <div className='flex flex-col gap-4 rounded-lg bg-card p-4'>
             <h2 className='text-xs font-semibold text-neutral-10 uppercase'>
-              Hot Topics
+              Hot Picks
             </h2>
             <div className='flex flex-col divide-y divide-border/40'>
-              {hotTopics.map((topic) => (
+              {hotPicks.map(({ event, volume }) => (
                 <button
-                  key={topic.id}
+                  key={event.id}
                   type='button'
-                  onClick={() => goToMarket(topic)}
+                  onClick={() => goToEvent(event)}
                   className='flex items-center justify-between gap-4 py-3 text-left hover:bg-hover cursor-pointer p-2.5'
                 >
                   <span className='line-clamp-2 text-sm text-black'>
-                    {topic.title}
+                    {event.title}
                   </span>
                   <span className='shrink-0 text-sm font-semibold text-neutral-10'>
-                    {topic.volume > 0 ? formatNairaCompact(topic.volume) : 'New'}
+                    {volume > 0 ? formatNairaCompact(volume) : 'New'}
                   </span>
                 </button>
               ))}
-              {!hotTopics.length && (
+              {!hotPicks.length && (
                 <p className='py-3 text-sm text-neutral-10'>
-                  No markets available yet.
+                  No hot picks right now.
                 </p>
               )}
             </div>
@@ -262,15 +281,9 @@ const MarketsDashboard = () => {
 
       {closingSoon.length > 0 && (
         <section className='flex flex-col gap-3'>
-          <div className='flex items-center gap-2'>
-            <span className='flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-bold text-blue-500'>
-              <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500' />
-              LIVE
-            </span>
-            <h2 className='text-sm font-semibold text-black uppercase'>
-              Closing soon
-            </h2>
-          </div>
+          <h2 className='text-sm font-semibold text-black uppercase'>
+            Closing soon
+          </h2>
           <div className='hide-scroll-bar flex gap-4 overflow-x-auto pb-1'>
             {closingSoon.map((market) => (
               <div key={market.id} className='w-[260px] shrink-0'>

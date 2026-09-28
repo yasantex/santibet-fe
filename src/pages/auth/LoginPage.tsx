@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import useUpdateToken from '../../hooks/useUpdateToken'
 import { useAppDispatch } from '../../utils/hooks'
 import { useFormik } from 'formik'
@@ -21,6 +21,14 @@ import {
   getGoogleOAuthCodeVerifier,
   removeGoogleOAuthCodeVerifier,
 } from '../../utils/googleAuth'
+import {
+  AUTH_REDIRECT_PARAM,
+  buildAuthPath,
+  clearRememberedAuthRedirect,
+  getRememberedAuthRedirect,
+  getSafeRedirect,
+  rememberAuthRedirect,
+} from '../../utils/authRedirect'
 
 type Step = 'identifier' | 'password' | 'otp' | 'setPassword'
 
@@ -55,10 +63,21 @@ const LoginPage = () => {
   const [isGoogleCallback] = useState(
     () => new URLSearchParams(window.location.search).has('code'),
   )
+  // Where to send the user once signed in (e.g. a shared market link). The
+  // Google callback lands on bare /signin, so it reads the stashed value.
+  const [redirectTo] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return (
+      getSafeRedirect(params.get(AUTH_REDIRECT_PARAM)) ??
+      (params.has('code') ? getRememberedAuthRedirect() : null)
+    )
+  })
 
   const handleAuthSuccess = (data: AuthResponse) => {
     if (data?.mfaRequired) {
-      navigate(`/two-fa?authToken=${data?.challengeId}`)
+      const params = new URLSearchParams({ authToken: data?.challengeId ?? '' })
+      if (redirectTo) params.set(AUTH_REDIRECT_PARAM, redirectTo)
+      navigate(`/two-fa?${params.toString()}`)
       return
     }
     updateToken({
@@ -66,7 +85,7 @@ const LoginPage = () => {
       refreshToken: data.refreshToken,
     })
     dispatch(setUser(data.user))
-    navigate('/')
+    navigate(redirectTo ?? '/', { replace: true })
   }
 
   // Step 1 — identifier -> /auth/start
@@ -177,7 +196,7 @@ const LoginPage = () => {
       onSuccess: handleAuthSuccess,
       onError: (error) => {
         showWarningToast(error.message)
-        navigate('/signin', { replace: true })
+        navigate(buildAuthPath('/signin', redirectTo), { replace: true })
       },
     },
   })
@@ -192,19 +211,30 @@ const LoginPage = () => {
 
     if (!codeVerifier) {
       showWarningToast('Google sign-in failed. Please try again.')
-      navigate('/signin', { replace: true })
+      navigate(buildAuthPath('/signin', redirectTo), { replace: true })
       return
     }
 
     finishGoogleSignIn({ code, codeVerifier, redirectUri })
       .catch(() => {
         showWarningToast('Google sign-in failed. Please try again.')
-        navigate('/signin', { replace: true })
+        navigate(buildAuthPath('/signin', redirectTo), { replace: true })
       })
       .finally(() => {
         removeGoogleOAuthCodeVerifier()
+        clearRememberedAuthRedirect()
       })
-  }, [finishGoogleSignIn, navigate])
+  }, [finishGoogleSignIn, navigate, redirectTo])
+
+  // Pre-fill the reset form when they signed in with an email, and keep the
+  // post-login redirect so they still land where they were headed.
+  const forgotPasswordPath = (() => {
+    const params = new URLSearchParams()
+    if (identifier.includes('@')) params.set('email', identifier)
+    if (redirectTo) params.set(AUTH_REDIRECT_PARAM, redirectTo)
+    const query = params.toString()
+    return `/forgot-password${query ? `?${query}` : ''}`
+  })()
 
   const goBackToIdentifier = () => {
     setStep('identifier')
@@ -244,6 +274,7 @@ const LoginPage = () => {
             icon='google-icon'
             iconClassName='mb-1'
             onClick={() => {
+              rememberAuthRedirect(redirectTo)
               startGoogleOAuth().catch((error) => {
                 showWarningToast(error.message)
               })
@@ -302,6 +333,12 @@ const LoginPage = () => {
                 : ''
             }
           />
+          <Link
+            to={forgotPasswordPath}
+            className='-mt-2.5 self-end text-sm font-semibold text-black underline underline-offset-3'
+          >
+            Forgot password?
+          </Link>
           <Button
             type='submit'
             text='Sign In'

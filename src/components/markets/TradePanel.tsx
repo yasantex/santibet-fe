@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { useCookies } from 'react-cookie'
 import { isAxiosError } from 'axios'
 import { Button } from '../globals/Button'
@@ -20,6 +20,7 @@ import type { BetType } from '../../types/bet.types'
 import { outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
 import SuspendedHint from '../globals/SuspendedHint'
+import useAuthNavigate from '../../hooks/useAuthNavigate'
 
 const QUICK_ADDS = [100, 200, 500, 1000]
 
@@ -35,6 +36,8 @@ const TradePanel = ({
   onSelectOutcome,
 }: TradePanelProps) => {
   const navigate = useNavigate()
+  const authNavigate = useAuthNavigate()
+  const location = useLocation()
   const [cookies] = useCookies(['token'])
   const isSignedIn = !!cookies?.token
   const suspended = useAccountSuspended()
@@ -86,6 +89,14 @@ const TradePanel = ({
   const potentialReturn = shares // each share settles at 1 unit if it wins
   const toWin = Math.max(potentialReturn, 0)
 
+  // Send guests to sign in, then back to this market with their pick kept.
+  const goToSignIn = () => {
+    const params = new URLSearchParams(location.search)
+    if (outcome) params.set('outcome', outcome.id)
+    const query = params.toString()
+    authNavigate('/signin', `${location.pathname}${query ? `?${query}` : ''}`)
+  }
+
   const addAmount = (delta: number) => {
     clearBetError()
     setAmount(String((Number(amount) || 0) + delta))
@@ -93,7 +104,7 @@ const TradePanel = ({
 
   const handleSubmit = async () => {
     if (!isSignedIn) {
-      navigate('/signin')
+      goToSignIn()
       return
     }
     if (!outcome) return
@@ -204,7 +215,7 @@ const TradePanel = ({
               variation='primary'
               size='large'
               className='w-full'
-              onClick={() => navigate('/signin')}
+              onClick={goToSignIn}
             />
           </div>
         ) : (

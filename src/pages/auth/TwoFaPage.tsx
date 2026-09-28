@@ -12,6 +12,11 @@ import { useEffect } from 'react'
 import useUpdateToken from '../../hooks/useUpdateToken'
 import { useAppDispatch } from '../../utils/hooks'
 import { setUser } from '../../redux/userSlice'
+import {
+  AUTH_REDIRECT_PARAM,
+  buildAuthPath,
+  getSafeRedirect,
+} from '../../utils/authRedirect'
 
 const TwoFaPage = () => {
   const [searchParams] = useSearchParams()
@@ -19,10 +24,12 @@ const TwoFaPage = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const authToken = searchParams.get('authToken') || ''
+  const redirectTo = getSafeRedirect(searchParams.get(AUTH_REDIRECT_PARAM))
+  const signInPath = buildAuthPath('/signin', redirectTo)
 
   useEffect(() => {
     if (!authToken) {
-      navigate('/signin')
+      navigate(signInPath)
     }
   }, [authToken])
 
@@ -48,7 +55,7 @@ const TwoFaPage = () => {
           refreshToken: data.refreshToken,
         })
         dispatch(setUser(userData))
-        navigate('/')
+        navigate(redirectTo ?? '/', { replace: true })
       },
     },
   })
@@ -108,7 +115,7 @@ const TwoFaPage = () => {
         <p className='text-sm text-center text-neutral-10'>
           Back to
           <Link
-            to={`/signin`}
+            to={signInPath}
             className='font-semibold text-black underline underline-offset-3'
           >
             {' '}

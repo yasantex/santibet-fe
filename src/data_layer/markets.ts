@@ -194,6 +194,7 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
     imageUrl: e.imageUrl,
     live: e.live ?? false,
     liveState: e.liveState ?? null,
+    featured: e.featured ?? false,
     markets: (e.markets ?? []).map((m) =>
       normalizeLobbyMarket(m, category, e.id, e.imageUrl, e.title),
     ),
@@ -461,6 +462,61 @@ export const useLiveEvents = (params: EventQueryParams = {}, enabled = true) =>
     },
   })
 
+/** Round length of a rolling series event (e.g. "Bitcoin 5 minutes"), if any. */
+export const eventIntervalSeconds = (e: UiEvent): number | null =>
+  e.markets.find((m) => m.durationSeconds)?.durationSeconds ?? null
+
+/** Time filters for live bets, keyed by round length. */
+export const LIVE_INTERVALS = [
+  { label: '5 mins', seconds: 300 },
+  { label: '15 mins', seconds: 900 },
+  { label: '1 hour', seconds: 3600 },
+] as const
+
+/**
+ * Everything bettable in-play: the /lobby/live feed plus the rolling crypto
+ * "Up or Down" rounds. The backend only flags some rounds as `live` (today
+ * just the 1-hour ones), so the 5- and 15-minute rounds are pulled from the
+ * Crypto category and merged in. Pass `category` to scope the result.
+ */
+export const useLiveBets = (
+  opts: { limit?: number; category?: string; enabled?: boolean } = {},
+) => {
+  const { limit = 40, category, enabled = true } = opts
+  const wantsCrypto =
+    enabled && (!category || category.toLowerCase() === 'crypto')
+  const live = useLiveEvents({ limit }, enabled)
+  const crypto = useQuery({
+    queryKey: ['live-crypto-series'],
+    enabled: wantsCrypto,
+    refetchInterval: 15000,
+    queryFn: () => fetchEvents({ category: 'crypto', limit: 100 }),
+  })
+
+  const events = useMemo<UiEvent[]>(() => {
+    const merged = new Map<string, UiEvent>()
+    for (const e of live.data?.events ?? []) merged.set(e.id, e)
+    if (wantsCrypto) {
+      for (const e of crypto.data?.events ?? []) {
+        const rolling =
+          eventIntervalSeconds(e) &&
+          e.markets.some((m) => m.status === 'open' && m.yes)
+        if (rolling && !merged.has(e.id)) merged.set(e.id, { ...e, live: true })
+      }
+    }
+    const all = [...merged.values()]
+    return category
+      ? all.filter((e) => e.category.toLowerCase() === category.toLowerCase())
+      : all
+  }, [live.data, crypto.data, wantsCrypto, category])
+
+  return {
+    events,
+    isLoading: enabled && (live.isLoading || (wantsCrypto && crypto.isLoading)),
+    isError: live.isError && (!wantsCrypto || crypto.isError),
+  }
+}
+
 /**
  * Live odds via SSE (GET /api/lobby/stream?markets=&event=). The backend pushes
  * on every odds change; we use each message as a throttled "refresh" signal and
@@ -570,23 +626,31 @@ export const useLobbyStream = (opts: {
 
 export interface LobbyHomeNormalized {
   featured: UiEvent[]
+  hotPicks: UiEvent[]
   trending: UiEvent[]
   closingSoon: UiEvent[]
   categories: LobbyCategory[]
 }
 
-/** The lobby home rails (featured / trending / closing-soon). Lobby feed only. */
+/** The lobby home rails (featured / hot picks / trending / closing-soon). Lobby feed only. */
 export const useLobbyHome = (limit = 12) =>
   useQuery({
     queryKey: ['lobby-home', limit],
     queryFn: async (): Promise<LobbyHomeNormalized> => {
       const feed = await resolveFeed()
       if (feed !== 'lobby') {
-        return { featured: [], trending: [], closingSoon: [], categories: [] }
+        return {
+          featured: [],
+          hotPicks: [],
+          trending: [],
+          closingSoon: [],
+          categories: [],
+        }
       }
       const h = await get<LobbyHome>(`${LOBBY_BASE}/home`, { limit })
       return {
         featured: (h.featured ?? []).map(normalizeLobbyEvent),
+        hotPicks: (h.hotPicks ?? []).map(normalizeLobbyEvent),
         trending: (h.trending ?? []).map(normalizeLobbyEvent),
         closingSoon: (h.closingSoon ?? []).map(normalizeLobbyEvent),
         categories: h.categories ?? [],
