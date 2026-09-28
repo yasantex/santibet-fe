@@ -3,12 +3,20 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon, Search01Icon } from '@hugeicons/core-free-icons'
 import MarketCard from '../../components/markets/MarketCard'
+import LiveEventCard from '../../components/markets/LiveEventCard'
+import {
+  LiveBadge,
+  LiveIntervalFilter,
+} from '../../components/markets/LiveBits'
 import { MarketCardSkeleton } from '../../components/globals/ReusedText'
 import { Button } from '../../components/globals/Button'
 import Dropdown from '../../components/globals/Dropdown'
 import SearchInput from '../../components/globals/SearchInput'
 import {
+  eventIntervalSeconds,
+  LIVE_INTERVALS,
   useEventsInfinite,
+  useLiveBets,
   marketMatchesQuery,
   normalizeText,
   type EventQueryParams,
@@ -16,7 +24,12 @@ import {
 import { useFavorites } from '../../hooks/useFavorites'
 import { marketHref } from '../../utils/marketDisplay'
 import { formatCompact } from '../../utils/functions'
-import { categoryLabel, categoryTopics, mockSportsTree } from '../../utils/constants'
+import {
+  categoryLabel,
+  categoryTopics,
+  mockSportsTree,
+  type CategoryTopic,
+} from '../../utils/constants'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 
 type SortOption = NonNullable<EventQueryParams['sort']>
@@ -30,13 +43,20 @@ const SORT_OPTIONS: { label: string; value: SortOption }[] = [
 const isSortOption = (value: string | null): value is SortOption =>
   SORT_OPTIONS.some((opt) => opt.value === value)
 
-const matchesTopic = (market: UiMarket, topic: string) => {
-  const q = topic.toLowerCase()
-  return (
-    market.title.toLowerCase().includes(q) ||
-    (market.subtitle ?? '').toLowerCase().includes(q)
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+// Whole-word match on any of the topic's keywords (or its name), so "eth"
+// doesn't catch "MegaETH" and "base" doesn't catch "database".
+const topicPattern = (topic: CategoryTopic) =>
+  new RegExp(
+    `\\b(${(topic.keywords ?? [topic.name]).map(escapeRegExp).join('|')})\\b`,
+    'i',
   )
-}
+
+const matchesTopic = (market: UiMarket, pattern: RegExp) =>
+  pattern.test(market.title) ||
+  pattern.test(market.subtitle ?? '') ||
+  pattern.test(market.eventTitle ?? '')
 
 // Sports events carry the sport in `seriesKey` (e.g. "apisports:football") and
 // the league/competition in `subtitle` (e.g. "Bundesliga"). These drive the
@@ -47,7 +67,7 @@ const SPORT_LABELS: Record<string, string> = {
   baseball: 'Baseball',
   hockey: 'Ice Hockey',
   'american-football': 'American Football',
-  'nfl': 'American Football',
+  nfl: 'American Football',
   rugby: 'Rugby',
   tennis: 'Tennis',
   cricket: 'Cricket',
@@ -78,6 +98,7 @@ const CategoryPage = () => {
   const active = routeCategory ?? 'All'
 
   const isSports = active.toLowerCase() === 'sports'
+  const isCrypto = active.toLowerCase() === 'crypto'
 
   // Nav links (e.g. Header's New / Breaking / Upcoming) deep-link into a sort
   // mode via `?sort=`, so the initial value comes from the URL when present.
@@ -102,6 +123,8 @@ const CategoryPage = () => {
   // Sports sub-navigation: pick a sport type, then a league within it.
   const [activeSport, setActiveSport] = useState<string | null>(null)
   const [activeLeague, setActiveLeague] = useState<string | null>(null)
+  // Crypto: round-length filter for the live section (seconds; null = all).
+  const [liveInterval, setLiveInterval] = useState<number | null>(null)
 
   // Sub-filters are scoped to whichever category is active — reset them
   // whenever the category itself changes (render-time reset, per
@@ -112,6 +135,7 @@ const CategoryPage = () => {
     setActiveTopic(null)
     setActiveSport(null)
     setActiveLeague(null)
+    setLiveInterval(null)
   }
 
   const {
@@ -130,14 +154,31 @@ const CategoryPage = () => {
   })
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
+  // Crypto's live bets (rolling "Up or Down" rounds + anything in-play) get
+  // their own section, so they're left out of the regular grid below.
+  const { events: liveCrypto, isLoading: isLiveLoading } = useLiveBets({
+    category: 'crypto',
+    limit: 100,
+    enabled: isCrypto,
+  })
+  const liveCryptoIds = useMemo(
+    () => new Set(isCrypto ? liveCrypto.map((e) => e.id) : []),
+    [isCrypto, liveCrypto],
+  )
+  const liveMarkets = useMemo(
+    () => (isCrypto ? liveCrypto.flatMap((e) => e.markets) : []),
+    [isCrypto, liveCrypto],
+  )
+
   const allMarkets = useMemo<UiMarket[]>(() => {
     const markets = (data?.pages ?? [])
       .flatMap((p) => p.events)
       .flatMap((e) => e.markets)
+      .filter((m) => !liveCryptoIds.has(m.eventId))
     const open = markets.filter((m) => m.status !== 'closed' && m.yes)
     const pool = open.length ? open : markets.filter((m) => m.yes)
     return [...pool].sort((a, b) => b.volume - a.volume)
-  }, [data])
+  }, [data, liveCryptoIds])
 
   const byCategory = useMemo(
     () =>
@@ -153,17 +194,51 @@ const CategoryPage = () => {
     () => (active === 'All' ? [] : (categoryTopics[active] ?? [])),
     [active],
   )
+  const topicPatterns = useMemo(
+    () => new Map(topics.map((t) => [t.name, topicPattern(t)])),
+    [topics],
+  )
+  const activePattern = activeTopic ? topicPatterns.get(activeTopic) : undefined
+
+  // Counts include Crypto's live rounds, which sit in their own section.
   const topicCounts = useMemo(() => {
     const map = new Map<string, number>()
     topics.forEach((topic) => {
-      const live = byCategory.filter((m) => matchesTopic(m, topic.name)).length
+      const pattern = topicPatterns.get(topic.name)!
+      const live = [...byCategory, ...liveMarkets].filter((m) =>
+        matchesTopic(m, pattern),
+      ).length
       map.set(
         topic.name,
         topic.mockCount != null ? Math.max(live, topic.mockCount) : live,
       )
     })
     return map
-  }, [topics, byCategory])
+  }, [topics, topicPatterns, byCategory, liveMarkets])
+
+  const liveFiltered = useMemo(
+    () =>
+      liveCrypto.filter(
+        (e) =>
+          (liveInterval == null || eventIntervalSeconds(e) === liveInterval) &&
+          (!activePattern ||
+            e.markets.some((m) => matchesTopic(m, activePattern))),
+      ),
+    [liveCrypto, liveInterval, activePattern],
+  )
+  const liveInTopic = useMemo(
+    () =>
+      activePattern
+        ? liveCrypto.filter((e) =>
+            e.markets.some((m) => matchesTopic(m, activePattern)),
+          )
+        : liveCrypto,
+    [liveCrypto, activePattern],
+  )
+  const showLive =
+    isCrypto &&
+    !searchTerm &&
+    (isLiveLoading || !activeTopic || liveInTopic.length > 0)
 
   // Only show sub-topics that actually match loaded markets — the topic list
   // is a curated superset, so hiding the empties keeps the sidebar honest
@@ -172,7 +247,8 @@ const CategoryPage = () => {
   const visibleTopics = useMemo(
     () =>
       topics.filter(
-        (topic) => topic.mockCount != null || (topicCounts.get(topic.name) ?? 0) > 0,
+        (topic) =>
+          topic.mockCount != null || (topicCounts.get(topic.name) ?? 0) > 0,
       ),
     [topics, topicCounts],
   )
@@ -218,10 +294,10 @@ const CategoryPage = () => {
         return true
       })
     }
-    return activeTopic
-      ? byCategory.filter((m) => matchesTopic(m, activeTopic))
+    return activePattern
+      ? byCategory.filter((m) => matchesTopic(m, activePattern))
       : byCategory
-  }, [isSports, byCategory, activeSport, activeLeague, activeTopic])
+  }, [isSports, byCategory, activeSport, activeLeague, activePattern])
 
   const filtered = useMemo(() => {
     const q = normalizeText(searchTerm.trim())
@@ -316,14 +392,12 @@ const CategoryPage = () => {
               type='button'
               onClick={() => setActiveTopic(null)}
               className={`flex items-center justify-between text-black/60 hover:bg-hover cursor-pointer rounded-md px-3 py-2 text-left text-sm ${
-                activeTopic === null
-                    ? 'bg-hover'
-                  : ''
+                activeTopic === null ? 'bg-hover' : ''
               }`}
             >
               All
               <span className='text-xs text-neutral-10'>
-                {formatCompact(byCategory.length)}
+                {formatCompact(byCategory.length + liveMarkets.length)}
               </span>
             </button>
             {visibleTopics.map((topic) => (
@@ -332,9 +406,7 @@ const CategoryPage = () => {
                 type='button'
                 onClick={() => setActiveTopic(topic.name)}
                 className={`flex items-center text-black/60 cursor-pointer hover:bg-hover justify-between rounded-md px-3 py-2 text-left text-sm ${
-                  activeTopic === topic.name
-                    ? 'bg-hover'
-                    : ''
+                  activeTopic === topic.name ? 'bg-hover' : ''
                 }`}
               >
                 {topic.name}
@@ -413,6 +485,65 @@ const CategoryPage = () => {
           </div>
         </div>
 
+        {/* Sub-topic chips — the mobile stand-in for the topic sidebar. */}
+        {!isSports && active !== 'All' && visibleTopics.length > 0 && (
+          <div className='hide-scroll-bar -mt-2 flex gap-2 overflow-x-auto md:hidden'>
+            {[null, ...visibleTopics.map((t) => t.name)].map((name) => (
+              <button
+                key={name ?? 'all'}
+                type='button'
+                onClick={() => setActiveTopic(name)}
+                className={`shrink-0 cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium ${
+                  activeTopic === name
+                    ? 'bg-black text-white'
+                    : 'bg-card text-neutral-10'
+                }`}
+              >
+                {name ?? 'All'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Live rounds, narrowed by the active sub-topic; hidden when the
+            topic has none (e.g. Stablecoins). */}
+        {showLive && (
+          <section className='flex flex-col gap-3'>
+            <div className='flex flex-wrap items-center justify-between gap-3'>
+              <div className='flex items-center gap-2'>
+                <h2 className='text-sm font-semibold text-black uppercase'>
+                  Live bets
+                </h2>
+                <LiveBadge />
+              </div>
+              <LiveIntervalFilter
+                intervals={LIVE_INTERVALS}
+                value={liveInterval}
+                onChange={setLiveInterval}
+              />
+            </div>
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+              {isLiveLoading
+                ? Array.from({ length: 3 }).map((_, i) => (
+                    <MarketCardSkeleton key={i} />
+                  ))
+                : liveFiltered.map((event) => (
+                    <LiveEventCard
+                      key={event.id}
+                      event={event}
+                      onSelectMarket={goToMarket}
+                      onSelectOutcome={goToTrade}
+                    />
+                  ))}
+            </div>
+            {!isLiveLoading && !liveFiltered.length && (
+              <p className='py-6 text-center text-sm text-neutral-10'>
+                No live crypto bets for this timeframe right now.
+              </p>
+            )}
+          </section>
+        )}
+
         {isError ? (
           <p className='py-16 text-center text-sm text-neutral-10'>
             We couldn’t load markets right now.
@@ -436,20 +567,22 @@ const CategoryPage = () => {
                   ))}
             </div>
 
-            {!isLoading && !filtered.length && (
-              <p className='py-12 text-center text-sm text-neutral-10'>
-                {searchTerm
-                  ? `No markets match "${searchTerm}".`
-                  : `No open markets in ${
-                      activeLeague ??
-                      (isSports
-                        ? (activeSport ?? categoryLabel(active))
-                        : categoryLabel(active))
-                    }${
-                      !isSports && activeTopic ? ` / ${activeTopic}` : ''
-                    }. Try loading more or another category.`}
-              </p>
-            )}
+            {!isLoading &&
+              !filtered.length &&
+              !(showLive && liveInTopic.length) && (
+                <p className='py-12 text-center text-sm text-neutral-10'>
+                  {searchTerm
+                    ? `No markets match "${searchTerm}".`
+                    : `No open markets in ${
+                        activeLeague ??
+                        (isSports
+                          ? (activeSport ?? categoryLabel(active))
+                          : categoryLabel(active))
+                      }${
+                        !isSports && activeTopic ? ` / ${activeTopic}` : ''
+                      }. Try loading more or another category.`}
+                </p>
+              )}
 
             {hasNextPage && (
               <div className='flex justify-center pt-2'>
