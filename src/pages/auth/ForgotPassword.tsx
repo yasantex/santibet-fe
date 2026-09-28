@@ -6,10 +6,15 @@ import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
 import { Button } from '../../components/globals/Button'
 import { FormInput } from '../../components/globals/FormInput'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
+import {
+  AUTH_REDIRECT_PARAM,
+  buildAuthPath,
+} from '../../utils/authRedirect'
 
 const ForgotPassword = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const {
     mutateAsync: postForgotPassword,
     isPending,
@@ -31,7 +36,7 @@ const ForgotPassword = () => {
   const { values, handleChange, handleBlur, errors, touched, handleSubmit } =
     useFormik({
       initialValues: {
-        email: '',
+        email: searchParams.get('email') ?? '',
       },
       validationSchema: ForgotPasswordSchema,
       onSubmit: async (vals) => {
@@ -85,7 +90,11 @@ const ForgotPassword = () => {
             variation='plain'
             className='mt-2.5'
             size='large'
-            onClick={() => navigate('/signin')}
+            onClick={() =>
+              navigate(
+                buildAuthPath('/signin', searchParams.get(AUTH_REDIRECT_PARAM)),
+              )
+            }
           />
         </div>
       ) : (

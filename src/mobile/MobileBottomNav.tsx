@@ -3,7 +3,8 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Button } from '../components/globals/Button'
 import { useAppSelector } from '../utils/hooks'
 import { useLocation, useNavigate } from 'react-router'
-import { useLiveEvents } from '../data_layer/markets'
+import useAuthNavigate from '../hooks/useAuthNavigate'
+import { useLiveBets } from '../data_layer/markets'
 import useAccountSuspended from '../hooks/useAccountSuspended'
 import { SUSPENDED_CTA_HINT } from '../utils/constants'
 
@@ -19,6 +20,7 @@ const MobileBottomNav = ({
   const { user } = useAppSelector((state) => state.user)
   const suspended = useAccountSuspended()
   const navigate = useNavigate()
+  const authNavigate = useAuthNavigate()
   const { pathname } = useLocation()
 
   const isMarketsActive = pathname === '/'
@@ -26,8 +28,8 @@ const MobileBottomNav = ({
 
   // Same approximation as the desktop nav's "Live 81" badge — one page of
   // the live feed, not a dedicated count endpoint.
-  const { data: liveEventsData } = useLiveEvents({ limit: 100 })
-  const liveCount = liveEventsData?.events.length ?? 0
+  const { events: liveBets } = useLiveBets({ limit: 100 })
+  const liveCount = liveBets.length
 
   return (
     <nav className='fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-between border-t border-border bg-white px-2 pb-[env(safe-area-inset-bottom)] pt-2 lg:hidden'>
@@ -83,7 +85,7 @@ const MobileBottomNav = ({
           type='button'
           text='Login'
           className='shrink-0 w-fit! mt-1.5!'
-          onClick={() => navigate('/signin')}
+          onClick={() => authNavigate('/signin')}
         />
       )}
 

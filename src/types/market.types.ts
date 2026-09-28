@@ -222,6 +222,8 @@ export interface UiEvent {
   imageUrl?: string | null
   live?: boolean
   liveState?: LiveState | null
+  /** Admin-featured (Events → Featured); always gets a hero chart slide. */
+  featured?: boolean
   markets: UiMarket[]
 }
 
@@ -301,6 +303,7 @@ export interface LobbyEvent {
   category: LobbyCategoryRef | null
   closeTime: string
   featured: boolean
+  hot?: boolean // operator-curated hot pick (admin → Events → Hot pick)
   live?: boolean
   liveState?: LiveState | null
   marketCount: number
@@ -314,6 +317,7 @@ export interface LobbyEventListResponse {
 
 export interface LobbyHome {
   featured: LobbyEvent[]
+  hotPicks?: LobbyEvent[]
   trending: LobbyEvent[]
   closingSoon: LobbyEvent[]
   categories: LobbyCategory[]

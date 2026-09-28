@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import logo from '../assets/Santibet Logo.svg'
 import logoDark from '../assets/Santibet Logo (white).svg'
 import { Link, NavLink, useNavigate } from 'react-router'
+import useAuthNavigate from '../hooks/useAuthNavigate'
 import Dropdown from '../components/globals/Dropdown'
 import SearchInput from '../components/globals/SearchInput'
 import Deposit from '../components/appModals/Deposit'
@@ -15,7 +16,7 @@ import {
 import {
   useMarketSearch,
   useAvailableCategories,
-  useLiveEvents,
+  useLiveBets,
 } from '../data_layer/markets'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -190,6 +191,7 @@ const CategoryRow = () => {
 
 const Header = () => {
   const navigate = useNavigate()
+  const authNavigate = useAuthNavigate()
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
   const { isDark, toggleTheme } = useTheme()
@@ -206,8 +208,8 @@ const Header = () => {
 
   // Live count badge next to the nav's "Live" link, Kalshi-style ("LIVE 81").
   // Approximate — one page of the live feed, not a dedicated count endpoint.
-  const { data: liveEventsData } = useLiveEvents({ limit: 100 })
-  const liveCount = liveEventsData?.events.length ?? 0
+  const { events: liveBets } = useLiveBets({ limit: 100 })
+  const liveCount = liveBets.length
 
   const { data: openPositions } = useBetPositions('OPEN', 100)
   // Portfolio = unspent cash + the live market value of open positions;
@@ -398,13 +400,13 @@ const Header = () => {
               <Button
                 type='button'
                 text='Login'
-                onClick={() => navigate('/signin')}
+                onClick={() => authNavigate('/signin')}
               />
               <Button
                 type='button'
                 text='Sign up'
                 variation='plain'
-                onClick={() => navigate('/signup')}
+                onClick={() => authNavigate('/signup')}
               />
               <Dropdown
                 align='end'

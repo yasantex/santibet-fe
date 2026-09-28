@@ -38,3 +38,31 @@ export const ScoreBoard = ({ state }: { state: LiveState }) => {
     </div>
   )
 }
+
+/** All / 5 mins / 15 mins / 1 hour chips for filtering live bets. */
+export const LiveIntervalFilter = ({
+  intervals,
+  value,
+  onChange,
+}: {
+  intervals: readonly { label: string; seconds: number }[]
+  value: number | null
+  onChange: (seconds: number | null) => void
+}) => (
+  <div className='hide-scroll-bar flex gap-2 overflow-x-auto'>
+    {[{ label: 'All', seconds: null }, ...intervals].map((opt) => (
+      <button
+        key={opt.label}
+        type='button'
+        onClick={() => onChange(opt.seconds)}
+        className={`shrink-0 cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+          value === opt.seconds
+            ? 'bg-brand-green text-black'
+            : 'bg-card text-neutral-10 hover:text-black'
+        }`}
+      >
+        {opt.label}
+      </button>
+    ))}
+  </div>
+)
