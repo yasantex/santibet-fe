@@ -9,7 +9,7 @@ import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import FilterComponent, {
   type FilterCategory,
 } from '../components/globals/FilterComponent'
-import { useEvents, useLiveEvents, useLobbyHome } from '../data_layer/markets'
+import { useEvents, useLiveBets, useLobbyHome } from '../data_layer/markets'
 import { useFavorites } from '../hooks/useFavorites'
 import { marketHref } from '../utils/marketDisplay'
 import type { UiEvent, UiMarket, UiOutcome } from '../types/market.types'
@@ -61,22 +61,30 @@ const MarketsDashboard = () => {
   const { data: home, isLoading: isHomeLoading } = useLobbyHome()
   // Every admin-featured event, not just the few /lobby/home returns.
   const { data: featuredData } = useEvents({ featured: true, limit: 50 })
-  const { data: liveData } = useLiveEvents({ limit: 8 })
+  // In-play sports + rolling crypto rounds — the same set as the /live page.
+  const { events: allLiveEvents } = useLiveBets({ limit: 12 })
   const liveEvents = useMemo<UiEvent[]>(
-    () => liveData?.events ?? [],
-    [liveData],
+    () => allLiveEvents.slice(0, 12),
+    [allLiveEvents],
+  )
+  const liveEventIds = useMemo(
+    () => new Set(allLiveEvents.map((e) => e.id)),
+    [allLiveEvents],
   )
 
   const closingSoon = useMemo<UiMarket[]>(() => {
+    // "Closing soon" is about the deadline, not in-play — anything live
+    // belongs in the Live rail above, so leave it out here.
     return (home?.closingSoon ?? [])
+      .filter((e) => !e.live && !liveEventIds.has(e.id))
       .flatMap((e) => e.markets)
-      .filter((m) => m.yes && m.status !== 'closed')
+      .filter((m) => m.yes && m.status !== 'closed' && !m.live)
       .sort(
         (a, b) =>
           new Date(a.closeTime).getTime() - new Date(b.closeTime).getTime(),
       )
       .slice(0, 8)
-  }, [home])
+  }, [home, liveEventIds])
 
   const allMarkets = useMemo<UiMarket[]>(() => {
     const markets = (data?.events ?? []).flatMap((e) => e.markets)
@@ -289,7 +297,7 @@ const MarketsDashboard = () => {
               <div key={market.id} className='w-[260px] shrink-0'>
                 <MarketCard
                   market={market}
-                  live
+                  countdown
                   onSelect={goToMarket}
                   onSelectOutcome={goToTrade}
                   onSave={toggleFavorite}

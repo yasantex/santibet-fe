@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import logo from '../assets/Santibet Logo.svg'
 import logoDark from '../assets/Santibet Logo (white).svg'
-import { Link, NavLink, useNavigate } from 'react-router'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import useAuthNavigate from '../hooks/useAuthNavigate'
 import Dropdown from '../components/globals/Dropdown'
 import SearchInput from '../components/globals/SearchInput'
@@ -17,6 +17,7 @@ import {
   useMarketSearch,
   useAvailableCategories,
   useLiveBets,
+  useLobbyCategories,
 } from '../data_layer/markets'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -90,10 +91,49 @@ const CategoryRow = () => {
     () => primaryNavLinks.filter((link) => isLinkVisible(link, available)),
     [available, isLinkVisible],
   )
-  const visibleMoreLinks = useMemo(
-    () => moreNavLinks.filter((link) => isLinkVisible(link, available)),
-    [available, isLinkVisible],
-  )
+  // Categories an admin creates at runtime aren't in the static nav lists —
+  // append any unknown top-level ones to "More", and nest each More entry's
+  // subcategories (from the API's `parentSlug`) beneath it.
+  const { data: apiCategories } = useLobbyCategories()
+  const visibleMoreLinks = useMemo(() => {
+    const cats = apiCategories ?? []
+    const slugOf = (href: string) =>
+      href.startsWith('/category/')
+        ? href.slice('/category/'.length).toLowerCase()
+        : null
+    const known = new Set(
+      [...primaryNavLinks, ...moreNavLinks]
+        .map((link) => slugOf(link.href))
+        .filter(Boolean),
+    )
+    const apiSlugs = new Set(cats.map((c) => c.slug.toLowerCase()))
+    const childrenOf = (parent: string) =>
+      cats
+        .filter((c) => c.parentSlug?.toLowerCase() === parent)
+        .map((c) => ({
+          label: c.name,
+          href: `/category/${parent}?sub=${c.slug.toLowerCase()}`,
+        }))
+
+    const staticLinks = moreNavLinks.filter((link) =>
+      isLinkVisible(link, available),
+    )
+    // Top-level categories not in the static lists, plus subcategories whose
+    // parent isn't listed anywhere (so they'd otherwise be unreachable).
+    const extraLinks: NavLinkConfig[] = cats
+      .filter((c) => {
+        const slug = c.slug.toLowerCase()
+        const parent = c.parentSlug?.toLowerCase()
+        if (known.has(slug)) return false
+        return !parent || (!known.has(parent) && !apiSlugs.has(parent))
+      })
+      .map((c) => ({ label: c.name, href: `/category/${c.slug.toLowerCase()}` }))
+
+    return [...staticLinks, ...extraLinks].map((link) => {
+      const slug = slugOf(link.href)
+      return { ...link, children: slug ? childrenOf(slug) : [] }
+    })
+  }, [apiCategories, available, isLinkVisible])
 
   return (
     <div className='flex items-center w-full gap-6'>
@@ -148,22 +188,34 @@ const CategoryRow = () => {
           <Dropdown
             align='end'
             className='ml-6 shrink-0'
-            menuClassName='w-44 rounded-lg py-1'
+            menuClassName='w-52 max-h-[70vh] overflow-y-auto rounded-lg py-1'
             menu={({ close }) => (
               <div className='flex flex-col'>
                 {visibleMoreLinks.map((link) => (
-                  <NavLink
-                    key={link.label}
-                    to={link.href}
-                    onClick={close}
-                    className={({ isActive }) =>
-                      `px-3 py-2 text-left text-sm hover:bg-hover ${
-                        isActive ? 'font-semibold text-black' : 'text-black/60'
-                      }`
-                    }
-                  >
-                    {link.label}
-                  </NavLink>
+                  <div key={link.href} className='flex flex-col'>
+                    <NavLink
+                      to={link.href}
+                      end
+                      onClick={close}
+                      className={({ isActive }) =>
+                        `px-3 py-2 text-left text-sm hover:bg-hover ${
+                          isActive ? 'font-semibold text-black' : 'text-black/60'
+                        }`
+                      }
+                    >
+                      {link.label}
+                    </NavLink>
+                    {link.children.map((child) => (
+                      <Link
+                        key={child.href}
+                        to={child.href}
+                        onClick={close}
+                        className='py-1.5 pr-3 pl-6 text-left text-xs text-black/60 hover:bg-hover hover:text-black'
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
                 ))}
               </div>
             )}
@@ -191,6 +243,17 @@ const CategoryRow = () => {
 
 const Header = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  // NavLink matches on pathname only, so every /browse?sort=… link would light
+  // up at once. Match the sort param too (no param = plain "Events").
+  const browseSort =
+    location.pathname === '/browse'
+      ? (new URLSearchParams(location.search).get('sort') ?? '')
+      : null
+  const browseLinkClass = (sort: string) =>
+    `flex items-center ${
+      browseSort === sort ? 'text-black' : 'text-black/60 hover:text-black'
+    }`
   const authNavigate = useAuthNavigate()
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
@@ -246,16 +309,9 @@ const Header = () => {
             />
           </Link>
           <div className='hidden shrink-0 items-center gap-4 text-sm font-semibold lg:flex'>
-            <NavLink
-              to='/browse'
-              className={({ isActive }) =>
-                `flex items-center ${
-                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
-                }`
-              }
-            >
+            <Link to='/browse' className={browseLinkClass('')}>
               Events
-            </NavLink>
+            </Link>
             <NavLink
               to='/live'
               className={({ isActive }) =>
@@ -267,36 +323,23 @@ const Header = () => {
               Live
               {liveCount > 0 && <span className='text-error'>{liveCount}</span>}
             </NavLink>
-            <NavLink
-              to='/browse?sort=newest'
-              className={({ isActive }) =>
-                `flex items-center ${
-                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
-                }`
-              }
-            >
+            <Link to='/browse?sort=newest' className={browseLinkClass('newest')}>
               New
-            </NavLink>
-            <NavLink
-              to='/browse?sort=trending'
-              className={({ isActive }) =>
-                `flex items-center ${
-                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
-                }`
-              }
-            >
+            </Link>
+            <Link to='/browse?sort=trending' className={browseLinkClass('trending')}>
               Breaking
-            </NavLink>
-            <NavLink
-              to='/browse?sort=closing_soon'
-              className={({ isActive }) =>
-                `flex items-center ${
-                  isActive ? 'text-black' : 'text-black/60 hover:text-black'
-                }`
-              }
-            >
+            </Link>
+            <Link to='/browse?sort=closing_soon' className={browseLinkClass('closing_soon')}>
               Upcoming
-            </NavLink>
+            </Link>
+            <a
+              href='https://santibet.com'
+              target='_blank'
+              rel='noopener noreferrer'
+              className='flex items-center text-black/60 hover:text-black'
+            >
+              Campaign
+            </a>
           </div>
         </div>
         <div className='flex items-center justify-end gap-5 w-full'>

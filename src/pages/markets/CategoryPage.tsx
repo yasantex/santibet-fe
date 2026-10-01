@@ -17,12 +17,13 @@ import {
   LIVE_INTERVALS,
   useEventsInfinite,
   useLiveBets,
+  useLobbyCategories,
   marketMatchesQuery,
   normalizeText,
   type EventQueryParams,
 } from '../../data_layer/markets'
 import { useFavorites } from '../../hooks/useFavorites'
-import { marketHref } from '../../utils/marketDisplay'
+import { marketHref, marketSport } from '../../utils/marketDisplay'
 import { formatCompact } from '../../utils/functions'
 import {
   categoryLabel,
@@ -58,35 +59,6 @@ const matchesTopic = (market: UiMarket, pattern: RegExp) =>
   pattern.test(market.subtitle ?? '') ||
   pattern.test(market.eventTitle ?? '')
 
-// Sports events carry the sport in `seriesKey` (e.g. "apisports:football") and
-// the league/competition in `subtitle` (e.g. "Bundesliga"). These drive the
-// data-driven sport → league sub-navigation on the Sports page.
-const SPORT_LABELS: Record<string, string> = {
-  football: 'Football',
-  basketball: 'Basketball',
-  baseball: 'Baseball',
-  hockey: 'Ice Hockey',
-  'american-football': 'American Football',
-  nfl: 'American Football',
-  rugby: 'Rugby',
-  tennis: 'Tennis',
-  cricket: 'Cricket',
-  volleyball: 'Volleyball',
-  handball: 'Handball',
-  mma: 'MMA',
-  boxing: 'Boxing',
-}
-
-const marketSport = (market: UiMarket): string | null => {
-  const key = market.seriesKey ?? ''
-  if (!key.startsWith('apisports:')) return null
-  const raw = key.slice('apisports:'.length).toLowerCase()
-  return (
-    SPORT_LABELS[raw] ??
-    raw.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-  )
-}
-
 const OTHER = 'Other'
 const marketLeague = (market: UiMarket): string =>
   (market.subtitle ?? '').trim() || OTHER
@@ -101,13 +73,11 @@ const CategoryPage = () => {
   const isCrypto = active.toLowerCase() === 'crypto'
 
   // Nav links (e.g. Header's New / Breaking / Upcoming) deep-link into a sort
-  // mode via `?sort=`, so the initial value comes from the URL when present.
+  // mode via `?sort=`. Derive it from the URL on every render (not just the
+  // first) so switching between those links while already on /browse works.
   const sortParam = searchParams.get('sort')
-  const [sort, setSort] = useState<SortOption>(
-    isSortOption(sortParam) ? sortParam : 'trending',
-  )
+  const sort: SortOption = isSortOption(sortParam) ? sortParam : 'trending'
   const changeSort = (value: SortOption) => {
-    setSort(value)
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
@@ -117,6 +87,40 @@ const CategoryPage = () => {
       { replace: true },
     )
   }
+  // Admin-created subcategories (API `parentSlug`) — picked via `?sub=` so
+  // the header's More menu can deep-link straight into one.
+  const activeSlug = active.toLowerCase()
+  const { data: apiCategories } = useLobbyCategories()
+  const subcategories = useMemo(
+    () =>
+      (apiCategories ?? []).filter(
+        (c) => c.parentSlug?.toLowerCase() === activeSlug,
+      ),
+    [apiCategories, activeSlug],
+  )
+  const subParam = searchParams.get('sub')?.toLowerCase() ?? null
+  const activeSub =
+    subcategories.find((c) => c.slug.toLowerCase() === subParam) ?? null
+  const changeSub = (slug: string | null) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (slug) next.set('sub', slug)
+        else next.delete('sub')
+        return next
+      },
+      { replace: true },
+    )
+  // Static nav label first ("Tech" → "Tech & AI"), then the admin-given name
+  // for categories the nav doesn't know about, then the raw slug.
+  const staticLabel = categoryLabel(active)
+  const categoryName =
+    staticLabel !== active
+      ? staticLabel
+      : ((apiCategories ?? []).find((c) => c.slug.toLowerCase() === activeSlug)
+          ?.name ?? active)
+  const activeLabel = activeSub?.name ?? categoryName
+
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTopic, setActiveTopic] = useState<string | null>(null)
@@ -150,7 +154,9 @@ const CategoryPage = () => {
     sort,
     // Filter server-side by category slug (lower-case) so a busy category like
     // Sports paginates within itself instead of over the whole catalogue.
-    ...(active !== 'All' ? { category: active.toLowerCase() } : {}),
+    ...(active !== 'All'
+      ? { category: activeSub ? activeSub.slug.toLowerCase() : activeSlug }
+      : {}),
   })
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
@@ -180,15 +186,22 @@ const CategoryPage = () => {
     return [...pool].sort((a, b) => b.volume - a.volume)
   }, [data, liveCryptoIds])
 
-  const byCategory = useMemo(
-    () =>
-      active === 'All'
-        ? allMarkets
-        : allMarkets.filter(
-            (m) => m.category.toLowerCase() === active.toLowerCase(),
-          ),
-    [allMarkets, active],
-  )
+  // Match on slug (falls back to the name for the raw feed) so admin-created
+  // categories whose name differs from their slug ("Real Estate" vs
+  // "real-estate") still match. A parent also keeps its subcategories' markets.
+  const byCategory = useMemo(() => {
+    if (active === 'All') return allMarkets
+    const allowed = new Set(
+      activeSub
+        ? [activeSub.slug.toLowerCase()]
+        : [activeSlug, ...subcategories.map((c) => c.slug.toLowerCase())],
+    )
+    return allMarkets.filter(
+      (m) =>
+        allowed.has(m.categorySlug ?? '') ||
+        allowed.has(m.category.toLowerCase()),
+    )
+  }, [allMarkets, active, activeSlug, activeSub, subcategories])
 
   const topics = useMemo(
     () => (active === 'All' ? [] : (categoryTopics[active] ?? [])),
@@ -426,8 +439,8 @@ const CategoryPage = () => {
               ? 'Browse markets'
               : (activeLeague ??
                 (isSports
-                  ? (activeSport ?? categoryLabel(active))
-                  : categoryLabel(active)))}
+                  ? (activeSport ?? activeLabel)
+                  : activeLabel))}
           </h1>
 
           <div className='flex shrink-0 items-center gap-2'>
@@ -484,6 +497,27 @@ const CategoryPage = () => {
             </Dropdown>
           </div>
         </div>
+
+        {/* Admin-created subcategories — on every screen size, since the
+            set changes at runtime and isn't part of the curated sidebar. */}
+        {active !== 'All' && subcategories.length > 0 && (
+          <div className='hide-scroll-bar -mt-2 flex gap-2 overflow-x-auto'>
+            {[null, ...subcategories].map((sub) => (
+              <button
+                key={sub?.slug ?? 'all'}
+                type='button'
+                onClick={() => changeSub(sub ? sub.slug.toLowerCase() : null)}
+                className={`shrink-0 cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium ${
+                  (activeSub?.slug ?? null) === (sub?.slug ?? null)
+                    ? 'bg-black text-white'
+                    : 'bg-card text-neutral-10'
+                }`}
+              >
+                {sub ? sub.name : `All ${categoryName}`}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Sub-topic chips — the mobile stand-in for the topic sidebar. */}
         {!isSports && active !== 'All' && visibleTopics.length > 0 && (
@@ -576,8 +610,8 @@ const CategoryPage = () => {
                     : `No open markets in ${
                         activeLeague ??
                         (isSports
-                          ? (activeSport ?? categoryLabel(active))
-                          : categoryLabel(active))
+                          ? (activeSport ?? activeLabel)
+                          : activeLabel)
                       }${
                         !isSports && activeTopic ? ` / ${activeTopic}` : ''
                       }. Try loading more or another category.`}

@@ -192,6 +192,9 @@ export interface UiMarket {
   eventTitle?: string
   subtitle: string
   category: string
+  /** Category slug (lower-case). Matches `/category/:slug` routes even when
+   *  the display name differs, e.g. "Real Estate" → "real-estate". */
+  categorySlug?: string
   status: MarketStatus
   openTime: string
   closeTime: string
@@ -259,6 +262,8 @@ export interface LobbyCategoryRef {
 }
 
 export interface LobbyCategory extends LobbyCategoryRef {
+  /** Parent category slug for an admin-created subcategory; null at top level. */
+  parentSlug: string | null
   eventCount: number
 }
 
