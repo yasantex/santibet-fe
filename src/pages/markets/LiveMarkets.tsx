@@ -82,12 +82,13 @@ const LiveMarkets = () => {
       { replace: true },
     )
   // Picking from the sidebar keeps the round-length filter only while it
-  // still applies (i.e. not when moving to Sports).
+  // still applies (All / Crypto).
   const select = (category: string | null, sub: string | null = null) =>
     setParams({
       category,
       sub,
-      interval: category === 'sports' ? null : intervalFilter,
+      interval:
+        category === null || category === 'crypto' ? intervalFilter : null,
     })
 
   // Category → sport / coin tree with live counts, mirroring the Sports
@@ -116,9 +117,9 @@ const LiveMarkets = () => {
   }, [allEvents])
 
   const activeGroup = groups.find((g) => g.key === categoryFilter) ?? null
-  // Round-length chips (5 mins / 15 mins / 1 hour) for the rolling crypto
-  // rounds — shown everywhere except Sports, as before.
-  const showIntervals = categoryFilter !== 'sports'
+  // Round-length chips (5 mins / 15 mins / 1 hour) only apply to the rolling
+  // crypto rounds, so they show on "All live" and Crypto only.
+  const showIntervals = categoryFilter === null || categoryFilter === 'crypto'
   const activeSub = activeGroup?.subs.find((s) => s.value === subFilter) ?? null
 
   const events = useMemo<UiEvent[]>(
