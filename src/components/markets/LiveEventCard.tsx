@@ -7,8 +7,9 @@ import {
   outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
-import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
+import { formatSharePrice } from '../../utils/functions'
 import { useCountdown } from '../../hooks/useCountdown'
+import MarketMetaLine from './MarketMetaLine'
 import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
 
 interface LiveEventCardProps {
@@ -85,10 +86,10 @@ const LiveEventCard = ({
         })}
       </div>
 
-      <div className='flex items-center justify-between pt-0.5 text-xs text-placeholder'>
-        <span>Volume: {formatNairaCompact(market.volume)}</span>
+      <div className='flex items-center justify-between gap-3 pt-0.5 text-xs text-placeholder'>
+        <MarketMetaLine market={market} />
         {event.markets.length > 1 && (
-          <span>{event.markets.length} markets</span>
+          <span className='shrink-0'>{event.markets.length} markets</span>
         )}
       </div>
     </div>

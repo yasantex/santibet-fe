@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Bookmark02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
-import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
+import { formatSharePrice } from '../../utils/functions'
 import {
   categoryIcon,
   marketDisplayTitle,
@@ -11,6 +11,7 @@ import {
 } from '../../utils/marketDisplay'
 import { MarketCountdown } from '../globals/ReusedText'
 import ShareMarketButton from './ShareMarketButton'
+import MarketMetaLine from './MarketMetaLine'
 
 /** Binary (Yes/No) markets: one full stat row per side, price button inline. */
 const OutcomeRow = ({
@@ -113,8 +114,10 @@ interface MarketCardProps {
   isSaved?: boolean
   /** Show a share button next to the save button. */
   shareable?: boolean
-  /** Show a LIVE badge + ticking countdown in the header. */
+  /** Show a LIVE badge + ticking countdown — only for genuinely in-play markets. */
   live?: boolean
+  /** Show the ticking countdown without the LIVE badge (e.g. "Closing soon"). */
+  countdown?: boolean
 }
 
 const MarketCard = ({
@@ -125,6 +128,7 @@ const MarketCard = ({
   isSaved = false,
   shareable = false,
   live = false,
+  countdown = false,
 }: MarketCardProps) => {
   const outcomes = market.outcomes ?? []
   // Binary yes/no markets keep the familiar green/no red split. Anything with
@@ -234,18 +238,16 @@ const MarketCard = ({
         )}
       </div>
 
-      <div className='mt-auto flex items-center justify-between pt-1'>
-        {live ? (
+      <div className='mt-auto flex items-center justify-between gap-3 pt-1'>
+        {live || countdown ? (
           <MarketCountdown
             openTime={market.openTime}
             closeTime={market.closeTime}
           />
         ) : (
-          <span className='text-xs text-placeholder'>
-            Volume: {formatNairaCompact(market.volume)}
-          </span>
+          <MarketMetaLine market={market} />
         )}
-        <span className='flex items-center gap-0.5 text-xs font-semibold text-neutral-10'>
+        <span className='flex shrink-0 items-center gap-0.5 text-xs font-semibold text-neutral-10'>
           Explore
           <HugeiconsIcon icon={ArrowRight01Icon} size={14} />
         </span>

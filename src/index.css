@@ -23,6 +23,20 @@
   border-radius: 9999px;
 }
 
+/* The page's own scrollbar stays visible; inner scroll areas only reveal
+   theirs while scrolling. */
+html {
+  scrollbar-color: rgb(156 163 175) transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: rgb(156 163 175);
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: rgb(107 114 128);
+}
+
 html.is-scrolling * {
   scrollbar-color: rgb(156 163 175) transparent;
 }

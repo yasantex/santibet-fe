@@ -183,3 +183,117 @@ export const siblingShortLabels = (titles: string[]): string[] => {
     return label || titles[i]
   })
 }
+
+export interface MarketTag {
+  label: string
+  /** Rolling market that re-opens every round — rendered with a repeat icon. */
+  recurring?: boolean
+}
+
+const RECURRENCE_LABELS: Record<number, string> = {
+  300: '5 Min',
+  900: '15 Min',
+  1800: '30 Min',
+  3600: 'Hourly',
+  14400: '4 Hours',
+  86400: 'Daily',
+  604800: 'Weekly',
+}
+
+const recurrenceLabel = (seconds: number) => {
+  if (RECURRENCE_LABELS[seconds]) return RECURRENCE_LABELS[seconds]
+  if (seconds < 3600) return `${Math.round(seconds / 60)} Min`
+  if (seconds < 86400) return `${Math.round(seconds / 3600)} Hours`
+  return `${Math.round(seconds / 86400)} Days`
+}
+
+const DAY_MS = 86_400_000
+const startOfDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+
+/** "7:45 PM", "Tomorrow 7:45 PM", "Sat 7:45 PM" or "Oct 20, 7:45 PM". */
+const kickoffLabel = (date: Date) => {
+  const time = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+  const days = Math.round((startOfDay(date) - startOfDay(new Date())) / DAY_MS)
+  if (days === 0) return time
+  if (days === 1) return `Tomorrow ${time}`
+  if (days > 1 && days < 7)
+    return `${date.toLocaleDateString('en-US', { weekday: 'short' })} ${time}`
+  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${time}`
+}
+
+/** "Ends Nov 4" (year added when it isn't the current one). */
+const endsLabel = (date: Date) =>
+  `Ends ${date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(date.getFullYear() !== new Date().getFullYear()
+      ? { year: 'numeric' }
+      : {}),
+  })}`
+
+/**
+ * Context tags shown beside the volume on market cards (Polymarket-style):
+ * - rolling rounds (crypto Up/Down) → how often a new round opens ("Hourly")
+ * - sports → league + kickoff ("Premier League", "Sat 7:45 PM"); sports
+ *   markets close at kickoff, so closeTime is the start time
+ * - everything else → when the market ends ("Ends Nov 4")
+ */
+export const marketTags = (market: {
+  subtitle?: string
+  closeTime?: string
+  seriesKey?: string | null
+  durationSeconds?: number | null
+}): MarketTag[] => {
+  const close = market.closeTime ? new Date(market.closeTime) : null
+  const upcoming =
+    close && !Number.isNaN(close.getTime()) && close.getTime() > Date.now()
+      ? close
+      : null
+
+  if (market.durationSeconds && market.durationSeconds > 0) {
+    return [{ label: recurrenceLabel(market.durationSeconds), recurring: true }]
+  }
+
+  if (market.seriesKey?.startsWith('apisports:')) {
+    const tags: MarketTag[] = []
+    const league = market.subtitle?.trim()
+    if (league) tags.push({ label: league })
+    if (upcoming) tags.push({ label: kickoffLabel(upcoming) })
+    return tags
+  }
+
+  return upcoming ? [{ label: endsLabel(upcoming) }] : []
+}
+
+// Sports events carry the sport in `seriesKey` (e.g. "apisports:football") and
+// the league/competition in `subtitle` (e.g. "Bundesliga"). These drive the
+// data-driven sport → league sub-navigation on the Sports page.
+const SPORT_LABELS: Record<string, string> = {
+  football: 'Football',
+  basketball: 'Basketball',
+  baseball: 'Baseball',
+  hockey: 'Ice Hockey',
+  'american-football': 'American Football',
+  nfl: 'American Football',
+  rugby: 'Rugby',
+  tennis: 'Tennis',
+  cricket: 'Cricket',
+  volleyball: 'Volleyball',
+  handball: 'Handball',
+  mma: 'MMA',
+  boxing: 'Boxing',
+}
+
+export const marketSport = (market: { seriesKey?: string | null }): string | null => {
+  const key = market.seriesKey ?? ''
+  if (!key.startsWith('apisports:')) return null
+  const raw = key.slice('apisports:'.length).toLowerCase()
+  return (
+    SPORT_LABELS[raw] ??
+    raw.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  )
+}
