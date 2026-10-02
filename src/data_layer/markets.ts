@@ -184,6 +184,7 @@ export const normalizeLobbyMarket = (
 
 export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
   const category = e.category?.name ?? 'General'
+  const categorySlug = (e.category?.slug ?? category).toLowerCase()
   return {
     id: e.id,
     provider: e.provider === 'KALSHI' ? 'kalshi' : 'polymarket',
@@ -195,9 +196,10 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
     live: e.live ?? false,
     liveState: e.liveState ?? null,
     featured: e.featured ?? false,
-    markets: (e.markets ?? []).map((m) =>
-      normalizeLobbyMarket(m, category, e.id, e.imageUrl, e.title),
-    ),
+    markets: (e.markets ?? []).map((m) => ({
+      ...normalizeLobbyMarket(m, category, e.id, e.imageUrl, e.title),
+      categorySlug,
+    })),
   }
 }
 
@@ -394,6 +396,23 @@ export const useEvents = (params: EventQueryParams = {}, enabled = true) =>
   })
 
 /**
+ * Live category tree from the lobby (GET /api/lobby/categories) — flat list,
+ * subcategories carry `parentSlug`. Admins create categories at runtime, so
+ * this refetches on focus and every few minutes rather than being cached for
+ * the session. Only categories with events are returned. Lobby-only; empty on
+ * the raw fallback feed.
+ */
+export const useLobbyCategories = () =>
+  useQuery({
+    queryKey: ['lobby-categories-nav'],
+    queryFn: () =>
+      get<LobbyCategory[]>(`${LOBBY_BASE}/categories`).catch(() => []),
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchOnWindowFocus: true,
+  })
+
+/**
  * Set of category names (lower-cased) that currently have at least one open,
  * tradeable market. Used to hide the "ahead-of-catalogue" nav entries and
  * empty sub-topic filters so browse only surfaces categories with markets.
@@ -403,12 +422,7 @@ export const useEvents = (params: EventQueryParams = {}, enabled = true) =>
 export const useAvailableCategories = (): Set<string> | null => {
   // Authoritative per-category counts (covers small categories that a single
   // event page would miss). Lobby-only; empty on the raw fallback feed.
-  const { data: lobbyCats } = useQuery({
-    queryKey: ['lobby-categories-nav'],
-    queryFn: () =>
-      get<LobbyCategory[]>(`${LOBBY_BASE}/categories`).catch(() => []),
-    staleTime: 5 * 60_000,
-  })
+  const { data: lobbyCats } = useLobbyCategories()
   // Event sample — the feed-agnostic signal, and the only one on the raw feed.
   const { data: events } = useEvents({ limit: 100 })
 
