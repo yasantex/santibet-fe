@@ -226,11 +226,11 @@ const LoginPage = () => {
       })
   }, [finishGoogleSignIn, navigate, redirectTo])
 
-  // Pre-fill the reset form when they signed in with an email, and keep the
+  // Pre-fill the reset form with the email/phone they signed in with, and keep the
   // post-login redirect so they still land where they were headed.
   const forgotPasswordPath = (() => {
     const params = new URLSearchParams()
-    if (identifier.includes('@')) params.set('email', identifier)
+    if (identifier) params.set('identifier', identifier)
     if (redirectTo) params.set(AUTH_REDIRECT_PARAM, redirectTo)
     const query = params.toString()
     return `/forgot-password${query ? `?${query}` : ''}`

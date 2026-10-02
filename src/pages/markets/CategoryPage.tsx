@@ -25,12 +25,7 @@ import {
 import { useFavorites } from '../../hooks/useFavorites'
 import { marketHref, marketSport } from '../../utils/marketDisplay'
 import { formatCompact } from '../../utils/functions'
-import {
-  categoryLabel,
-  categoryTopics,
-  mockSportsTree,
-  type CategoryTopic,
-} from '../../utils/constants'
+import { categoryTopics, type CategoryTopic } from '../../utils/constants'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 
 type SortOption = NonNullable<EventQueryParams['sort']>
@@ -94,7 +89,7 @@ const CategoryPage = () => {
   const subcategories = useMemo(
     () =>
       (apiCategories ?? []).filter(
-        (c) => c.parentSlug?.toLowerCase() === activeSlug,
+        (c) => c.parentSlug?.toLowerCase() === activeSlug && c.eventCount > 0,
       ),
     [apiCategories, activeSlug],
   )
@@ -111,14 +106,10 @@ const CategoryPage = () => {
       },
       { replace: true },
     )
-  // Static nav label first ("Tech" → "Tech & AI"), then the admin-given name
-  // for categories the nav doesn't know about, then the raw slug.
-  const staticLabel = categoryLabel(active)
+  // Admin-given name from the API, falling back to the raw slug.
   const categoryName =
-    staticLabel !== active
-      ? staticLabel
-      : ((apiCategories ?? []).find((c) => c.slug.toLowerCase() === activeSlug)
-          ?.name ?? active)
+    (apiCategories ?? []).find((c) => c.slug.toLowerCase() === activeSlug)
+      ?.name ?? active
   const activeLabel = activeSub?.name ?? categoryName
 
   const [searchOpen, setSearchOpen] = useState(false)
@@ -204,8 +195,13 @@ const CategoryPage = () => {
   }, [allMarkets, active, activeSlug, activeSub, subcategories])
 
   const topics = useMemo(
-    () => (active === 'All' ? [] : (categoryTopics[active] ?? [])),
-    [active],
+    () =>
+      active === 'All'
+        ? []
+        : (Object.entries(categoryTopics).find(
+            ([key]) => key.toLowerCase() === activeSlug,
+          )?.[1] ?? []),
+    [active, activeSlug],
   )
   const topicPatterns = useMemo(
     () => new Map(topics.map((t) => [t.name, topicPattern(t)])),
@@ -218,12 +214,10 @@ const CategoryPage = () => {
     const map = new Map<string, number>()
     topics.forEach((topic) => {
       const pattern = topicPatterns.get(topic.name)!
-      const live = [...byCategory, ...liveMarkets].filter((m) =>
-        matchesTopic(m, pattern),
-      ).length
       map.set(
         topic.name,
-        topic.mockCount != null ? Math.max(live, topic.mockCount) : live,
+        [...byCategory, ...liveMarkets].filter((m) => matchesTopic(m, pattern))
+          .length,
       )
     })
     return map
@@ -255,14 +249,9 @@ const CategoryPage = () => {
 
   // Only show sub-topics that actually match loaded markets — the topic list
   // is a curated superset, so hiding the empties keeps the sidebar honest
-  // (e.g. Business shows only the topics with markets, not all six). Topics
-  // with a fixed mockCount always show, standing in until real data arrives.
+  // (e.g. Business shows only the topics with markets, not all six).
   const visibleTopics = useMemo(
-    () =>
-      topics.filter(
-        (topic) =>
-          topic.mockCount != null || (topicCounts.get(topic.name) ?? 0) > 0,
-      ),
+    () => topics.filter((topic) => (topicCounts.get(topic.name) ?? 0) > 0),
     [topics, topicCounts],
   )
 
@@ -276,16 +265,6 @@ const CategoryPage = () => {
       if (!sports.has(sport)) sports.set(sport, new Map())
       const leagues = sports.get(sport)!
       leagues.set(league, (leagues.get(league) ?? 0) + 1)
-    }
-    // Merge in mock leagues/sports the live feed doesn't cover yet (e.g.
-    // NFL, MLB) — skipped wherever a real league of the same name already
-    // has markets, so mock data never overrides a live count.
-    for (const mock of mockSportsTree) {
-      if (!sports.has(mock.sport)) sports.set(mock.sport, new Map())
-      const leagues = sports.get(mock.sport)!
-      for (const league of mock.leagues) {
-        if (!leagues.has(league.name)) leagues.set(league.name, league.count)
-      }
     }
     return [...sports.entries()]
       .map(([sport, leagues]) => ({

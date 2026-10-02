@@ -8,7 +8,7 @@ import CustomSelector from '../globals/CustomSelector'
 import DateInput from '../globals/DateInput'
 import KycDocumentUpload from '../../pages/account/profileTabs/KycDocumentUpload'
 import { useSantiBetMutation } from '../../data_layer/utils'
-import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
+import { showSuccessToast } from '../../utils/toastUtils'
 import { kycStatusBadge } from '../../utils/status'
 import type { BaseApiResponse, KycStatusResponse } from '../../types/types'
 
@@ -46,6 +46,9 @@ const StandardVerification = ({
   refetchKyc,
 }: StandardVerificationProps) => {
   const [method, setMethod] = useState<VerifyMethod>('idNumber')
+  // Set when an ID-number check fails — opens a prompt pointing the user to
+  // the document upload instead. Holds the API's reason, if it gave one.
+  const [failureMessage, setFailureMessage] = useState<string | null>(null)
   const badge = kycStatusBadge(kycStatus?.status)
   const canSubmit = SUBMITTABLE_STATUSES.includes(kycStatus?.status ?? '')
 
@@ -56,12 +59,11 @@ const StandardVerification = ({
     path: '/kyc/verify',
     mutationOptions: {
       onError: (error) => {
-        if (isAxiosError(error)) {
-          const errorData = error.response?.data
-          showWarningToast(errorData?.message)
-        } else {
-          showWarningToast(error.message)
-        }
+        setFailureMessage(
+          (isAxiosError(error) ? error.response?.data?.message : null) ??
+            error.message ??
+            '',
+        )
       },
       onSuccess: (data) => {
         showSuccessToast(data?.message)
@@ -91,144 +93,193 @@ const StandardVerification = ({
       try {
         await postVerify(vals)
       } catch {
-        // Already surfaced via the mutation's onError toast above.
+        // Already surfaced via the failure modal (see onError above).
       }
     },
   })
 
+  // Label of the picked ID type ("BVN", "Voter's Card") for field hints.
+  const idTypeLabel =
+    idTypeOptions.find((o) => o.value === values.idType)?.label ?? 'your ID'
+
   return (
-    <ModalComponent
-      open={open}
-      handleClose={handleClose}
-      title='Standard verification'
-      subtitle='Verify your identity to unlock withdrawals.'
-      className='max-w-125! w-[90%]!'
-    >
-      {kycLoading ? (
-        <div className='h-11 w-full animate-pulse rounded-lg bg-neutral-10/20' />
-      ) : canSubmit ? (
-        <div className='flex w-full flex-col gap-3'>
-          {kycStatus?.rejectionReason && kycStatus.status !== 'NOT_STARTED' && (
-            <p className='rounded-lg bg-error-bg px-3 py-2.5 text-xs font-medium text-error'>
-              {kycStatus.rejectionReason}
-            </p>
-          )}
+    <>
+      <ModalComponent
+        open={open}
+        handleClose={handleClose}
+        title='Standard verification'
+        subtitle='Verify your identity to unlock withdrawals.'
+        className='max-w-125! w-[90%]!'
+      >
+        {kycLoading ? (
+          <div className='h-11 w-full animate-pulse rounded-lg bg-neutral-10/20' />
+        ) : canSubmit ? (
+          <div className='flex w-full flex-col gap-3'>
+            {kycStatus?.rejectionReason &&
+              kycStatus.status !== 'NOT_STARTED' && (
+                <p className='rounded-lg bg-error-bg px-3 py-2.5 text-xs font-medium text-error'>
+                  {kycStatus.rejectionReason}
+                </p>
+              )}
 
-          <div className='flex items-center gap-1 rounded-full bg-hover p-1'>
-            {(
-              [
-                { value: 'idNumber', label: 'ID number' },
-                { value: 'upload', label: 'Upload document' },
-              ] as const
-            ).map((m) => (
-              <button
-                key={m.value}
-                type='button'
-                onClick={() => setMethod(m.value)}
-                className={`flex-1 rounded-full py-1.5 text-sm font-semibold transition-colors ${
-                  method === m.value
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-neutral-10 hover:text-black'
-                }`}
+            <div className='flex items-center gap-1 rounded-full bg-hover p-1'>
+              {(
+                [
+                  { value: 'idNumber', label: 'ID number' },
+                  { value: 'upload', label: 'Upload document' },
+                ] as const
+              ).map((m) => (
+                <button
+                  key={m.value}
+                  type='button'
+                  onClick={() => setMethod(m.value)}
+                  className={`flex-1 rounded-full py-1.5 text-sm font-semibold transition-colors ${
+                    method === m.value
+                      ? 'bg-white text-black shadow-sm'
+                      : 'text-neutral-10 hover:text-black'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {method === 'upload' ? (
+              <KycDocumentUpload onSubmitted={refetchKyc} />
+            ) : (
+              <form
+                onSubmit={handleSubmit}
+                className='w-full flex flex-col gap-2.5'
               >
-                {m.label}
-              </button>
-            ))}
+                <CustomSelector
+                  options={idTypeOptions}
+                  value={values.idType}
+                  onChange={(value) => setFieldValue('idType', value)}
+                  placeholder='Select ID type'
+                  containerClassName='w-full'
+                />
+
+                <FormInput
+                  type='text'
+                  name='idNumber'
+                  value={values.idNumber}
+                  placeholder={
+                    values.idType
+                      ? `Enter ${values.idType} number`
+                      : 'Enter ID number'
+                  }
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  errors={
+                    errors.idNumber && touched.idNumber ? errors.idNumber : ''
+                  }
+                />
+
+                <FormInput
+                  type='text'
+                  name='firstName'
+                  value={values.firstName}
+                  placeholder={`Enter first name as displayed on ${idTypeLabel}`}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  errors={
+                    errors.firstName && touched.firstName
+                      ? errors.firstName
+                      : ''
+                  }
+                />
+
+                <FormInput
+                  type='text'
+                  name='lastName'
+                  value={values.lastName}
+                  placeholder={`Enter last name as displayed on ${idTypeLabel}`}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  errors={
+                    errors.lastName && touched.lastName ? errors.lastName : ''
+                  }
+                />
+                <DateInput
+                  value={values.dateOfBirth}
+                  onChange={(date) => setFieldValue('dateOfBirth', date)}
+                  placeholder={`Enter date of birth as displayed on ${idTypeLabel}`}
+                  errors={
+                    errors.dateOfBirth && touched.dateOfBirth
+                      ? errors.dateOfBirth
+                      : ''
+                  }
+                  containerClassName='w-full'
+                />
+
+                <Button
+                  type='submit'
+                  text='Verify KYC'
+                  variation='primary'
+                  className='mt-2.5'
+                  size='large'
+                  loading={isPending}
+                  disabled={isPending}
+                />
+              </form>
+            )}
           </div>
-
-          {method === 'upload' ? (
-            <KycDocumentUpload onSubmitted={refetchKyc} />
-          ) : (
-            <form
-              onSubmit={handleSubmit}
-              className='w-full flex flex-col gap-2.5'
+        ) : (
+          <div className='flex flex-col gap-1.5 rounded-lg bg-card p-4'>
+            <span
+              className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}
             >
-              <CustomSelector
-                options={idTypeOptions}
-                value={values.idType}
-                onChange={(value) => setFieldValue('idType', value)}
-                placeholder='Select ID type'
-                containerClassName='w-full'
-              />
+              {badge.label}
+            </span>
+            {kycStatus?.status === 'PENDING' && (
+              <p className='text-xs text-placeholder'>
+                We’re reviewing your details
+                {kycStatus.submittedAt
+                  ? ` (submitted ${new Date(kycStatus.submittedAt).toLocaleDateString()})`
+                  : ''}
+                . You’ll be notified once it’s done.
+              </p>
+            )}
+          </div>
+        )}
+      </ModalComponent>
 
-              <FormInput
-                type='text'
-                name='idNumber'
-                value={values.idNumber}
-                placeholder='Enter ID number'
-                onChange={handleChange}
-                onBlur={handleBlur}
-                errors={
-                  errors.idNumber && touched.idNumber ? errors.idNumber : ''
-                }
-              />
-
-              <FormInput
-                type='text'
-                name='firstName'
-                value={values.firstName}
-                placeholder='Enter first name'
-                onChange={handleChange}
-                onBlur={handleBlur}
-                errors={
-                  errors.firstName && touched.firstName ? errors.firstName : ''
-                }
-              />
-
-              <FormInput
-                type='text'
-                name='lastName'
-                value={values.lastName}
-                placeholder='Enter last name'
-                onChange={handleChange}
-                onBlur={handleBlur}
-                errors={
-                  errors.lastName && touched.lastName ? errors.lastName : ''
-                }
-              />
-              <DateInput
-                value={values.dateOfBirth}
-                onChange={(date) => setFieldValue('dateOfBirth', date)}
-                placeholder='select date'
-                errors={
-                  errors.dateOfBirth && touched.dateOfBirth
-                    ? errors.dateOfBirth
-                    : ''
-                }
-                containerClassName='w-full'
-              />
-
-              <Button
-                type='submit'
-                text='Verify KYC'
-                variation='primary'
-                className='mt-2.5'
-                size='large'
-                loading={isPending}
-                disabled={isPending}
-              />
-            </form>
-          )}
-        </div>
-      ) : (
-        <div className='flex flex-col gap-1.5 rounded-lg bg-card p-4'>
-          <span
-            className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}
-          >
-            {badge.label}
-          </span>
-          {kycStatus?.status === 'PENDING' && (
-            <p className='text-xs text-placeholder'>
-              We’re reviewing your details
-              {kycStatus.submittedAt
-                ? ` (submitted ${new Date(kycStatus.submittedAt).toLocaleDateString()})`
-                : ''}
-              . You’ll be notified once it’s done.
+      <ModalComponent
+        open={open && failureMessage !== null}
+        handleClose={() => setFailureMessage(null)}
+        title='Verification failed'
+        subtitle="We couldn't verify your ID number."
+        className='max-w-100! w-[90%]!'
+      >
+        <div className='flex w-full flex-col gap-3'>
+          {failureMessage && (
+            <p className='rounded-lg bg-error-bg px-3 py-2.5 text-xs font-medium text-error'>
+              {failureMessage}
             </p>
           )}
+          <p className='text-sm text-neutral-10'>
+            Please verify by uploading a photo of your ID document instead.
+          </p>
+          <Button
+            type='button'
+            text='Upload document'
+            variation='primary'
+            size='large'
+            onClick={() => {
+              setFailureMessage(null)
+              setMethod('upload')
+            }}
+          />
+          <Button
+            type='button'
+            text='Try again'
+            variation='plain'
+            size='large'
+            onClick={() => setFailureMessage(null)}
+          />
         </div>
-      )}
-    </ModalComponent>
+      </ModalComponent>
+    </>
   )
 }
 
