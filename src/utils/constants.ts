@@ -21,11 +21,6 @@ import type { NavigateFunction } from 'react-router'
 export type NavLink = {
   label: string
   href: string
-  /** Category the backend doesn't serve yet — always shown regardless of
-   *  `useAvailableCategories`, unlike real category links which are hidden
-   *  once loaded if they have zero open markets. Drop this flag once the
-   *  backend actually returns markets for the category. */
-  isMock?: boolean
 }
 
 export type CategoryLink = {
@@ -47,62 +42,8 @@ export type SearchResult = {
   direction: 'up' | 'down' | 'neutral'
 }
 
-/**
- * Order and labels follow the GLOBAL row of the platform's taxonomy doc:
- * Home | Trending | Sports | Finance | Crypto | Economics | Politics |
- * Tech & AI | Culture | Climate | Science | Entertainment | Weather | More.
- * Esports moved out of this list — the doc lists it as a Sports
- * subcategory (see `mockSportsTree`), not a sibling domain.
- * Categories not in the doc's primary row (Business, Geopolitics, General)
- * live in `moreNavLinks` instead, under a "More" dropdown.
- * Pro", they're distinct products/states rather than market categories, so
- * they're surfaced in the header's top row instead; see `Header.tsx`.
- */
-export const primaryNavLinks: NavLink[] = [
-  { label: 'Trending', href: '/' },
-  { label: 'Sports', href: '/category/Sports' },
-  { label: 'Finance', href: '/category/Finance', isMock: true },
-  { label: 'Crypto', href: '/category/Crypto' },
-  { label: 'Economics', href: '/category/Economics', isMock: true },
-  { label: 'Politics', href: '/category/Politics' },
-  { label: 'Tech & AI', href: '/category/Tech' },
-  { label: 'Culture', href: '/category/Culture', isMock: true },
-  { label: 'Climate', href: '/category/Climate', isMock: true },
-  { label: 'Science', href: '/category/Science', isMock: true },
-  { label: 'Entertainment', href: '/category/Entertainment' },
-  { label: 'Weather', href: '/category/Weather', isMock: true },
-]
-
-/** Overflow categories shown in the nav's "More" dropdown — real categories
- *  the doc's GLOBAL row doesn't call out by name, plus the catch-all. */
-export const moreNavLinks: NavLink[] = [
-  { label: 'Business', href: '/category/Business' },
-  { label: 'Geopolitics', href: '/category/Geopolitics', isMock: true },
-  { label: 'General', href: '/category/General' },
-]
-
-/**
- * Display label for a category route slug (e.g. "Tech" -> "Tech & AI"),
- * looked up from the nav links so the category-page heading matches
- * whatever the nav pill says. Falls back to the raw slug for categories
- * reachable only by direct URL (not in either nav list).
- */
-export const categoryLabel = (slug: string): string =>
-  [...primaryNavLinks, ...moreNavLinks].find(
-    (link) => link.href.toLowerCase() === `/category/${slug}`.toLowerCase(),
-  )?.label ?? slug
-
 export type CategoryTopic = {
   name: string
-  /**
-   * Fixed display count for a topic with no backing market data yet (the
-   * backend doesn't tag markets by topic, or doesn't have any for this one
-   * at all) — shown instead of the live per-market count so the sidebar
-   * looks populated ahead of real data. Delete this field (or the whole
-   * entry) once the API returns markets that actually match the topic; the
-   * count then falls back to the honest live count automatically.
-   */
-  mockCount?: number
   /**
    * Words that place a market in this topic, matched whole-word against the
    * market/event title and subtitle. Defaults to the topic name itself —
@@ -119,21 +60,21 @@ export type CategoryTopic = {
  * taxonomy doc, so the sidebar structure matches it domain-for-domain. The
  * backend doesn't expose per-market tags yet, so this is a curated
  * placeholder list — swap for real tag data once the API returns it.
- * Counts shown against topics without `mockCount` are computed live from
- * loaded market titles, so they stay honest even though the topic list
- * itself is mocked.
+ * Counts are computed live from loaded market titles, and topics with no
+ * matching markets are hidden. Keys are matched case-insensitively against
+ * the category slug.
  */
 export const categoryTopics: Record<string, CategoryTopic[]> = {
   Politics: [
-    { name: 'Elections', mockCount: 0 },
-    { name: 'Government', mockCount: 0 },
-    { name: 'Legislation', mockCount: 0 },
-    { name: 'Courts', mockCount: 0 },
-    { name: 'Parties', mockCount: 0 },
-    { name: 'Leaders', mockCount: 0 },
+    { name: 'Elections' },
+    { name: 'Government' },
+    { name: 'Legislation' },
+    { name: 'Courts' },
+    { name: 'Parties' },
+    { name: 'Leaders' },
   ],
   // Sports doesn't use this list — its sidebar is the data-driven sport →
-  // league tree in CategoryPage (`sportsGroups` + `mockSportsTree`) instead.
+  // league tree in CategoryPage (`sportsGroups`) instead.
   // Crypto topics are keyword-driven (see `keywords`) since the labels are
   // groupings that never appear in market titles. Topics can overlap (a
   // Hyperliquid airdrop is both DeFi and an Airdrop); empty ones are hidden.
@@ -210,129 +151,30 @@ export const categoryTopics: Record<string, CategoryTopic[]> = {
     { name: 'Layoffs' },
   ],
   Finance: [
-    { name: 'Equities', mockCount: 0 },
-    { name: 'Commodities', mockCount: 0 },
-    { name: 'Forex', mockCount: 0 },
-    { name: 'Rates', mockCount: 0 },
-    { name: 'Bonds', mockCount: 0 },
+    { name: 'Equities' },
+    { name: 'Commodities' },
+    { name: 'Forex' },
+    { name: 'Rates' },
+    { name: 'Bonds' },
   ],
   Entertainment: [
-    { name: 'Film', mockCount: 0 },
-    { name: 'TV', mockCount: 0 },
-    { name: 'Music', mockCount: 0 },
-    { name: 'Gaming', mockCount: 0 },
-    { name: 'Awards', mockCount: 0 },
-    { name: 'Celebrity', mockCount: 0 },
+    { name: 'Film' },
+    { name: 'TV' },
+    { name: 'Music' },
+    { name: 'Gaming' },
+    { name: 'Awards' },
+    { name: 'Celebrity' },
   ],
   Tech: [
-    { name: 'AI', mockCount: 0 },
-    { name: 'Software', mockCount: 0 },
-    { name: 'Hardware', mockCount: 0 },
-    { name: 'Cybersecurity', mockCount: 0 },
-    { name: 'Robotics', mockCount: 0 },
-    { name: 'Startups', mockCount: 0 },
-  ],
-  // Mock categories below — no backend data at all yet, so every topic
-  // carries a fixed mockCount. Delete each block once the category ships.
-  Geopolitics: [
-    { name: 'Russia-Ukraine War', mockCount: 0 },
-    { name: 'Middle East', mockCount: 0 },
-    { name: 'China-Taiwan', mockCount: 0 },
-    { name: 'NATO', mockCount: 0 },
-    { name: 'Sanctions', mockCount: 0 },
-  ],
-  Culture: [
-    { name: 'Music', mockCount: 0 },
-    { name: 'Movies', mockCount: 0 },
-    { name: 'TV', mockCount: 0 },
-    { name: 'Books', mockCount: 0 },
-    { name: 'Art', mockCount: 0 },
-    { name: 'Internet Culture', mockCount: 0 },
-  ],
-  Economics: [
-    { name: 'Inflation', mockCount: 0 },
-    { name: 'Employment', mockCount: 0 },
-    { name: 'GDP', mockCount: 0 },
-    { name: 'Rates', mockCount: 0 },
-    { name: 'Trade', mockCount: 0 },
-    { name: 'Housing', mockCount: 0 },
-  ],
-  Weather: [
-    { name: 'Temperature', mockCount: 0 },
-    { name: 'Rain', mockCount: 0 },
-    { name: 'Storms', mockCount: 0 },
-    { name: 'Wind', mockCount: 0 },
-    { name: 'Severe Weather', mockCount: 0 },
-  ],
-  Climate: [
-    { name: 'Climate Change', mockCount: 0 },
-    { name: 'Energy', mockCount: 0 },
-    { name: 'Environment', mockCount: 0 },
-    { name: 'Natural Events', mockCount: 0 },
-  ],
-  Science: [
-    { name: 'Space', mockCount: 0 },
-    { name: 'Biology', mockCount: 0 },
-    { name: 'Medicine', mockCount: 0 },
-    { name: 'Physics', mockCount: 0 },
-    { name: 'Chemistry', mockCount: 0 },
-    { name: 'Earth Science', mockCount: 0 },
+    { name: 'AI' },
+    { name: 'Software' },
+    { name: 'Hardware' },
+    { name: 'Cybersecurity' },
+    { name: 'Robotics' },
+    { name: 'Startups' },
   ],
   General: [{ name: 'Trending' }, { name: 'Featured' }, { name: 'New' }],
 }
-
-export type MockLeague = { name: string; count: number }
-export type MockSportGroup = { sport: string; leagues: MockLeague[] }
-
-/**
- * Sports leagues shown in the Sports sidebar that the live feed doesn't
- * cover yet — either a whole sport our sports-data provider doesn't carry
- * (NFL, MLB, UFC, College Football), or extra leagues within a sport we do
- * cover (Serie A, MLS, Süper Lig alongside the Premier League/Bundesliga/
- * LaLiga markets that already come through). Merged into the live sport →
- * league tree in CategoryPage; a league here is skipped once a market with
- * a matching sport/league already exists, and the whole entry should be
- * deleted once the backend/API actually returns markets for it.
- */
-export const mockSportsTree: MockSportGroup[] = [
-  {
-    sport: 'Football',
-    leagues: [
-      { name: 'Premier League', count: 0 },
-      { name: 'Serie A', count: 0 },
-      { name: 'MLS', count: 0 },
-      { name: 'Süper Lig', count: 0 },
-    ],
-  },
-  { sport: 'American Football', leagues: [{ name: 'NFL', count: 0 }] },
-  { sport: 'Baseball', leagues: [{ name: 'MLB', count: 0 }] },
-  {
-    sport: 'College Football',
-    leagues: [{ name: 'College Football', count: 0 }],
-  },
-  { sport: 'MMA', leagues: [{ name: 'UFC', count: 0 }] },
-  // Basketball, Tennis, Cricket, Hockey, Golf and Motorsport are named
-  // explicitly as Sports subcategories in the taxonomy doc, alongside
-  // Football/Baseball/Esports above — added here so the sidebar covers the
-  // doc's full list even though the sports-data provider has no markets
-  // for them yet.
-  { sport: 'Basketball', leagues: [{ name: 'NBA', count: 0 }] },
-  { sport: 'Tennis', leagues: [{ name: 'Wimbledon', count: 0 }] },
-  { sport: 'Cricket', leagues: [{ name: 'ICC World Cup', count: 0 }] },
-  { sport: 'Hockey', leagues: [{ name: 'NHL', count: 0 }] },
-  { sport: 'Golf', leagues: [{ name: 'PGA Tour', count: 0 }] },
-  { sport: 'Motorsport', leagues: [{ name: 'Formula 1', count: 0 }] },
-  {
-    sport: 'Esports',
-    leagues: [
-      { name: 'League of Legends', count: 0 },
-      { name: 'CS2', count: 0 },
-      { name: 'Dota 2', count: 0 },
-      { name: 'Valorant', count: 0 },
-      { name: 'Overwatch', count: 0 },
-    ],
-  },
-]
 
 export type DepositOption = {
   id: string

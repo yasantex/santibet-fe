@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useFormik } from 'formik'
 import { useSantiBetMutation } from '../../data_layer/utils'
 import type { BaseApiResponse } from '../../types/types'
@@ -10,12 +10,16 @@ import { FormInput } from '../../components/globals/FormInput'
 import { OtpInput } from '../../components/globals/OtpInput'
 
 const RecoverPassword = () => {
+  // Email or phone number the reset code was sent to (route param), with
+  // `?email=` kept as a fallback for older links.
+  const { identifier: identifierParam } = useParams<{ identifier?: string }>()
   const [searchParams] = useSearchParams()
-  const email = searchParams.get('email') || ''
+  const navigate = useNavigate()
+  const identifier = identifierParam || searchParams.get('email') || ''
 
   const { mutateAsync: postRecover, isPending } = useSantiBetMutation<
     BaseApiResponse,
-    { email: string; code: string; newPassword: string }
+    { identifier: string; code: string; newPassword: string }
   >({
     path: `/auth/reset-password`,
     mutationOptions: {
@@ -27,8 +31,10 @@ const RecoverPassword = () => {
           showWarningToast(error.message)
         }
       },
+      // Resetting signs out every device and returns no tokens — sign in again.
       onSuccess: (data) => {
         showSuccessToast(data?.message)
+        navigate('/signin', { replace: true })
       },
     },
   })
@@ -46,13 +52,13 @@ const RecoverPassword = () => {
     initialValues: {
       code: '',
       newPassword: '',
-      email
+      identifier,
     },
     validationSchema: NewPasswordSchema,
     onSubmit: async (vals) => {
       try {
         await postRecover({
-          email,
+          identifier,
           code: vals.code,
           newPassword: vals.newPassword,
         })
@@ -64,7 +70,9 @@ const RecoverPassword = () => {
     <div className='flex flex-col items-center justify-center w-full mx-auto mt-10 md:mt-20 max-w-100 px-5 md:max-w-125! gap-2.5'>
       <h1 className='text-black font-bold text-center'>Reset your password</h1>
       <p className='text-sm text-center text-neutral-10'>
-        Enter your new password below.
+        {identifier
+          ? `Enter the code we sent to ${identifier} and your new password.`
+          : 'Enter the code we sent you and your new password.'}
       </p>
 
       <form

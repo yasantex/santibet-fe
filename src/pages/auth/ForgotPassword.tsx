@@ -1,25 +1,24 @@
 import { useFormik } from 'formik'
 import { useSantiBetMutation } from '../../data_layer/utils'
 import type { BaseApiResponse } from '../../types/types'
-import { ForgotPasswordSchema } from '../../utils/validations'
+import {
+  IdentifierSchema,
+  identifierChannel,
+} from '../../utils/validations'
 import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
 import { Button } from '../../components/globals/Button'
 import { FormInput } from '../../components/globals/FormInput'
 import { useNavigate, useSearchParams } from 'react-router'
-import {
-  AUTH_REDIRECT_PARAM,
-  buildAuthPath,
-} from '../../utils/authRedirect'
+import { AUTH_REDIRECT_PARAM, buildAuthPath } from '../../utils/authRedirect'
 
 const ForgotPassword = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const {
-    mutateAsync: postForgotPassword,
-    isPending,
-    isSuccess,
-  } = useSantiBetMutation<BaseApiResponse, { email: string }>({
+  const { mutateAsync: postForgotPassword, isPending } = useSantiBetMutation<
+    BaseApiResponse,
+    { identifier: string; channel: 'email' | 'sms' }
+  >({
     path: `/auth/forgot-password`,
     mutationOptions: {
       onError: (error) => {
@@ -36,87 +35,73 @@ const ForgotPassword = () => {
   const { values, handleChange, handleBlur, errors, touched, handleSubmit } =
     useFormik({
       initialValues: {
-        email: searchParams.get('email') ?? '',
+        identifier:
+          searchParams.get('identifier') ?? searchParams.get('email') ?? '',
       },
-      validationSchema: ForgotPasswordSchema,
+      validationSchema: IdentifierSchema,
       onSubmit: async (vals) => {
         try {
-          await postForgotPassword({ email: vals.email })
+          // Always 202 whether or not the account exists, so go straight to
+          // the code-entry page.
+          const identifier = vals.identifier.trim()
+          await postForgotPassword({
+            identifier,
+            channel: identifierChannel(identifier),
+          })
+          navigate(`/recover-password/${encodeURIComponent(identifier)}`)
         } catch {}
       },
     })
 
   return (
-    <>
-      {!isSuccess ? (
-        <div className='flex flex-col items-center justify-center w-full mx-auto mt-10 md:mt-20 max-w-100 px-5 md:max-w-125! gap-2.5'>
-          <h1 className='text-black font-bold text-center'>
-            Reset your password
-          </h1>
-          <p className='text-sm text-center text-neutral-10'>
-            Please enter the email address that you registered on SantiBet. We
-            will send you a one-time password reset link at this address.
-          </p>
+    <div className='flex flex-col items-center justify-center w-full mx-auto mt-10 md:mt-20 max-w-100 px-5 md:max-w-125! gap-2.5'>
+      <h1 className='text-black font-bold text-center'>Reset your password</h1>
+      <p className='text-sm text-center text-neutral-10'>
+        Enter the email address or phone number you registered on SantiBet.
+        We&apos;ll send a one-time reset code there — by email or SMS.
+      </p>
 
-          <form
-            onSubmit={handleSubmit}
-            className='w-full flex flex-col gap-2.5 mt-2.5'
-          >
-            <FormInput
-              type='text'
-              name='email'
-              value={values.email}
-              hasTitle
-              title='Email address'
-              placeholder='email address'
-              onChange={handleChange}
-              onBlur={handleBlur}
-              errors={errors.email && touched.email ? errors.email : ''}
-            />
+      <form
+        onSubmit={handleSubmit}
+        className='w-full flex flex-col gap-2.5 mt-2.5'
+      >
+        <FormInput
+          type='text'
+          name='identifier'
+          value={values.identifier}
+          hasTitle
+          title='Email address or phone number'
+          placeholder='email address/phone number'
+          onChange={handleChange}
+          onBlur={handleBlur}
+          errors={
+            errors.identifier && touched.identifier ? errors.identifier : ''
+          }
+        />
 
-            <Button
-              type='submit'
-              text='Send Reset Link'
-              variation='primary'
-              className='mt-2.5'
-              size='large'
-              loading={isPending}
-              disabled={isPending}
-            />
-          </form>
-          <Button
-            type='button'
-            text='Back to Login'
-            variation='plain'
-            className='mt-2.5'
-            size='large'
-            onClick={() =>
-              navigate(
-                buildAuthPath('/signin', searchParams.get(AUTH_REDIRECT_PARAM)),
-              )
-            }
-          />
-        </div>
-      ) : (
-        <div className='flex flex-col items-center justify-center w-full mx-auto mt-10 md:mt-20 max-w-100 px-5 md:max-w-125! gap-2.5'>
-          <h1 className='text-black font-bold text-center'>Check your email</h1>
-          <p className='text-sm text-center text-neutral-10'>
-            If a matching SantiBet account was found, an email with password
-            reset instructions was sent to:
-          </p>
-          <p className='text-sm font-bold text-center text-black break-all'>
-            {values.email}
-          </p>
-
-          <p className='text-sm font-semibold text-neutral-10'>
-            Didn&apos;t receive an email?{' '}
-            <span className='font-semibold text-black underline underline-offset-3 cursor-pointer'>
-              Contact support
-            </span>
-          </p>
-        </div>
-      )}
-    </>
+        <Button
+          type='submit'
+          text='Send Reset Code'
+          variation='primary'
+          className='mt-2.5'
+          size='large'
+          loading={isPending}
+          disabled={isPending}
+        />
+      </form>
+      <Button
+        type='button'
+        text='Back to Login'
+        variation='plain'
+        className='mt-2.5'
+        size='large'
+        onClick={() =>
+          navigate(
+            buildAuthPath('/signin', searchParams.get(AUTH_REDIRECT_PARAM)),
+          )
+        }
+      />
+    </div>
   )
 }
 
