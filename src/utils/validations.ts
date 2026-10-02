@@ -8,6 +8,10 @@ export const SignInSchema = Yup.object({
 
 const phoneRegExp = /^\+?[0-9]{7,15}$/
 
+/** Which channel a sign-in identifier reaches: an `@` means email, else SMS. */
+export const identifierChannel = (identifier: string): 'email' | 'sms' =>
+  identifier.includes('@') ? 'email' : 'sms'
+
 export const IdentifierSchema = Yup.object().shape({
   identifier: Yup.string()
     .required('Email address or phone number is required')
@@ -36,12 +40,6 @@ export const SetPasswordSchema = Yup.object().shape({
     .min(8, 'Password must be at least 8 characters'),
 })
 
-export const ForgotPasswordSchema = Yup.object({
-  email: Yup.string()
-    .email('Email is not a valid email')
-    .required('Email is required'),
-})
-
 export const NewPasswordSchema = Yup.object({
   newPassword: Yup.string()
     .required('Password is required')
@@ -51,7 +49,9 @@ export const NewPasswordSchema = Yup.object({
       'Password must contain letters and numbers',
     ),
   code: Yup.string().required('Code is required'),
-  email: Yup.string().trim().required('Email is required'),
+  identifier: Yup.string()
+    .trim()
+    .required('Email address or phone number is required'),
 })
 
 export const ChangePasswordSchema = Yup.object({

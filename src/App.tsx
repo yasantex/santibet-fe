@@ -81,7 +81,7 @@ function App() {
               <Route path='/two-fa' element={<TwoFaPage />} />
 
               <Route
-                path='/recover-password/:email'
+                path='/recover-password/:identifier'
                 element={<RecoverPassword />}
               />
             </Route>

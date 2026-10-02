@@ -8,14 +8,11 @@ import SearchInput from '../components/globals/SearchInput'
 import Deposit from '../components/appModals/Deposit'
 import { useModalControl } from '../hooks/useModalControl'
 import {
-  moreNavLinks,
-  primaryNavLinks,
   type NavLink as NavLinkConfig,
   type SearchResult,
 } from '../utils/constants'
 import {
   useMarketSearch,
-  useAvailableCategories,
   useLiveBets,
   useLobbyCategories,
 } from '../data_layer/markets'
@@ -71,69 +68,51 @@ const CategoryRow = () => {
   const scrollByAmount = (delta: number) =>
     scrollRef.current?.scrollBy({ left: delta, behavior: 'smooth' })
 
-  // Only surface category tabs that actually have markets behind them. Live /
-  // Trending (non-`/category/` hrefs) and mock categories (no backend data
-  // yet) always show; category links are kept while the feed is still
-  // loading (`available === null`) to avoid flashing a near-empty nav, then
-  // filtered to categories with open markets once loaded.
-  const isLinkVisible = useCallback(
-    (link: NavLinkConfig, availableSet: Set<string> | null) => {
-      if (!availableSet || link.isMock) return true
-      const category = link.href.startsWith('/category/')
-        ? link.href.slice('/category/'.length)
-        : null
-      return !category || availableSet.has(category.toLowerCase())
-    },
-    [],
-  )
-  const available = useAvailableCategories()
-  const visibleLinks = useMemo(
-    () => primaryNavLinks.filter((link) => isLinkVisible(link, available)),
-    [available, isLinkVisible],
-  )
-  // Categories an admin creates at runtime aren't in the static nav lists —
-  // append any unknown top-level ones to "More", and nest each More entry's
-  // subcategories (from the API's `parentSlug`) beneath it.
+  // Nav is driven entirely by the lobby's category list — admins create
+  // categories at runtime, so nothing here is hard-coded. Only categories
+  // (and subcategories) with events show; a parent with no events of its own
+  // still shows if one of its subcategories has some. Subcategories whose
+  // parent isn't returned get their own top-level tab so they stay reachable.
   const { data: apiCategories } = useLobbyCategories()
-  const visibleMoreLinks = useMemo(() => {
+  const { visibleLinks, visibleMoreLinks } = useMemo(() => {
     const cats = apiCategories ?? []
-    const slugOf = (href: string) =>
-      href.startsWith('/category/')
-        ? href.slice('/category/'.length).toLowerCase()
-        : null
-    const known = new Set(
-      [...primaryNavLinks, ...moreNavLinks]
-        .map((link) => slugOf(link.href))
-        .filter(Boolean),
-    )
-    const apiSlugs = new Set(cats.map((c) => c.slug.toLowerCase()))
+    const slugs = new Set(cats.map((c) => c.slug.toLowerCase()))
     const childrenOf = (parent: string) =>
       cats
-        .filter((c) => c.parentSlug?.toLowerCase() === parent)
+        .filter(
+          (c) => c.parentSlug?.toLowerCase() === parent && c.eventCount > 0,
+        )
         .map((c) => ({
           label: c.name,
           href: `/category/${parent}?sub=${c.slug.toLowerCase()}`,
         }))
 
-    const staticLinks = moreNavLinks.filter((link) =>
-      isLinkVisible(link, available),
-    )
-    // Top-level categories not in the static lists, plus subcategories whose
-    // parent isn't listed anywhere (so they'd otherwise be unreachable).
-    const extraLinks: NavLinkConfig[] = cats
+    const topLevel = cats
       .filter((c) => {
-        const slug = c.slug.toLowerCase()
         const parent = c.parentSlug?.toLowerCase()
-        if (known.has(slug)) return false
-        return !parent || (!known.has(parent) && !apiSlugs.has(parent))
+        return !parent || !slugs.has(parent)
       })
-      .map((c) => ({ label: c.name, href: `/category/${c.slug.toLowerCase()}` }))
+      .map((c) => {
+        const slug = c.slug.toLowerCase()
+        return {
+          label: c.name,
+          href: `/category/${slug}`,
+          eventCount: c.eventCount,
+          children: childrenOf(slug),
+        }
+      })
+      .filter((c) => c.eventCount > 0 || c.children.length > 0)
 
-    return [...staticLinks, ...extraLinks].map((link) => {
-      const slug = slugOf(link.href)
-      return { ...link, children: slug ? childrenOf(slug) : [] }
-    })
-  }, [apiCategories, available, isLinkVisible])
+    const links: NavLinkConfig[] = [
+      { label: 'Trending', href: '/' },
+      ...topLevel.map(({ label, href }) => ({ label, href })),
+    ]
+    // "More" lists the categories that have subcategories, nested beneath.
+    return {
+      visibleLinks: links,
+      visibleMoreLinks: topLevel.filter((c) => c.children.length > 0),
+    }
+  }, [apiCategories])
 
   return (
     <div className='flex items-center w-full gap-6'>
@@ -323,9 +302,6 @@ const Header = () => {
               Live
               {liveCount > 0 && <span className='text-error'>{liveCount}</span>}
             </NavLink>
-            <Link to='/browse?sort=newest' className={browseLinkClass('newest')}>
-              New
-            </Link>
             <Link to='/browse?sort=trending' className={browseLinkClass('trending')}>
               Breaking
             </Link>
