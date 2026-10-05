@@ -518,6 +518,55 @@ const CategoryPage = () => {
           </div>
         )}
 
+        {/* Sports chips — the mobile stand-in for the sport → league sidebar:
+            a row of sports, then the picked sport's leagues beneath it. */}
+        {isSports && sportsGroups.length > 0 && (
+          <div className='-mt-2 flex flex-col gap-2 md:hidden'>
+            <div className='hide-scroll-bar flex gap-2 overflow-x-auto'>
+              {[null, ...sportsGroups.map((g) => g.sport)].map((sport) => (
+                <button
+                  key={sport ?? 'all'}
+                  type='button'
+                  onClick={() => {
+                    setActiveSport(sport)
+                    setActiveLeague(null)
+                  }}
+                  className={`shrink-0 cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium ${
+                    activeSport === sport
+                      ? 'bg-black text-white'
+                      : 'bg-card text-neutral-10'
+                  }`}
+                >
+                  {sport ?? 'All sports'}
+                </button>
+              ))}
+            </div>
+            {activeSport && (
+              <div className='hide-scroll-bar flex gap-2 overflow-x-auto'>
+                {[
+                  null,
+                  ...(sportsGroups
+                    .find((g) => g.sport === activeSport)
+                    ?.leagues.map((l) => l.name) ?? []),
+                ].map((league) => (
+                  <button
+                    key={league ?? 'all'}
+                    type='button'
+                    onClick={() => setActiveLeague(league)}
+                    className={`shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-medium ${
+                      activeLeague === league
+                        ? 'bg-black text-white'
+                        : 'bg-card text-neutral-10'
+                    }`}
+                  >
+                    {league ?? `All ${activeSport}`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Live rounds, narrowed by the active sub-topic; hidden when the
             topic has none (e.g. Stablecoins). */}
         {showLive && (
