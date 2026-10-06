@@ -6,7 +6,10 @@ import { Button } from '../globals/Button'
 import { FormInput } from '../globals/FormInput'
 import CustomSelector from '../globals/CustomSelector'
 import DateInput from '../globals/DateInput'
-import KycDocumentUpload from '../../pages/account/profileTabs/KycDocumentUpload'
+import { Stepper, StepScreen } from '../globals/Stepper'
+import KycDocumentUpload, {
+  UPLOAD_STEPS,
+} from '../../pages/account/profileTabs/KycDocumentUpload'
 import { useSantiBetMutation } from '../../data_layer/utils'
 import { showSuccessToast } from '../../utils/toastUtils'
 import { kycStatusBadge } from '../../utils/status'
@@ -32,6 +35,13 @@ const SUBMITTABLE_STATUSES = ['NOT_STARTED', 'REJECTED', 'MORE_INFO_REQUIRED']
 
 type VerifyMethod = 'idNumber' | 'upload'
 
+// Manual flow: ID → name → date of birth. Each step lists the fields it gates.
+const MANUAL_STEPS: (keyof KycPayload)[][] = [
+  ['idType', 'idNumber'],
+  ['firstName', 'lastName'],
+  ['dateOfBirth'],
+]
+
 type StandardVerificationProps = ModalProps & {
   kycStatus: KycStatusResponse | undefined
   kycLoading: boolean
@@ -46,6 +56,7 @@ const StandardVerification = ({
   refetchKyc,
 }: StandardVerificationProps) => {
   const [method, setMethod] = useState<VerifyMethod>('idNumber')
+  const [step, setStep] = useState(0)
   // Set when an ID-number check fails — opens a prompt pointing the user to
   // the document upload instead. Holds the API's reason, if it gave one.
   const [failureMessage, setFailureMessage] = useState<string | null>(null)
@@ -76,7 +87,7 @@ const StandardVerification = ({
     values,
     errors,
     touched,
-    handleSubmit,
+    submitForm,
     handleChange,
     handleBlur,
     setFieldValue,
@@ -102,6 +113,28 @@ const StandardVerification = ({
   const idTypeLabel =
     idTypeOptions.find((o) => o.value === values.idType)?.label ?? 'your ID'
 
+  const changeMethod = (m: VerifyMethod) => {
+    setMethod(m)
+    setStep(0)
+  }
+
+  const totalSteps = method === 'upload' ? UPLOAD_STEPS : MANUAL_STEPS.length
+  const stepComplete = MANUAL_STEPS[step]?.every((f) => values[f].trim())
+  const isLastStep = step === MANUAL_STEPS.length - 1
+
+  const manualSecondary =
+    step === 0
+      ? { secondaryText: 'Not now', onSecondary: handleClose }
+      : { secondaryText: 'Back', onSecondary: () => setStep(step - 1) }
+
+  const manualStepProps = {
+    continueDisabled: !stepComplete,
+    continueText: isLastStep ? 'Verify' : 'Continue',
+    loading: isLastStep && isPending,
+    onContinue: () => (isLastStep ? submitForm() : setStep(step + 1)),
+    ...manualSecondary,
+  }
+
   return (
     <>
       <ModalComponent
@@ -122,35 +155,42 @@ const StandardVerification = ({
                 </p>
               )}
 
-            <div className='flex items-center gap-1 rounded-full bg-hover p-1'>
-              {(
-                [
-                  { value: 'idNumber', label: 'ID number' },
-                  { value: 'upload', label: 'Upload document' },
-                ] as const
-              ).map((m) => (
-                <button
-                  key={m.value}
-                  type='button'
-                  onClick={() => setMethod(m.value)}
-                  className={`flex-1 rounded-full py-1.5 text-sm font-semibold transition-colors ${
-                    method === m.value
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-neutral-10 hover:text-black'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
+            {/* Method can only be switched before the flow is underway. */}
+            {step === 0 && (
+              <div className='flex items-center gap-1 rounded-full bg-hover p-1'>
+                {(
+                  [
+                    { value: 'idNumber', label: 'ID number' },
+                    { value: 'upload', label: 'Upload document' },
+                  ] as const
+                ).map((m) => (
+                  <button
+                    key={m.value}
+                    type='button'
+                    onClick={() => changeMethod(m.value)}
+                    className={`flex-1 rounded-full py-1.5 text-sm font-semibold transition-colors ${
+                      method === m.value
+                        ? 'bg-white text-black shadow-sm'
+                        : 'text-neutral-10 hover:text-black'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <Stepper steps={totalSteps} current={step} className='my-2' />
 
             {method === 'upload' ? (
-              <KycDocumentUpload onSubmitted={refetchKyc} />
-            ) : (
-              <form
-                onSubmit={handleSubmit}
-                className='w-full flex flex-col gap-2.5'
-              >
+              <KycDocumentUpload
+                step={step}
+                onStepChange={setStep}
+                onCancel={handleClose}
+                onSubmitted={refetchKyc}
+              />
+            ) : step === 0 ? (
+              <StepScreen title='Which ID will you use?' {...manualStepProps}>
                 <CustomSelector
                   options={idTypeOptions}
                   value={values.idType}
@@ -158,14 +198,13 @@ const StandardVerification = ({
                   placeholder='Select ID type'
                   containerClassName='w-full'
                 />
-
                 <FormInput
                   type='text'
                   name='idNumber'
                   value={values.idNumber}
                   placeholder={
                     values.idType
-                      ? `Enter ${values.idType} number`
+                      ? `Enter ${idTypeLabel} number`
                       : 'Enter ID number'
                   }
                   onChange={handleChange}
@@ -174,12 +213,18 @@ const StandardVerification = ({
                     errors.idNumber && touched.idNumber ? errors.idNumber : ''
                   }
                 />
-
+              </StepScreen>
+            ) : step === 1 ? (
+              <StepScreen
+                title='What’s your name?'
+                subtitle={`Enter it exactly as it appears on ${idTypeLabel}.`}
+                {...manualStepProps}
+              >
                 <FormInput
                   type='text'
                   name='firstName'
                   value={values.firstName}
-                  placeholder={`Enter first name as displayed on ${idTypeLabel}`}
+                  placeholder='Legal first name'
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={
@@ -188,22 +233,28 @@ const StandardVerification = ({
                       : ''
                   }
                 />
-
                 <FormInput
                   type='text'
                   name='lastName'
                   value={values.lastName}
-                  placeholder={`Enter last name as displayed on ${idTypeLabel}`}
+                  placeholder='Legal last name'
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={
                     errors.lastName && touched.lastName ? errors.lastName : ''
                   }
                 />
+              </StepScreen>
+            ) : (
+              <StepScreen
+                title='When were you born?'
+                subtitle={`Use the date of birth on ${idTypeLabel}.`}
+                {...manualStepProps}
+              >
                 <DateInput
                   value={values.dateOfBirth}
-                  onChange={(date) => setFieldValue('dateOfBirth', date)}
-                  placeholder={`Enter date of birth as displayed on ${idTypeLabel}`}
+                  onChange={(date) => setFieldValue('dateOfBirth', date ?? '')}
+                  placeholder='Date of birth'
                   errors={
                     errors.dateOfBirth && touched.dateOfBirth
                       ? errors.dateOfBirth
@@ -211,17 +262,7 @@ const StandardVerification = ({
                   }
                   containerClassName='w-full'
                 />
-
-                <Button
-                  type='submit'
-                  text='Verify KYC'
-                  variation='primary'
-                  className='mt-2.5'
-                  size='large'
-                  loading={isPending}
-                  disabled={isPending}
-                />
-              </form>
+              </StepScreen>
             )}
           </div>
         ) : (
@@ -267,7 +308,7 @@ const StandardVerification = ({
             size='large'
             onClick={() => {
               setFailureMessage(null)
-              setMethod('upload')
+              changeMethod('upload')
             }}
           />
           <Button
@@ -275,7 +316,11 @@ const StandardVerification = ({
             text='Try again'
             variation='plain'
             size='large'
-            onClick={() => setFailureMessage(null)}
+            onClick={() => {
+              // Back to the start so the ID number can be re-checked.
+              setFailureMessage(null)
+              setStep(0)
+            }}
           />
         </div>
       </ModalComponent>
