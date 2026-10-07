@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useDebounce } from 'use-debounce'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon, Search01Icon } from '@hugeicons/core-free-icons'
@@ -18,8 +19,7 @@ import {
   useEventsInfinite,
   useLiveBets,
   useLobbyCategories,
-  marketMatchesQuery,
-  normalizeText,
+  SEARCH_DEBOUNCE_MS,
   type EventQueryParams,
 } from '../../data_layer/markets'
 import { useFavorites } from '../../hooks/useFavorites'
@@ -133,6 +133,9 @@ const CategoryPage = () => {
     setLiveInterval(null)
   }
 
+  // Searched server-side via /lobby/events?q=, within the active category.
+  const [searchQuery] = useDebounce(searchTerm.trim(), SEARCH_DEBOUNCE_MS)
+
   const {
     data,
     isLoading,
@@ -140,15 +143,19 @@ const CategoryPage = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useEventsInfinite({
-    limit: 100,
-    sort,
-    // Filter server-side by category slug (lower-case) so a busy category like
-    // Sports paginates within itself instead of over the whole catalogue.
-    ...(active !== 'All'
-      ? { category: activeSub ? activeSub.slug.toLowerCase() : activeSlug }
-      : {}),
-  })
+  } = useEventsInfinite(
+    {
+      limit: 100,
+      sort,
+      q: searchQuery || undefined,
+      // Filter server-side by category slug (lower-case) so a busy category like
+      // Sports paginates within itself instead of over the whole catalogue.
+      ...(active !== 'All'
+        ? { category: activeSub ? activeSub.slug.toLowerCase() : activeSlug }
+        : {}),
+    },
+    { keepPrevious: !!searchQuery },
+  )
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
   // Crypto's live bets (rolling "Up or Down" rounds + anything in-play) get
@@ -291,11 +298,8 @@ const CategoryPage = () => {
       : byCategory
   }, [isSports, byCategory, activeSport, activeLeague, activePattern])
 
-  const filtered = useMemo(() => {
-    const q = normalizeText(searchTerm.trim())
-    if (!q) return byTopic
-    return byTopic.filter((m) => marketMatchesQuery(m, q))
-  }, [byTopic, searchTerm])
+  // The search itself runs server-side (see `q` above).
+  const filtered = byTopic
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))

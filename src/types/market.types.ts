@@ -320,6 +320,33 @@ export interface LobbyEventListResponse {
   cursor: string | null
 }
 
+/** GET /api/lobby/search — slim event and market hits, no prices. */
+type LobbySearchCategory = Pick<LobbyCategoryRef, 'slug' | 'name'>
+
+export interface LobbySearchEvent {
+  id: string
+  slug: string
+  title: string
+  subtitle: string | null
+  imageUrl: string | null
+  category: LobbySearchCategory | null
+}
+
+export interface LobbySearchMarket {
+  id: string
+  slug: string
+  title: string
+  eventId: string
+  eventTitle: string | null
+  imageUrl: string | null
+  category: LobbySearchCategory | null
+}
+
+export interface LobbySearchResponse {
+  events: LobbySearchEvent[]
+  markets: LobbySearchMarket[]
+}
+
 export interface LobbyHome {
   featured: LobbyEvent[]
   hotPicks?: LobbyEvent[]
