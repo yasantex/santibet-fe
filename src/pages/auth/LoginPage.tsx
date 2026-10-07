@@ -12,10 +12,26 @@ import {
   SetPasswordSchema,
 } from '../../utils/validations'
 import { isAxiosError } from 'axios'
+import {
+  browserSupportsWebAuthn,
+  startAuthentication,
+} from '@simplewebauthn/browser'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { FingerPrintIcon } from '@hugeicons/core-free-icons'
 import { showWarningToast } from '../../utils/toastUtils'
 import { setUser } from '../../redux/userSlice'
 import { Button } from '../../components/globals/Button'
 import { FormInput } from '../../components/globals/FormInput'
+import type {
+  PasskeyLoginOptionsResponse,
+  PasskeyLoginVerifyPayload,
+} from '../../types/passkey.types'
+import {
+  browserPromptErrorMessage,
+  isChallengeError,
+  markPasskeyOfferPending,
+  passkeyErrorCode,
+} from '../../utils/passkeys'
 import {
   startGoogleOAuth,
   getGoogleOAuthCodeVerifier,
@@ -41,6 +57,16 @@ interface VerifyResponse {
   verificationTicket: string
 }
 
+const PASSKEY_TRY_AGAIN =
+  'That didn’t work. Try again or sign in with your password.'
+
+const passkeyLoginErrorMessage = (code?: string) => {
+  if (code === 'PASSKEY_UNKNOWN')
+    return 'We don’t recognise that passkey. Sign in another way and add it again.'
+  if (isChallengeError(code)) return 'That took too long. Try again.'
+  return PASSKEY_TRY_AGAIN
+}
+
 const handleMutationError = (error: unknown) => {
   if (isAxiosError(error)) {
     showWarningToast(error.response?.data?.message)
@@ -58,10 +84,12 @@ const LoginPage = () => {
   const [step, setStep] = useState<Step>('identifier')
   const [identifier, setIdentifier] = useState('')
   const [verificationTicket, setVerificationTicket] = useState('')
+  const [supportsPasskeys] = useState(() => browserSupportsWebAuthn())
+  const [isPasskeySigningIn, setIsPasskeySigningIn] = useState(false)
   // Set synchronously so the first render already shows the loader instead
   // of flashing the normal form before the callback effect below runs.
-  const [isGoogleCallback] = useState(
-    () => new URLSearchParams(window.location.search).has('code'),
+  const [isGoogleCallback] = useState(() =>
+    new URLSearchParams(window.location.search).has('code'),
   )
   // Where to send the user once signed in (e.g. a shared market link). The
   // Google callback lands on bare /signin, so it reads the stashed value.
@@ -120,7 +148,11 @@ const LoginPage = () => {
         path: '/auth/login',
         mutationOptions: {
           onError: handleMutationError,
-          onSuccess: handleAuthSuccess,
+          onSuccess: (data) => {
+            // Offer "Add a passkey for next time" once they land in the app.
+            if (supportsPasskeys) markPasskeyOfferPending()
+            handleAuthSuccess(data)
+          },
         },
       },
     )
@@ -186,6 +218,47 @@ const LoginPage = () => {
       }
     },
   })
+
+  // Passkey sign-in — options → browser prompt → verify. No identifier: the
+  // passkey names the account. Every attempt fetches fresh options, so a
+  // spent/expired challenge just means trying again.
+  const { mutateAsync: getPasskeyOptions } =
+    useSantiBetMutation<PasskeyLoginOptionsResponse>({
+      path: '/auth/passkeys/login/options',
+    })
+
+  const { mutateAsync: verifyPasskey } = useSantiBetMutation<
+    AuthResponse,
+    PasskeyLoginVerifyPayload
+  >({
+    path: '/auth/passkeys/login/verify',
+  })
+
+  const handlePasskeySignIn = async () => {
+    setIsPasskeySigningIn(true)
+    try {
+      const { challengeId, options } = await getPasskeyOptions({})
+
+      let credential
+      try {
+        credential = await startAuthentication({ optionsJSON: options })
+      } catch (error) {
+        // Cancelled or no passkey on this device stays quiet; a setup problem
+        // (e.g. rpId not matching this domain) gets a message.
+        const message = browserPromptErrorMessage(error)
+        if (message) showWarningToast(message)
+        return
+      }
+
+      // Same shape as /auth/login; mfaRequired is always false (a passkey
+      // counts as two-factor on its own).
+      handleAuthSuccess(await verifyPasskey({ challengeId, credential }))
+    } catch (error) {
+      showWarningToast(passkeyLoginErrorMessage(passkeyErrorCode(error)))
+    } finally {
+      setIsPasskeySigningIn(false)
+    }
+  }
 
   const { mutateAsync: finishGoogleSignIn } = useSantiBetMutation<
     AuthResponse,
@@ -280,6 +353,24 @@ const LoginPage = () => {
               })
             }}
           />
+          {/* Sign-in only: a passkey can't create an account. */}
+          {supportsPasskeys && pathname === '/signin' && (
+            <Button
+              type='button'
+              text={
+                <span className='flex items-center gap-2.5'>
+                  <HugeiconsIcon icon={FingerPrintIcon} size={18} />
+                  {isPasskeySigningIn
+                    ? 'Waiting for your passkey…'
+                    : 'Sign in with a passkey'}
+                </span>
+              }
+              variation='plain'
+              size='large'
+              disabled={isPasskeySigningIn}
+              onClick={handlePasskeySignIn}
+            />
+          )}
           <div className='flex items-center w-full gap-2.5 mt-2.5 text-sm text-neutral-10'>
             <span className='flex-1 h-px bg-border' />
             OR

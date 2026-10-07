@@ -7,6 +7,7 @@ import Footer from './Footer'
 import Header from './Header'
 import SuspendedBanner from '../components/globals/SuspendedBanner'
 import { Outlet } from 'react-router'
+import PasskeyOffer from '../components/appModals/auth/PasskeyOffer'
 
 const AppLayout = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
@@ -44,6 +45,7 @@ const AppLayout = () => {
           handleModalClose()
         }}
       />
+      <PasskeyOffer />
     </div>
   )
 }
