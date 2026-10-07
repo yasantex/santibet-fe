@@ -10,6 +10,7 @@ import TwoFactorSetupModal from '../../../components/appModals/auth/TwoFactorSet
 import DisableTwoFactorModal from '../../../components/appModals/auth/DisableTwoFactorModal'
 import ChangePassword from '../../../components/appModals/auth/ChangePassword'
 import RegenerateRecoveryCodes from '../../../components/appModals/auth/RegenerateRecoveryCodes'
+import PasskeysSection from './PasskeysSection'
 
 interface SecurityRow {
   id: string
@@ -128,6 +129,8 @@ const SecurityTab = () => {
           )}
         </button>
       ))}
+
+      <PasskeysSection />
 
       <TwoFactorSetupModal
         open={modalOpen && modal === 'setup-enable'}
