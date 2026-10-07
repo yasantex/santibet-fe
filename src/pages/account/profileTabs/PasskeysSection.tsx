@@ -13,6 +13,7 @@ import {
   useSantiBetQuery,
 } from '../../../data_layer/utils'
 import { Button } from '../../../components/globals/Button'
+import { FormInput } from '../../../components/globals/FormInput'
 import AddPasskeyModal from '../../../components/appModals/auth/AddPasskeyModal'
 import { showSuccessToast, showWarningToast } from '../../../utils/toastUtils'
 import { PASSKEYS_QUERY_KEY, passkeyErrorCode } from '../../../utils/passkeys'
@@ -125,31 +126,35 @@ const PasskeyRow = ({ passkey }: { passkey: Passkey }) => {
                   handleSave()
                 }}
               >
-                <input
-                  autoFocus
+                <FormInput
+                  type='text'
+                  name='passkeyName'
                   value={name}
+                  placeholder='Passkey name'
+                  autoFocus
                   maxLength={60}
                   disabled={isRenaming}
                   onChange={(e) => setName(e.target.value)}
+                  onBlur={() => {}}
                   onKeyDown={(e) => e.key === 'Escape' && cancelEdit()}
                   aria-label='Passkey name'
-                  className='min-w-0 flex-1 rounded-md border border-border bg-transparent px-2 py-1 text-sm font-semibold text-black outline-none focus:border-brand-green'
+                  containerClassName='min-w-0 flex-1'
                 />
-                <button
+                <Button
                   type='submit'
+                  text='Save'
+                  variation='primary'
+                  size='medium'
                   disabled={isRenaming}
-                  className='cursor-pointer text-xs font-semibold text-black underline underline-offset-3 disabled:opacity-50'
-                >
-                  Save
-                </button>
-                <button
+                />
+                <Button
                   type='button'
+                  text='Cancel'
+                  variation='plain'
+                  size='medium'
                   disabled={isRenaming}
                   onClick={cancelEdit}
-                  className='cursor-pointer text-xs font-semibold text-neutral-10 disabled:opacity-50'
-                >
-                  Cancel
-                </button>
+                />
               </form>
             ) : (
               <div className='flex min-w-0 items-center gap-2'>
@@ -174,28 +179,33 @@ const PasskeyRow = ({ passkey }: { passkey: Passkey }) => {
 
         {!editing && (
           <div className='flex items-center gap-2'>
-            <button
+            <Button
               type='button'
+              text={
+                <span className='flex items-center gap-1.5'>
+                  <HugeiconsIcon icon={PencilEdit02Icon} size={14} />
+                  Rename
+                </span>
+              }
+              variation='plain'
+              size='medium'
               onClick={() => setEditing(true)}
-              className='flex cursor-pointer items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-hover'
-            >
-              <HugeiconsIcon icon={PencilEdit02Icon} size={14} />
-              Rename
-            </button>
-            <button
+            />
+            <Button
               type='button'
+              text={
+                <span className='flex items-center gap-1.5'>
+                  <HugeiconsIcon icon={Delete02Icon} size={14} />
+                  {confirmingDelete ? 'Tap to confirm' : 'Remove'}
+                </span>
+              }
+              variation='error'
+              size='medium'
+              className={confirmingDelete ? 'bg-error! text-white!' : ''}
+              disabled={isRemoving}
               onClick={handleDeleteTap}
               onBlur={() => setConfirmingDelete(false)}
-              disabled={isRemoving}
-              className={`flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                confirmingDelete
-                  ? 'bg-error text-white'
-                  : 'border border-error text-error hover:bg-surface-error'
-              }`}
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={14} />
-              {confirmingDelete ? 'Tap to confirm' : 'Remove'}
-            </button>
+            />
           </div>
         )}
       </div>
@@ -235,7 +245,7 @@ const PasskeysSection = () => {
             text='Add passkey'
             variation='primary'
             size='medium'
-            className='shrink-0'
+            className='shrink-0 w-fit!'
             onClick={() => setAddOpen(true)}
           />
         )}

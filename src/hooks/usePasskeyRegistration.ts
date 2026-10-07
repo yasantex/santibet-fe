@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { isAxiosError } from 'axios'
 import { useQueryClient } from '@tanstack/react-query'
 import { startRegistration } from '@simplewebauthn/browser'
 import { useSantiBetMutation } from '../data_layer/utils'
@@ -7,6 +6,7 @@ import { showSuccessToast, showWarningToast } from '../utils/toastUtils'
 import {
   PASSKEYS_QUERY_KEY,
   browserPromptErrorMessage,
+  passkeyApiMessage,
   passkeyErrorCode,
 } from '../utils/passkeys'
 import type {
@@ -15,6 +15,7 @@ import type {
   PasskeyRegisterVerifyPayload,
 } from '../types/passkey.types'
 
+// Fallbacks for when the API sends a code but no message.
 const REGISTER_ERROR_MESSAGES: Record<string, string> = {
   PASSKEY_VERIFICATION_FAILED: 'That didn’t work. Try again.',
   PASSKEY_ALREADY_REGISTERED: 'This passkey is already on an account.',
@@ -67,8 +68,8 @@ const usePasskeyRegistration = () => {
     } catch (error) {
       const code = passkeyErrorCode(error)
       showWarningToast(
-        (code && REGISTER_ERROR_MESSAGES[code]) ||
-          (isAxiosError(error) ? error.response?.data?.message : null) ||
+        passkeyApiMessage(error) ||
+          (code && REGISTER_ERROR_MESSAGES[code]) ||
           'That didn’t work. Try again.',
       )
       return null
