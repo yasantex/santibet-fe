@@ -156,7 +156,20 @@ const isAccountSuspendedError = (error: unknown) =>
 
 // Session endpoints stay allowed for suspended accounts, so their success
 // says nothing about whether the account can write again.
-const SESSION_PATHS = ['/auth/login', '/auth/logout', '/auth/refresh']
+const SESSION_PATHS = [
+  '/auth/login',
+  '/auth/logout',
+  '/auth/refresh',
+  '/auth/passkeys/login',
+]
+
+// Sign-in calls answer 401 for bad credentials, not an expired session, so
+// they must not trigger a token refresh (which would also hide their `code`).
+const NO_REFRESH_PATHS = [
+  '/auth/refresh',
+  '/auth/login',
+  '/auth/passkeys/login',
+]
 
 const isAllowedWhileSuspended = (config: AxiosRequestConfig) =>
   !config.method ||
@@ -194,8 +207,7 @@ apiClient.interceptors.response.use(
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
-      originalRequest.url !== '/auth/refresh' &&
-      originalRequest.url !== '/auth/login'
+      !NO_REFRESH_PATHS.some((path) => originalRequest.url?.startsWith(path))
     ) {
       originalRequest._retry = true
       try {
