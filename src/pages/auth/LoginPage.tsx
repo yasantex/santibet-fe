@@ -30,6 +30,7 @@ import {
   browserPromptErrorMessage,
   isChallengeError,
   markPasskeyOfferPending,
+  passkeyApiMessage,
   passkeyErrorCode,
 } from '../../utils/passkeys'
 import {
@@ -60,6 +61,7 @@ interface VerifyResponse {
 const PASSKEY_TRY_AGAIN =
   'That didn’t work. Try again or sign in with your password.'
 
+// Fallback for when the API sends a code but no message.
 const passkeyLoginErrorMessage = (code?: string) => {
   if (code === 'PASSKEY_UNKNOWN')
     return 'We don’t recognise that passkey. Sign in another way and add it again.'
@@ -254,7 +256,10 @@ const LoginPage = () => {
       // counts as two-factor on its own).
       handleAuthSuccess(await verifyPasskey({ challengeId, credential }))
     } catch (error) {
-      showWarningToast(passkeyLoginErrorMessage(passkeyErrorCode(error)))
+      showWarningToast(
+        passkeyApiMessage(error) ??
+          passkeyLoginErrorMessage(passkeyErrorCode(error)),
+      )
     } finally {
       setIsPasskeySigningIn(false)
     }
