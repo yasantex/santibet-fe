@@ -7,6 +7,10 @@ export const PASSKEYS_QUERY_KEY = ['auth', 'passkeys']
 export const passkeyErrorCode = (error: unknown): string | undefined =>
   isAxiosError(error) ? error.response?.data?.code : undefined
 
+// The API's own `message` (e.g. "That passkey could not be verified"), if any.
+export const passkeyApiMessage = (error: unknown): string | undefined =>
+  isAxiosError(error) ? error.response?.data?.message || undefined : undefined
+
 // Challenge ids are single-use and live for five minutes. Either way the
 // fix is the same: fetch fresh options and prompt again.
 export const isChallengeError = (code?: string) =>
