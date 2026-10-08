@@ -13,7 +13,7 @@ import KycDocumentUpload, {
 import { useSantiBetMutation } from '../../data_layer/utils'
 import { showSuccessToast } from '../../utils/toastUtils'
 import { kycStatusBadge } from '../../utils/status'
-import type { BaseApiResponse, KycStatusResponse } from '../../types/types'
+import type { KycStatusResponse } from '../../types/types'
 
 type KycPayload = {
   idType: string
@@ -26,8 +26,8 @@ type KycPayload = {
 const idTypeOptions = [
   { label: 'BVN', value: 'BVN' },
   { label: 'NIN', value: 'NIN' },
-  { label: "Voter's Card", value: "voter's card" },
-  { label: "Driver's Licence", value: "driver's licence" },
+  { label: "Voter's Card", value: 'VOTERS_CARD' },
+  { label: "Driver's Licence", value: 'DRIVERS_LICENSE' },
 ]
 
 // Statuses where the user can (re)submit verification.
@@ -63,8 +63,10 @@ const StandardVerification = ({
   const badge = kycStatusBadge(kycStatus?.status)
   const canSubmit = SUBMITTABLE_STATUSES.includes(kycStatus?.status ?? '')
 
+  // Returns the KYC status, not a message: APPROVED on a name match;
+  // anything else means the ID couldn't be confirmed.
   const { mutateAsync: postVerify, isPending } = useSantiBetMutation<
-    BaseApiResponse,
+    KycStatusResponse,
     KycPayload
   >({
     path: '/kyc/verify',
@@ -77,8 +79,12 @@ const StandardVerification = ({
         )
       },
       onSuccess: (data) => {
-        showSuccessToast(data?.message)
         refetchKyc()
+        if (data?.status === 'APPROVED') {
+          showSuccessToast('You’re verified')
+        } else {
+          setFailureMessage(data?.rejectionReason ?? '')
+        }
       },
     },
   })
