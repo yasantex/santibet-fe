@@ -9,7 +9,13 @@ import { MarketCardSkeleton } from '../components/globals/ReusedText'
 import FilterComponent, {
   type FilterCategory,
 } from '../components/globals/FilterComponent'
-import { useEvents, useLiveBets, useLobbyHome } from '../data_layer/markets'
+import {
+  useEvents,
+  useEventsInfinite,
+  useLiveBets,
+  useLobbyHome,
+} from '../data_layer/markets'
+import { Button } from '../components/globals/Button'
 import { useFavorites } from '../hooks/useFavorites'
 import { marketHref } from '../utils/marketDisplay'
 import type { UiEvent, UiMarket, UiOutcome } from '../types/market.types'
@@ -57,7 +63,22 @@ const MarketsDashboard = () => {
 
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
-  const { data, isLoading, isError, refetch } = useEvents({ limit: 60 })
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useEventsInfinite({ limit: 60 })
+  // Every page loaded so far (grid + category chips); "Load more" appends a page.
+  const events = useMemo(
+    () => (data?.pages ?? []).flatMap((p) => p.events),
+    [data],
+  )
+  // The hero carousel only looks at the first page, so it stays put as more load.
+  const firstPageEvents = useMemo(() => data?.pages[0]?.events ?? [], [data])
   const { data: home, isLoading: isHomeLoading } = useLobbyHome()
   // Every admin-featured event, not just the few /lobby/home returns.
   const { data: featuredData } = useEvents({ featured: true, limit: 50 })
@@ -87,18 +108,18 @@ const MarketsDashboard = () => {
   }, [home, liveEventIds])
 
   const allMarkets = useMemo<UiMarket[]>(() => {
-    const markets = (data?.events ?? []).flatMap((e) => e.markets)
+    const markets = events.flatMap((e) => e.markets)
     // Prefer tradeable markets, richest volume first.
     const open = markets.filter((m) => m.status !== 'closed' && m.yes)
     const pool = open.length ? open : markets.filter((m) => m.yes)
     return [...pool].sort((a, b) => b.volume - a.volume)
-  }, [data])
+  }, [events])
 
   const categories = useMemo(() => {
     const set = new Set<string>()
-    ;(data?.events ?? []).forEach((e) => e.category && set.add(e.category))
+    events.forEach((e) => e.category && set.add(e.category))
     return ['All', ...Array.from(set)]
-  }, [data])
+  }, [events])
 
   // Hero carousel: every admin-featured event first, then the most
   // audience-relevant events that actually trade (so each slide has a real
@@ -117,19 +138,19 @@ const MarketsDashboard = () => {
         (m) => (m.yes?.price ?? 0) >= 0.02 && (m.yes?.price ?? 0) <= 0.98,
       )
     const picked = new Map<string, UiEvent>()
-    const events = data?.events ?? []
+    const pageEvents = firstPageEvents
     // The flag check guards the raw fallback feed, which ignores ?featured.
     for (const e of [
       ...(home?.featured ?? []),
       ...(featuredData?.events ?? []).filter((e) => e.featured),
-      ...events.filter((e) => e.featured),
+      ...pageEvents.filter((e) => e.featured),
     ]) {
       if (!picked.has(e.id) && showable(e)) picked.set(e.id, e)
     }
     // One slide per coin: its longest open interval, so the slide doesn't
     // settle out from under the viewer mid-rotation.
     for (const coin of FEATURED_CRYPTO) {
-      const series = events
+      const series = pageEvents
         .filter(
           (e) =>
             e.title.startsWith(`${coin} `) &&
@@ -145,10 +166,10 @@ const MarketsDashboard = () => {
     }
     const featuredLimit = picked.size + FEATURED_COUNT
     const eventOf = new Map(
-      events.flatMap((e) => e.markets.map((m) => [m.id, e] as const)),
+      pageEvents.flatMap((e) => e.markets.map((m) => [m.id, e] as const)),
     )
     const ranked = pickHotTopics(
-      events.flatMap((e) => e.markets),
+      pageEvents.flatMap((e) => e.markets),
       FEATURED_COUNT * 3,
     )
       // A hero slide needs a live question: real trading and an outcome that
@@ -160,7 +181,7 @@ const MarketsDashboard = () => {
       if (e && !picked.has(e.id)) picked.set(e.id, e)
     }
     return Array.from(picked.values())
-  }, [home, featuredData, data])
+  }, [home, featuredData, firstPageEvents])
 
   // Operator-curated in admin (Events → Hot pick), served by /lobby/home in
   // the order the API returns them.
@@ -374,6 +395,20 @@ const MarketsDashboard = () => {
               No markets in this category yet.
             </p>
           )}
+        </div>
+      )}
+
+      {!isError && hasNextPage && (
+        <div className='flex justify-center'>
+          <Button
+            type='button'
+            text={isFetchingNextPage ? 'Loading…' : 'Load more'}
+            variation='plain'
+            size='medium'
+            className='w-fit!'
+            loading={isFetchingNextPage}
+            onClick={() => fetchNextPage()}
+          />
         </div>
       )}
     </main>

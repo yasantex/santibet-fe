@@ -128,7 +128,7 @@ const KycDocumentUpload = ({
     >
       <FilePicker
         label='Selfie holding your ID'
-        hint='Speeds up the review'
+        // No PDF for the selfie (API accepts JPG/PNG/WEBP, ≤ 5 MB).
         accept={['image/jpeg', 'image/png', 'image/webp']}
         file={selfie}
         onChange={setSelfie}

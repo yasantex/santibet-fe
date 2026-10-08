@@ -56,11 +56,19 @@ export type FormatDateTimeOptions = {
   locale?: string
 }
 
+export type KycStatus =
+  | 'NOT_STARTED'
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'MORE_INFO_REQUIRED'
+
+// GET /kyc and POST /kyc/verify both return this.
 export type KycStatusResponse = {
-  status: string
-  legalName: string
-  provider: string
-  submittedAt: string
-  reviewedAt: string
-  rejectionReason: string
+  status: KycStatus
+  legalName: string | null
+  provider: string | null
+  submittedAt: string | null
+  reviewedAt: string | null
+  rejectionReason: string | null
 }
