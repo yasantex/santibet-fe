@@ -12,7 +12,7 @@ import {
   type SearchResult,
 } from '../utils/constants'
 import {
-  useMarketSearch,
+  useGlobalSearch,
   useLiveBets,
   useLobbyCategories,
 } from '../data_layer/markets'
@@ -270,7 +270,7 @@ const Header = () => {
 
   const [searchTerm, setSearchTerm] = useState('')
 
-  const { results: filteredResults } = useMarketSearch(searchTerm)
+  const { sections, query, isSearching } = useGlobalSearch(searchTerm)
 
   const handleSelectResult = (result: SearchResult) => {
     navigate(result.href)
@@ -325,7 +325,9 @@ const Header = () => {
               menuClassName='w-[350px] max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
               menu={({ close }) => (
                 <SearchResultsList
-                  results={filteredResults}
+                  sections={sections}
+                  loading={isSearching}
+                  emptyLabel={query ? `No results for "${query}"` : undefined}
                   onSelect={(result) => {
                     close()
                     handleSelectResult(result)
@@ -336,7 +338,7 @@ const Header = () => {
               <SearchInput
                 searchTerm={searchTerm}
                 handleChange={(e) => setSearchTerm(e.target.value)}
-                placeholder='Search markets'
+                placeholder='Search events and markets'
               />
             </Dropdown>
           </main>

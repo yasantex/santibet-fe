@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useQueries,
   useQuery,
@@ -7,10 +8,11 @@ import {
   type InfiniteData,
 } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
+import { useDebounce } from 'use-debounce'
 import { apiClient, type QueryParams } from './utils'
 import { toCents, toPercent } from '../utils/functions'
 import { categoryIcon } from '../utils/marketDisplay'
-import type { SearchResult } from '../utils/constants'
+import type { SearchResult, SearchSection } from '../utils/constants'
 import type {
   ApiEvent,
   ApiEventListResponse,
@@ -24,6 +26,9 @@ import type {
   LobbyEventListResponse,
   LobbyHome,
   LobbyMarket,
+  LobbySearchEvent,
+  LobbySearchMarket,
+  LobbySearchResponse,
   LobbyStatus,
   MarketChart,
   MarketHistoryResponse,
@@ -412,7 +417,11 @@ export const useLobbyCategories = () =>
     refetchOnWindowFocus: true,
   })
 
-export const useEventsInfinite = (params: EventQueryParams = {}) =>
+export const useEventsInfinite = (
+  params: EventQueryParams = {},
+  // Keep the previous results on screen while new params load (e.g. typing a search).
+  { keepPrevious = false }: { keepPrevious?: boolean } = {},
+) =>
   useInfiniteQuery<
     { events: UiEvent[]; cursor: string | null },
     Error,
@@ -424,6 +433,7 @@ export const useEventsInfinite = (params: EventQueryParams = {}) =>
     initialPageParam: undefined,
     queryFn: ({ pageParam }) => fetchEvents(params, pageParam),
     getNextPageParam: (last) => last.cursor ?? undefined,
+    placeholderData: keepPrevious ? keepPreviousData : undefined,
   })
 
 /**
@@ -886,8 +896,8 @@ export const useMarketCharts = (
 
 
 // ── Search ────────────────────────────────────────────────────────────
-// The events endpoint ignores `q` server-side, so we fetch a batch once and
-// filter client-side. Results are mapped into the shared SearchResult shape.
+// Global search hits GET /api/lobby/search (events + markets, no prices).
+// With no query the dropdown shows top-volume markets as suggestions.
 
 /** Lower-case + strip diacritics so "koln" matches "Köln", "munchen" ↔ "München". */
 export const normalizeText = (s: string): string =>
@@ -895,21 +905,6 @@ export const normalizeText = (s: string): string =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
-
-/**
- * True when the query hits any searchable part of a market — its title,
- * subtitle (league/context), category, or an outcome label (participants /
- * options like team names, "Over 2.5", "Draw"). `q` must be pre-normalized.
- */
-export const marketMatchesQuery = (m: UiMarket, q: string): boolean => {
-  if (!q) return true
-  return (
-    normalizeText(m.title ?? '').includes(q) ||
-    normalizeText(m.subtitle ?? '').includes(q) ||
-    normalizeText(m.category ?? '').includes(q) ||
-    m.outcomes.some((o) => normalizeText(o.label ?? '').includes(q))
-  )
-}
 
 const marketToSearchResult = (m: UiMarket): SearchResult => ({
   id: m.id,
@@ -924,26 +919,82 @@ const marketToSearchResult = (m: UiMarket): SearchResult => ({
   direction: 'neutral',
 })
 
-export const useMarketSearch = (term: string, limit = 12) => {
-  const [debounced, setDebounced] = useState(term)
+const SEARCH_ICON_BG = '#183123'
+const SEARCH_ICON_TEXT = '#c6f135'
 
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(term), 200)
-    return () => clearTimeout(id)
-  }, [term])
+const searchEventToResult = (e: LobbySearchEvent): SearchResult => ({
+  id: `event-${e.id}`,
+  title: e.title,
+  subtitle: e.subtitle || e.category?.name || '',
+  href: `/events/${e.id}`,
+  imageUrl: e.imageUrl,
+  iconLabel: categoryIcon(e.category?.name ?? ''),
+  iconBg: SEARCH_ICON_BG,
+  iconTextColor: SEARCH_ICON_TEXT,
+})
 
-  const { data, isLoading } = useEvents({ limit: 100 })
+const searchMarketToResult = (m: LobbySearchMarket): SearchResult => ({
+  id: `market-${m.id}`,
+  title: m.title,
+  subtitle: m.eventTitle || m.category?.name || '',
+  href: m.eventId ? `/markets/${m.id}?event=${m.eventId}` : `/markets/${m.id}`,
+  imageUrl: m.imageUrl,
+  iconLabel: categoryIcon(m.category?.name ?? ''),
+  iconBg: SEARCH_ICON_BG,
+  iconTextColor: SEARCH_ICON_TEXT,
+})
 
-  const results = useMemo<SearchResult[]>(() => {
-    const markets = (data?.events ?? [])
-      .flatMap((e) => e.markets)
-      .filter((m) => m.yes)
-    const q = normalizeText(debounced.trim())
-    const pool = q
-      ? markets.filter((m) => marketMatchesQuery(m, q))
-      : [...markets].sort((a, b) => b.volume - a.volume)
-    return pool.slice(0, limit).map(marketToSearchResult)
-  }, [data, debounced, limit])
+/** Wait this long after typing stops before searching. */
+export const SEARCH_DEBOUNCE_MS = 1000
 
-  return { results, isLoading }
+/**
+ * Global search for the header and the mobile overlay. `limit` (1–25) is
+ * passed straight through to the API.
+ */
+export const useGlobalSearch = (term: string, limit = 10) => {
+  const [q] = useDebounce(term.trim(), SEARCH_DEBOUNCE_MS)
+
+  const search = useQuery({
+    queryKey: ['lobby-search', q, limit],
+    enabled: !!q,
+    queryFn: () =>
+      get<LobbySearchResponse>(`${LOBBY_BASE}/search`, { q, limit }),
+    // Keep the last hits on screen while the next query loads.
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  })
+
+  // Suggestions for the empty state — the same top-volume markets as before.
+  const { data: events } = useEvents({ limit: 100 }, !q)
+
+  const sections = useMemo<SearchSection[]>(() => {
+    if (!q) {
+      const trending = (events?.events ?? [])
+        .flatMap((e) => e.markets)
+        .filter((m) => m.yes)
+        .sort((a, b) => b.volume - a.volume)
+        .slice(0, limit)
+        .map(marketToSearchResult)
+      return [{ title: 'Trending', results: trending }]
+    }
+    const data = search.data
+    return [
+      {
+        title: 'Events',
+        results: (data?.events ?? []).map(searchEventToResult),
+      },
+      {
+        title: 'Markets',
+        results: (data?.markets ?? []).map(searchMarketToResult),
+      },
+    ].filter((section) => section.results.length > 0)
+  }, [q, events, search.data, limit])
+
+  return {
+    sections,
+    query: q,
+    // True only before the first hits for a query arrive (not while refining).
+    isSearching: !!q && search.isLoading,
+    isError: !!q && search.isError,
+  }
 }
