@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 import { type SearchResult } from '../utils/constants'
 import SearchResultsList from '../data_layer/SearchResultsList'
-import { useMarketSearch } from '../data_layer/markets'
+import { useGlobalSearch } from '../data_layer/markets'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons'
 import type { ModalProps } from '../components/globals/ModalComponent'
@@ -23,7 +23,7 @@ const MobileSearchOverlay = ({
     if (open) setSearchTerm('')
   }, [open])
 
-  const { results } = useMarketSearch(searchTerm)
+  const { sections, query, isSearching } = useGlobalSearch(searchTerm)
 
   if (!open) return null
 
@@ -37,7 +37,7 @@ const MobileSearchOverlay = ({
             type='text'
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder='Search markets and profiles'
+            placeholder='Search events and markets'
             className='w-full bg-transparent text-sm font-medium text-black placeholder:text-neutral-30 focus:outline-none'
           />
         </div>
@@ -47,7 +47,12 @@ const MobileSearchOverlay = ({
       </div>
 
       <div className='flex-1 overflow-y-auto'>
-        <SearchResultsList results={results} onSelect={onSelectResult} />
+        <SearchResultsList
+          sections={sections}
+          loading={isSearching}
+          emptyLabel={query ? `No results for "${query}"` : undefined}
+          onSelect={onSelectResult}
+        />
       </div>
     </div>,
     document.body,

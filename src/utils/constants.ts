@@ -34,12 +34,20 @@ export type SearchResult = {
   title: string
   subtitle: string
   href: string
+  // Thumbnail; falls back to the category icon label when missing.
+  imageUrl?: string | null
   iconLabel: string
   iconBg: string
   iconTextColor?: string
-  percentage: number
-  change: number | null
-  direction: 'up' | 'down' | 'neutral'
+  // Price columns — global search hits carry no prices, so these are optional.
+  percentage?: number
+  change?: number | null
+  direction?: 'up' | 'down' | 'neutral'
+}
+
+export type SearchSection = {
+  title: string
+  results: SearchResult[]
 }
 
 export type CategoryTopic = {
