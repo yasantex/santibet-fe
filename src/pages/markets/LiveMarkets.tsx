@@ -13,6 +13,7 @@ import {
 } from '../../data_layer/markets'
 import { formatCompact } from '../../utils/functions'
 import { marketHref, marketSport } from '../../utils/marketDisplay'
+import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
 import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
 
 /** Sports and Crypto are always listed — the two kinds of in-play betting —
@@ -142,6 +143,12 @@ const LiveMarkets = () => {
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToOutcome = (m: UiMarket, o: UiOutcome) =>
     navigate(marketHref(m, o.id))
+  // Sports outcomes feed the combo slip; crypto rounds open to trade singly.
+  const combo = useComboSlip()
+  const handleOutcome = (m: UiMarket, o: UiOutcome) => {
+    if (isSportsMarket(m)) combo.toggle(m, o)
+    else goToOutcome(m, o)
+  }
 
   return (
     <main className='mx-auto flex w-full max-w-8xl flex-col gap-5 px-3 pt-10 pb-20 md:flex-row md:px-8'>
@@ -275,7 +282,10 @@ const LiveMarkets = () => {
                 key={event.id}
                 event={event}
                 onSelectMarket={goToMarket}
-                onSelectOutcome={goToOutcome}
+                onSelectOutcome={handleOutcome}
+                activeOutcomeId={combo.selectedOutcomeIdForMarket(
+                  event.markets[0]?.id,
+                )}
               />
             ))}
           </div>
