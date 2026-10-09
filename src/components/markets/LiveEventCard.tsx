@@ -16,12 +16,15 @@ interface LiveEventCardProps {
   event: UiEvent
   onSelectMarket: (market: UiMarket) => void
   onSelectOutcome: (market: UiMarket, outcome: UiOutcome) => void
+  /** Outcome highlighted as selected (e.g. added to the combo slip). */
+  activeOutcomeId?: string | null
 }
 
 const LiveEventCard = ({
   event,
   onSelectMarket,
   onSelectOutcome,
+  activeOutcomeId = null,
 }: LiveEventCardProps) => {
   const market = event.markets[0]
   const { label, display } = useCountdown(market?.openTime, market?.closeTime)
@@ -77,7 +80,9 @@ const LiveEventCard = ({
               key={o.id}
               type='button'
               onClick={() => onSelectOutcome(market, o)}
-              className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg cursor-pointer px-1 py-2 text-xs font-bold ${TONE_STYLES[tone].button}`}
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg cursor-pointer px-1 py-2 text-xs font-bold ${TONE_STYLES[tone].button} ${
+                o.id === activeOutcomeId ? 'ring-2 ring-black ring-offset-1' : ''
+              }`}
             >
               <span className='min-w-0 truncate uppercase'>{o.label}</span>
               <span className='shrink-0'>{formatSharePrice(o.cents)}</span>

@@ -23,6 +23,7 @@ import {
   type EventQueryParams,
 } from '../../data_layer/markets'
 import { useFavorites } from '../../hooks/useFavorites'
+import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
 import { marketHref, marketSport } from '../../utils/marketDisplay'
 import { formatCompact } from '../../utils/functions'
 import { categoryTopics, type CategoryTopic } from '../../utils/constants'
@@ -303,6 +304,13 @@ const CategoryPage = () => {
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
+  // On sports surfaces, tapping an outcome adds it to the combo slip (parlay);
+  // elsewhere it opens the market to trade singly.
+  const combo = useComboSlip()
+  const handleOutcome = (m: UiMarket, o: UiOutcome) => {
+    if (isSportsMarket(m)) combo.toggle(m, o)
+    else goToTrade(m, o)
+  }
 
   return (
     <main className='mx-auto flex w-full max-w-8xl flex-col gap-5 px-5 pt-10 pb-20 md:flex-row md:px-8'>
@@ -626,9 +634,12 @@ const CategoryPage = () => {
                       key={market.id}
                       market={market}
                       onSelect={goToMarket}
-                      onSelectOutcome={goToTrade}
+                      onSelectOutcome={handleOutcome}
                       onSave={toggleFavorite}
                       isSaved={isFavorite(market.id)}
+                      activeOutcomeId={combo.selectedOutcomeIdForMarket(
+                        market.id,
+                      )}
                     />
                   ))}
             </div>

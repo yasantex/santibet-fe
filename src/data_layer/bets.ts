@@ -12,6 +12,7 @@ import type {
   CashOutQuote,
   PlaceBetPayload,
 } from '../types/bet.types'
+import type { ComboBetPayload, ComboBetResponse } from '../types/combo.types'
 
 /**
  * Trading runs on the simple `/bets` model: place a stake on an outcome and
@@ -30,6 +31,21 @@ export const usePlaceBet = () => {
   const qc = useQueryClient()
   return useSantiBetMutation<Bet, PlaceBetPayload>({
     path: '/bets',
+    mutationOptions: {
+      onSuccess: () => invalidateAfterTrade(qc),
+    },
+  })
+}
+
+/**
+ * Place a combo (parlay): one stake across several sports selections that must
+ * all win. The backend re-prices the legs and returns the accepted combined
+ * odds; invalidates the same caches as a single bet on success.
+ */
+export const useComboBet = () => {
+  const qc = useQueryClient()
+  return useSantiBetMutation<ComboBetResponse, ComboBetPayload>({
+    path: '/bets/combo',
     mutationOptions: {
       onSuccess: () => invalidateAfterTrade(qc),
     },
