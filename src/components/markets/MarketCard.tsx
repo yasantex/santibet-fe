@@ -17,10 +17,12 @@ import MarketMetaLine from './MarketMetaLine'
 const OutcomeRow = ({
   outcome,
   tone,
+  active = false,
   onClick,
 }: {
   outcome?: UiOutcome
   tone: OutcomeTone
+  active?: boolean
   onClick?: () => void
 }) => {
   if (!outcome) return null
@@ -49,7 +51,9 @@ const OutcomeRow = ({
           e.stopPropagation()
           onClick?.()
         }}
-        className={`shrink-0 rounded-lg px-4 cursor-pointer py-2.5 text-xs font-bold ${style.button}`}
+        className={`shrink-0 rounded-lg px-4 cursor-pointer py-2.5 text-xs font-bold ${style.button} ${
+          active ? 'ring-2 ring-black ring-offset-1' : ''
+        }`}
       >
         {formatSharePrice(outcome.cents)}
       </button>
@@ -82,9 +86,11 @@ const OutcomeStatRow = ({
  *  markets so every side sits on the same line regardless of outcome count. */
 const OutcomeButtonRow = ({
   outcomes,
+  activeOutcomeId,
   onClick,
 }: {
   outcomes: { outcome: UiOutcome; tone: OutcomeTone }[]
+  activeOutcomeId?: string | null
   onClick?: (outcome: UiOutcome) => void
 }) => (
   <div className='flex items-stretch gap-1.5'>
@@ -96,7 +102,9 @@ const OutcomeButtonRow = ({
           e.stopPropagation()
           onClick?.(outcome)
         }}
-        className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-1 cursor-pointer py-2 text-xs font-bold ${TONE_STYLES[tone].button}`}
+        className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-1 cursor-pointer py-2 text-xs font-bold ${TONE_STYLES[tone].button} ${
+          outcome.id === activeOutcomeId ? 'ring-2 ring-black ring-offset-1' : ''
+        }`}
       >
         <span className='min-w-0 truncate uppercase'>{outcome.label}</span>
         <span className='shrink-0'>{formatSharePrice(outcome.cents)}</span>
@@ -118,6 +126,9 @@ interface MarketCardProps {
   live?: boolean
   /** Show the ticking countdown without the LIVE badge (e.g. "Closing soon"). */
   countdown?: boolean
+  /** Outcome currently selected on this card (e.g. added to the combo slip);
+   *  gets a highlighted ring. */
+  activeOutcomeId?: string | null
 }
 
 const MarketCard = ({
@@ -129,6 +140,7 @@ const MarketCard = ({
   shareable = false,
   live = false,
   countdown = false,
+  activeOutcomeId = null,
 }: MarketCardProps) => {
   const outcomes = market.outcomes ?? []
   // Binary yes/no markets keep the familiar green/no red split. Anything with
@@ -209,6 +221,7 @@ const MarketCard = ({
                 key={outcome.id}
                 outcome={outcome}
                 tone={tone}
+                active={outcome.id === activeOutcomeId}
                 onClick={() => onSelectOutcome?.(market, outcome)}
               />
             ))}
@@ -220,6 +233,7 @@ const MarketCard = ({
             ))}
             <OutcomeButtonRow
               outcomes={shownOutcomes}
+              activeOutcomeId={activeOutcomeId}
               onClick={handleOutcomeClick}
             />
           </div>

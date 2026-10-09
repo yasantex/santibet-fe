@@ -12,6 +12,7 @@ import {
 import userSlice from './userSlice'
 import favoritesSlice from './favoritesSlice'
 import accountStatusSlice from './accountStatusSlice'
+import comboSlipSlice from './comboSlipSlice'
 const storage = {
   getItem(key: string) {
     return Promise.resolve(window.localStorage.getItem(key))
@@ -38,6 +39,7 @@ const rootReducer = combineReducers({
   user: userSlice,
   favorites: favoritesSlice,
   accountStatus: accountStatusSlice,
+  comboSlip: comboSlipSlice,
 
   // other reducers would go here
 })
