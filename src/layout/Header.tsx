@@ -38,7 +38,7 @@ import ProfileDropdownMenu from '../components/globals/ProfileDropdownMenu'
 import { useSantiBetQuery } from '../data_layer/utils'
 import { useBetPositions } from '../data_layer/bets'
 import { useUnreadNotificationCount } from '../data_layer/notifications'
-import { formatCurrency, toMajorUnits } from '../utils/functions'
+import { formatCurrency, scrollToTop, toMajorUnits } from '../utils/functions'
 import type { WalletBalance } from '../types/wallet.types'
 
 const CategoryRow = () => {
@@ -280,7 +280,8 @@ const Header = () => {
     <header className='sticky top-0 z-50 px-3 md:px-6 bg-white border-b border-border py-2.5'>
       <div className='flex items-center justify-between! gap-5 w-full mb-2.5'>
         <div className='flex items-center gap-5 w-full'>
-          <Link to='/'>
+          {/* Already on the page? The Link is a no-op, so glide back up. */}
+          <Link to='/' onClick={scrollToTop}>
             <img
               src={isDark ? logoDark : logo}
               alt='Santibet'

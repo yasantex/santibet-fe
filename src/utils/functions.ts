@@ -164,3 +164,6 @@ export const formatCloseTimer = (iso?: string | null): string => {
   if (hours >= 1) return `Closes · ${hours}h ${minutes}m`
   return `Closes · ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
+
+export const scrollToTop = () =>
+  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })

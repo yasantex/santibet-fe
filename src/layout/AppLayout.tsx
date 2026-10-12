@@ -9,6 +9,7 @@ import SuspendedBanner from '../components/globals/SuspendedBanner'
 import { Outlet } from 'react-router'
 import PasskeyOffer from '../components/appModals/auth/PasskeyOffer'
 import ComboSlipMount from '../components/combo/ComboSlipMount'
+import BackToTop from '../components/globals/BackToTop'
 
 const AppLayout = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
@@ -48,6 +49,7 @@ const AppLayout = () => {
       />
       <PasskeyOffer />
       <ComboSlipMount />
+      <BackToTop />
     </div>
   )
 }
