@@ -2,13 +2,15 @@ import { useLocation } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { TicketStarIcon } from '@hugeicons/core-free-icons'
 import { useComboSlip } from '../../hooks/useComboSlip'
+import { FAB_STACK_CLASS, useSupport } from '../../support/supportContext'
 
 /** Sports browsing surfaces where a combo can be built. */
 const isSportsSurface = (pathname: string) =>
   pathname === '/live' || pathname.toLowerCase().startsWith('/category/sports')
 
 /**
- * Floating "Bet slip" button (bottom-right, above the mobile bottom nav).
+ * Floating "Bet slip" button (bottom-right, above the mobile bottom nav and
+ * the live-chat launcher).
  * - With selections: shows the leg count and live combined odds, on any page.
  * - Empty, but on a sports/live page: shows an inviting "Build a combo" prompt
  *   so the feature is discoverable before any outcome is tapped.
@@ -17,6 +19,7 @@ const isSportsSurface = (pathname: string) =>
 const BetSlipFab = ({ onClick }: { onClick: () => void }) => {
   const { legCount, combinedOdds } = useComboSlip()
   const { pathname } = useLocation()
+  const { chatAvailable } = useSupport()
   const onSportsSurface = isSportsSurface(pathname)
 
   if (legCount === 0 && !onSportsSurface) return null
@@ -27,7 +30,9 @@ const BetSlipFab = ({ onClick }: { onClick: () => void }) => {
       type='button'
       onClick={onClick}
       aria-label={empty ? 'Build a combo bet' : 'Open bet slip'}
-      className='fixed right-4 bottom-20 z-40 flex items-center gap-3 rounded-full bg-black py-3 pr-5 pl-3 text-white shadow-xl transition-transform hover:scale-[1.03] md:bottom-6'
+      className={`fixed right-4 z-40 flex items-center gap-3 rounded-full bg-black py-3 pr-5 pl-3 text-white shadow-xl transition-transform hover:scale-[1.03] ${
+        chatAvailable ? FAB_STACK_CLASS.withChat : FAB_STACK_CLASS.withoutChat
+      }`}
     >
       <span className='relative flex h-9 w-9 items-center justify-center rounded-full bg-brand-green text-black'>
         <HugeiconsIcon icon={TicketStarIcon} size={20} />
