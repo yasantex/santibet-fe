@@ -4,6 +4,7 @@ import { TextLoader } from '../components/globals/ReusedText'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowLeft02Icon } from '@hugeicons/core-free-icons'
 import { useNavigate } from 'react-router'
+import SupportActions from '../components/support/SupportActions'
 
 const ContactSupport = () => {
   const [content, setContent] = useState('')
@@ -24,6 +25,9 @@ const ContactSupport = () => {
       <div className='flex items-center gap-3 my-5 cursor-pointer' onClick={() => navigate(-1)}>
         <HugeiconsIcon icon={ArrowLeft02Icon} className='text-black' />
         <h1 className='text-2xl font-bold text-black'>Contact Us</h1>
+      </div>
+      <div className='mb-6'>
+        <SupportActions />
       </div>
       {loading ? (
         <TextLoader count={16} />
