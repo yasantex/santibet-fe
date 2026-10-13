@@ -28,6 +28,7 @@ const typeLabels: Record<NotificationType, string> = {
   MARKET_RESOLVED: 'Market',
   WINNINGS_CREDITED: 'Winnings',
   SECURITY_ALERT: 'Security',
+  SUPPORT_REPLY: 'Support',
 }
 
 

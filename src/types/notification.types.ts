@@ -12,6 +12,8 @@ export type NotificationType =
   | 'MARKET_RESOLVED'
   | 'WINNINGS_CREDITED'
   | 'SECURITY_ALERT'
+  /** An agent replied to a support report / chat (via Chatwoot webhook). */
+  | 'SUPPORT_REPLY'
 
 export interface AppNotification {
   id: string
