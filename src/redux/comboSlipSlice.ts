@@ -17,24 +17,16 @@ const comboSlipSlice = createSlice({
   initialState,
   reducers: {
     /**
-     * Toggle a selection:
-     * - same outcome already in the slip → remove it,
-     * - a different outcome from the same event → replace it (no correlated
-     *   same-game legs),
-     * - otherwise → append (up to MAX_COMBO_LEGS).
+     * Add a selection, or switch the pick WITHIN a market already on the ticket
+     * (same marketId → replace). Does NOT enforce the one-market-per-event rule
+     * or the max-legs cap — those are decided in `useComboSlip` so a clear
+     * message can be shown; this reducer only ever runs for allowed adds.
      */
-    toggleLeg: (state, action: PayloadAction<ComboLeg>) => {
+    addOrReplaceMarketLeg: (state, action: PayloadAction<ComboLeg>) => {
       const leg = action.payload
-      const sameOutcome = state.legs.findIndex(
-        (l) => l.outcomeId === leg.outcomeId,
-      )
-      if (sameOutcome >= 0) {
-        state.legs.splice(sameOutcome, 1)
-        return
-      }
-      const sameEvent = state.legs.findIndex((l) => l.eventId === leg.eventId)
-      if (sameEvent >= 0) {
-        state.legs[sameEvent] = leg
+      const sameMarket = state.legs.findIndex((l) => l.marketId === leg.marketId)
+      if (sameMarket >= 0) {
+        state.legs[sameMarket] = leg
         return
       }
       if (state.legs.length >= MAX_COMBO_LEGS) return
@@ -49,6 +41,7 @@ const comboSlipSlice = createSlice({
   },
 })
 
-export const { toggleLeg, removeLeg, clearSlip } = comboSlipSlice.actions
+export const { addOrReplaceMarketLeg, removeLeg, clearSlip } =
+  comboSlipSlice.actions
 
 export default comboSlipSlice.reducer
