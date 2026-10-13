@@ -4,8 +4,9 @@ import { useSupport } from '../../support/supportContext'
 
 /**
  * Floating live-chat launcher. Replaces Chatwoot's own bubble (hidden via
- * `hideMessageBubble`) so it can sit bottom-left — clear of the bet-slip FAB
- * and back-to-top button on the right, and above the mobile bottom nav.
+ * `hideMessageBubble`) so it can own the bottom-right corner above the mobile
+ * bottom nav; the bet-slip FAB and back-to-top button stack above it (see
+ * `FAB_STACK_CLASS`).
  */
 const SupportLauncher = () => {
   const { chatAvailable, chatStatus, unreadCount, openChat } = useSupport()
@@ -23,7 +24,7 @@ const SupportLauncher = () => {
           : 'Open live chat'
       }
       title='Chat with support'
-      className='fixed left-4 bottom-20 z-40 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-black text-white shadow-xl transition-transform hover:scale-[1.05] md:bottom-6'
+      className='fixed right-4 bottom-20 z-40 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-black text-white shadow-xl transition-transform hover:scale-[1.05] md:bottom-6'
     >
       {loading ? (
         <span className='h-5 w-5 animate-spin rounded-full border-2 border-brand-green border-t-transparent' />

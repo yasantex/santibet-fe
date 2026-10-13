@@ -24,3 +24,13 @@ export const SupportContext = createContext<SupportContextValue>({
 })
 
 export const useSupport = () => useContext(SupportContext)
+
+/**
+ * Bottom offset for the other bottom-right floating buttons (bet slip, back
+ * to top). When live chat is on, its launcher takes the corner, so they sit
+ * one launcher-height (48px) + 16px gap higher.
+ */
+export const FAB_STACK_CLASS = {
+  withChat: 'bottom-36 md:bottom-22',
+  withoutChat: 'bottom-20 md:bottom-6',
+} as const

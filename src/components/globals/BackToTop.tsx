@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowUp01Icon } from '@hugeicons/core-free-icons'
 import { scrollToTop } from '../../utils/functions'
+import { FAB_STACK_CLASS, useSupport } from '../../support/supportContext'
 
 // Show the button once the user is roughly a screen and a half down the page.
 const SHOW_AFTER_PX = 200
 
 /**
- * Floating "back to top" arrow. Sits bottom-left so it never collides with
- * the bet-slip FAB on the right; clears the mobile bottom nav below `md`.
+ * Floating "back to top" arrow, bottom-right. Stacks above the live-chat
+ * launcher when chat is on; clears the mobile bottom nav below `md`.
  */
 const BackToTop = () => {
   const [visible, setVisible] = useState(false)
+  const { chatAvailable } = useSupport()
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > SHOW_AFTER_PX)
@@ -26,7 +28,9 @@ const BackToTop = () => {
       aria-label='Back to top'
       onClick={scrollToTop}
       tabIndex={visible ? 0 : -1}
-      className={`fixed right-4 cursor-pointer bottom-20 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white text-black shadow-lg transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-xl md:bottom-6 ${
+      className={`fixed right-4 cursor-pointer z-40 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white text-black shadow-lg transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-xl ${
+        chatAvailable ? FAB_STACK_CLASS.withChat : FAB_STACK_CLASS.withoutChat
+      } ${
         visible
           ? 'translate-y-0 opacity-100'
           : 'pointer-events-none translate-y-4 opacity-0'
