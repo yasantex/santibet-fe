@@ -4,7 +4,7 @@ The frontend ships two support channels, and both land in Chatwoot:
 
 | Channel | What it is | Transport |
 |---|---|---|
-| **Live chat** | Real-time chat widget (bottom-left launcher, Help Center, Contact page, suspended-account banner) | Chatwoot **Website** inbox, loaded in the browser |
+| **Live chat** | Real-time chat widget (bottom-right launcher, Help Center, Contact page, suspended-account banner) | Chatwoot **Website** inbox, loaded in the browser |
 | **Report an issue** | Structured ticket: category + description + optional reference + auto-captured page/market context (Help Center, Contact page, flag icon on every market) | `POST /api/support/reports` → backend → Chatwoot **API** inbox |
 
 FE code: `src/utils/chatwoot.ts` (SDK wrapper), `src/support/SupportProvider.tsx` (loading, identity, reset), `src/components/support/*` (launcher, report modal, actions), `src/data_layer/support.ts` (API hooks).
@@ -151,7 +151,7 @@ Implementation:
 
 ## 4. Frontend behaviour reference
 
-- The widget lazy-loads on browser idle (≤4s after load), or immediately when the launcher is tapped. Chatwoot's own bubble is hidden, and our launcher shows an unread badge from `chatwoot:on-message`.
+- The widget lazy-loads on browser idle (≤4s after load), or immediately when the launcher is tapped. Chatwoot's own bubble is hidden, and our bottom-right launcher (bet slip / back-to-top stack above it) shows an unread badge from `chatwoot:on-message`.
 - **Identity:** on login → `setUser(identifier, {email, name, phone_number (E.164 only), avatar_url, identifier_hash})` plus contact attributes. Logged-out visitors chat anonymously (pre-chat form).
 - **Logout/session revoked** → `$chatwoot.reset()`, so the next person on a shared device can't see the previous user's chat.
 - **Dark mode:** the widget follows the OS, or is forced light when the user picked Light in-app. Chatwoot can't be forced dark.
