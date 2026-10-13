@@ -10,6 +10,8 @@ import { Outlet } from 'react-router'
 import PasskeyOffer from '../components/appModals/auth/PasskeyOffer'
 import ComboSlipMount from '../components/combo/ComboSlipMount'
 import BackToTop from '../components/globals/BackToTop'
+import SupportProvider from '../support/SupportProvider'
+import SupportLauncher from '../components/support/SupportLauncher'
 
 const AppLayout = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
@@ -32,25 +34,28 @@ const AppLayout = () => {
   }, [])
 
   return (
-    <div className='flex min-h-screen'>
-      <div className='flex w-full flex-1 flex-col '>
-        <Header />
-        <SuspendedBanner />
-        <main className='w-full flex-1 bg-white pb-20'>
-          <Outlet />
-        </main>
-        <Footer />
+    <SupportProvider>
+      <div className='flex min-h-screen'>
+        <div className='flex w-full flex-1 flex-col '>
+          <Header />
+          <SuspendedBanner />
+          <main className='w-full flex-1 bg-white pb-20'>
+            <Outlet />
+          </main>
+          <Footer />
+        </div>
+        <CookieConsent
+          open={modalOpen && modal === 'cookieConsent'}
+          handleClose={() => {
+            handleModalClose()
+          }}
+        />
+        <PasskeyOffer />
+        <ComboSlipMount />
+        <BackToTop />
+        <SupportLauncher />
       </div>
-      <CookieConsent
-        open={modalOpen && modal === 'cookieConsent'}
-        handleClose={() => {
-          handleModalClose()
-        }}
-      />
-      <PasskeyOffer />
-      <ComboSlipMount />
-      <BackToTop />
-    </div>
+    </SupportProvider>
   )
 }
 

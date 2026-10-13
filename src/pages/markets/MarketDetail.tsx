@@ -13,6 +13,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft01Icon,
   Bookmark02Icon,
+  Flag01Icon,
 } from '@hugeicons/core-free-icons'
 import { useFavorites } from '../../hooks/useFavorites'
 import TradePanel from '../../components/markets/TradePanel'
@@ -36,12 +37,14 @@ import {
   formatSharePrice,
 } from '../../utils/functions'
 import ShareMarketButton from '../../components/markets/ShareMarketButton'
+import { useSupport } from '../../support/supportContext'
 import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
 
 // How often the Live view extends its tail / pulls a fresh quote.
 const LIVE_TICK_MS = 3000
 
 const MarketDetail = () => {
+  const { openReport } = useSupport()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -224,6 +227,21 @@ const MarketDetail = () => {
             }`}
           >
             <HugeiconsIcon icon={Bookmark02Icon} size={18} />
+          </button>
+          <button
+            type='button'
+            aria-label='Report a problem with this market'
+            title='Report a problem with this market'
+            onClick={() =>
+              openReport({
+                category: 'MARKET',
+                marketId: market.id,
+                marketTitle: market.title,
+              })
+            }
+            className='rounded-full bg-card p-2 text-neutral-10 hover:text-black'
+          >
+            <HugeiconsIcon icon={Flag01Icon} size={18} />
           </button>
         </div>
       </div>

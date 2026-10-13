@@ -6,6 +6,7 @@ import {
   MultiplicationSignIcon,
 } from '@hugeicons/core-free-icons'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
+import { useSupport } from '../../support/supportContext'
 
 /**
  * App-wide "viewing only" banner for suspended accounts. Dismissing hides it
@@ -15,6 +16,7 @@ const SuspendedBanner = () => {
   const suspended = useAccountSuspended()
   const { pathname } = useLocation()
   const [dismissedOn, setDismissedOn] = useState<string | null>(null)
+  const { chatAvailable, openChat } = useSupport()
 
   if (!suspended || dismissedOn === pathname) return null
 
@@ -32,12 +34,22 @@ const SuspendedBanner = () => {
         <span className='font-semibold'>Account suspended — viewing only.</span>{' '}
         <span className='text-neutral-10'>
           You can browse, but changes are disabled.{' '}
-          <Link
-            to='/contact-us'
-            className='font-semibold text-black underline underline-offset-2'
-          >
-            Contact support
-          </Link>
+          {chatAvailable ? (
+            <button
+              type='button'
+              onClick={openChat}
+              className='cursor-pointer font-semibold text-black underline underline-offset-2'
+            >
+              Chat with support
+            </button>
+          ) : (
+            <Link
+              to='/contact-us'
+              className='font-semibold text-black underline underline-offset-2'
+            >
+              Contact support
+            </Link>
+          )}
         </span>
       </span>
       <button

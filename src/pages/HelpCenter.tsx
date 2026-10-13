@@ -6,6 +6,7 @@ import {
   WhatsappIcon,
 } from '@hugeicons/core-free-icons'
 import { Link } from 'react-router'
+import SupportActions from '../components/support/SupportActions'
 
 const faqs = [
   {
@@ -86,6 +87,7 @@ const HelpCenter = () => {
         <h2 className='text-sm font-semibold text-black uppercase'>
           Still need help?
         </h2>
+        <SupportActions />
         <div className='flex flex-col gap-3 sm:flex-row'>
           <a
             href='mailto:support@santibet.com'
