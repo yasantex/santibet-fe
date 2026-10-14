@@ -12,10 +12,13 @@ import ComboSlipMount from '../components/combo/ComboSlipMount'
 import BackToTop from '../components/globals/BackToTop'
 import SupportProvider from '../support/SupportProvider'
 import SupportLauncher from '../components/support/SupportLauncher'
+import BadgeCelebration from '../components/points/BadgeCelebration'
+import useReferralCapture from '../hooks/useReferralCapture'
 
 const AppLayout = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
+  useReferralCapture()
 
   useEffect(() => {
     const hasConsent = localStorage.getItem(COOKIE_CONSENT_KEY)
@@ -51,6 +54,7 @@ const AppLayout = () => {
           }}
         />
         <PasskeyOffer />
+        <BadgeCelebration />
         <ComboSlipMount />
         <BackToTop />
         <SupportLauncher />

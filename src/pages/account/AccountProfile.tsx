@@ -10,6 +10,8 @@ import ProfileTab from './profileTabs/ProfileTab'
 import SecurityTab from './profileTabs/SecurityTab'
 import VerificationTab from './profileTabs/VerificationTab'
 import KycTab from './profileTabs/KycTab'
+import BadgeGrid from '../../components/points/BadgeGrid'
+import { useBadges } from '../../data_layer/points'
 
 type AccountTab = 'profile' | 'security' | 'verification' | 'kyc'
 
@@ -39,6 +41,7 @@ const AccountProfile = () => {
   })
 
   const { user } = useAppSelector((state) => state.user)
+  const badges = useBadges()
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
   const [activeTab, setActiveTab] = useState<AccountTab>(
@@ -79,6 +82,17 @@ const AccountProfile = () => {
         ) : (
           <ProfileTab user={profile as UserData} refetch={refetch} />
         ))}
+
+      {activeTab === 'profile' && (
+        <section className='flex flex-col gap-3'>
+          <h2 className='text-sm font-semibold text-black uppercase'>Badges</h2>
+          <BadgeGrid
+            badges={badges.data?.data}
+            isLoading={badges.isLoading}
+            isError={badges.isError}
+          />
+        </section>
+      )}
 
       {activeTab === 'security' && <SecurityTab />}
 
