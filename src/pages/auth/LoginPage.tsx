@@ -46,6 +46,7 @@ import {
   getSafeRedirect,
   rememberAuthRedirect,
 } from '../../utils/authRedirect'
+import { clearReferralCode, getReferralCode } from '../../utils/referral'
 
 type Step = 'identifier' | 'password' | 'otp' | 'setPassword'
 
@@ -110,6 +111,8 @@ const LoginPage = () => {
       navigate(`/two-fa?${params.toString()}`)
       return
     }
+    // Only a new account uses the code; either way it has done its job.
+    clearReferralCode()
     updateToken({
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
@@ -200,7 +203,7 @@ const LoginPage = () => {
   const { mutateAsync: completeAuth, isPending: isCompleting } =
     useSantiBetMutation<
       AuthResponse,
-      { verificationTicket: string; password: string }
+      { verificationTicket: string; password: string; referralCode?: string }
     >({
       path: '/auth/complete',
       mutationOptions: {
@@ -214,7 +217,11 @@ const LoginPage = () => {
     validationSchema: SetPasswordSchema,
     onSubmit: async (vals) => {
       try {
-        await completeAuth({ verificationTicket, password: vals.password })
+        await completeAuth({
+          verificationTicket,
+          password: vals.password,
+          referralCode: getReferralCode(),
+        })
       } catch (error) {
         console.error(error)
       }
@@ -267,7 +274,12 @@ const LoginPage = () => {
 
   const { mutateAsync: finishGoogleSignIn } = useSantiBetMutation<
     AuthResponse,
-    { code: string; redirectUri: string; codeVerifier: string }
+    {
+      code: string
+      redirectUri: string
+      codeVerifier: string
+      referralCode?: string
+    }
   >({
     path: '/auth/google',
     mutationOptions: {
@@ -293,7 +305,13 @@ const LoginPage = () => {
       return
     }
 
-    finishGoogleSignIn({ code, codeVerifier, redirectUri })
+    // The backend only uses referralCode if this call creates the account.
+    finishGoogleSignIn({
+      code,
+      codeVerifier,
+      redirectUri,
+      referralCode: getReferralCode(),
+    })
       .catch(() => {
         showWarningToast('Google sign-in failed. Please try again.')
         navigate(buildAuthPath('/signin', redirectTo), { replace: true })
