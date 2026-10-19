@@ -48,7 +48,7 @@ const MobileBottomNav = ({
             isMarketsActive ? 'text-brand-green font-medium' : 'text-black'
           }
         >
-          Trending
+          Markets
         </span>
       </button>
       <button

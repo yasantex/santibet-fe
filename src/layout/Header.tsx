@@ -103,10 +103,10 @@ const CategoryRow = () => {
       })
       .filter((c) => c.eventCount > 0 || c.children.length > 0)
 
-    const links: NavLinkConfig[] = [
-      { label: 'Trending', href: '/' },
-      ...topLevel.map(({ label, href }) => ({ label, href })),
-    ]
+    const links: NavLinkConfig[] = topLevel.map(({ label, href }) => ({
+      label,
+      href,
+    }))
     // "More" lists the categories that have subcategories, nested beneath.
     return {
       visibleLinks: links,
@@ -116,7 +116,7 @@ const CategoryRow = () => {
 
   return (
     <div className='flex items-center w-full gap-6'>
-      {/* Doc's GLOBAL row starts with a standalone Home icon before Trending. */}
+      {/* Doc's GLOBAL row starts with a standalone Home icon before the categories. */}
       <NavLink
         to='/'
         end

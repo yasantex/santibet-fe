@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { QRCodeSVG } from 'qrcode.react'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -12,7 +13,8 @@ import {
 import { CopyButton } from '../components/globals/CopyButton'
 import { Button } from '../components/globals/Button'
 import { StatusBadge } from '../components/globals/ReusedText'
-import { useReferrals } from '../data_layer/points'
+import { Tabs } from '../components/globals/Tabs'
+import { useReferrals, useReferredFriends } from '../data_layer/points'
 import { useAppSelector } from '../utils/hooks'
 import {
   formatPoints,
@@ -22,8 +24,13 @@ import {
   referralRewardStatusHint,
   referralTriggerCopy,
   referralTriggerStep,
+  referredFriendFilters,
+  referredFriendStatusConfig,
 } from '../utils/points'
-import type { ReferralProgress } from '../types/points.types'
+import type {
+  ReferralProgress,
+  ReferredFriendStatus,
+} from '../types/points.types'
 
 const Header = () => (
   <div className='flex flex-col gap-2'>
@@ -165,6 +172,93 @@ const Counts = ({ data }: { data: ReferralProgress }) => (
     </div>
   </section>
 )
+
+const friendEmptyCopy: Record<ReferredFriendStatus | 'ALL', string> = {
+  ALL: 'No friends yet. Share your link to get started.',
+  PENDING: 'No friends waiting to count.',
+  QUALIFIED: 'No friends counted yet.',
+  REJECTED: 'No rejected referrals.',
+}
+
+const Friends = () => {
+  const [filter, setFilter] = useState<ReferredFriendStatus | 'ALL'>('ALL')
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useReferredFriends(filter === 'ALL' ? undefined : filter)
+  const friends = data?.pages.flatMap((p) => p.data) ?? []
+
+  return (
+    <section className='flex flex-col gap-3'>
+      <h2 className='text-sm font-semibold text-black uppercase'>
+        Friends you referred
+      </h2>
+      <div className='overflow-x-auto'>
+        <Tabs
+          tabs={referredFriendFilters}
+          activeTab={filter}
+          onChange={(id) => setFilter(id as ReferredFriendStatus | 'ALL')}
+        />
+      </div>
+
+      {isLoading ? (
+        <div className='h-32 animate-pulse rounded-2xl bg-card' />
+      ) : isError ? (
+        <div className='flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-6 text-center'>
+          <p className='text-sm text-neutral-10'>
+            We couldn’t load your friends right now.
+          </p>
+          <Button
+            type='button'
+            text='Try again'
+            className='w-fit!'
+            variation='plain'
+            onClick={() => refetch()}
+          />
+        </div>
+      ) : friends.length === 0 ? (
+        <p className='rounded-2xl border border-border bg-card p-6 text-center text-sm text-neutral-10'>
+          {friendEmptyCopy[filter]}
+        </p>
+      ) : (
+        <div className='flex flex-col divide-y divide-border rounded-2xl border border-border bg-card px-4'>
+          {friends.map((f) => (
+            <div key={f.id} className='flex items-center justify-between gap-3 py-3.5'>
+              <div className='flex min-w-0 flex-col gap-0.5'>
+                <span className='truncate text-sm font-semibold text-black'>
+                  {f.name}
+                </span>
+                <span className='text-xs text-neutral-10'>
+                  Joined {formatShortDate(f.createdAt)}
+                  {f.status === 'QUALIFIED' && f.qualifiedAt
+                    ? ` · Counted ${formatShortDate(f.qualifiedAt)}`
+                    : ''}
+                </span>
+              </div>
+              <StatusBadge value={f.status} statusConfig={referredFriendStatusConfig} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {hasNextPage && (
+        <Button
+          type='button'
+          text='Load more'
+          variation='plain'
+          className='w-fit! self-center'
+          loading={isFetchingNextPage}
+          onClick={() => fetchNextPage()}
+        />
+      )}
+    </section>
+  )
+}
 
 const Milestones = ({ data }: { data: ReferralProgress }) => {
   if (!data.milestones.length) return null
@@ -341,6 +435,7 @@ const ReferEarn = () => {
       <ShareCard code={data.code} link={data.link} />
       <Steps trigger={data.program.trigger} />
       <Counts data={data} />
+      <Friends />
       <Milestones data={data} />
       <Rewards data={data} />
 
