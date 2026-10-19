@@ -13,6 +13,8 @@ import type {
   PointsHistoryResponse,
   PointsSummary,
   ReferralProgress,
+  ReferredFriendStatus,
+  ReferredFriendsResponse,
 } from '../types/points.types'
 
 /**
@@ -94,6 +96,19 @@ export const useReferrals = (enabled = true) =>
     queryKey: REFERRALS_KEY,
     enabled,
     queryOptions: { refetchOnWindowFocus: 'always' },
+  })
+
+/** Main-app referrals only, newest first. */
+export const useReferredFriends = (
+  status?: ReferredFriendStatus,
+  limit = 20,
+) =>
+  useSantiBetInfiniteQuery<ReferredFriendsResponse>({
+    path: '/referrals/me/friends',
+    queryKey: [...REFERRALS_KEY, 'friends', { status, limit }],
+    params: { status, limit },
+    enabled: true,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
   })
 
 export const useBadges = (enabled = true) =>

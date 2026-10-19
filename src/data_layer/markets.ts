@@ -400,6 +400,15 @@ export const useEvents = (params: EventQueryParams = {}, enabled = true) =>
     queryFn: () => fetchEvents(params),
   })
 
+// Categories pinned to the front of the nav, in this order. The API has no
+// sort field, so anything not listed keeps the order the API returns it in.
+const PINNED_CATEGORY_SLUGS = ['sports']
+
+const pinnedRank = (c: LobbyCategory) => {
+  const i = PINNED_CATEGORY_SLUGS.indexOf(c.slug.toLowerCase())
+  return i === -1 ? PINNED_CATEGORY_SLUGS.length : i
+}
+
 /**
  * Live category tree from the lobby (GET /api/lobby/categories) — flat list,
  * subcategories carry `parentSlug`. Admins create categories at runtime, so
@@ -412,6 +421,8 @@ export const useLobbyCategories = () =>
     queryKey: ['lobby-categories-nav'],
     queryFn: () =>
       get<LobbyCategory[]>(`${LOBBY_BASE}/categories`).catch(() => []),
+    // Array sort is stable, so unpinned categories keep their API order.
+    select: (cats) => [...cats].sort((a, b) => pinnedRank(a) - pinnedRank(b)),
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
     refetchOnWindowFocus: true,

@@ -7,6 +7,11 @@ import {
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Link } from 'react-router'
+import { useContentPages } from '../data_layer/pages'
+import {
+  LEGACY_CONTENT_PAGES,
+  contentPageRoute,
+} from '../utils/contentPages'
 
 const socialLinks = [
   {
@@ -36,15 +41,26 @@ const footerLinks = [
   { label: 'About', href: '/about-us' },
   { label: 'Cookie Policy', href: '#' },
   { label: 'Responsible Gambling', href: '/responsible-gambling' },
-  { label: 'Contact Support', href: '/contact-us' },
 ]
 
-const footerLinksTwo = [
-  { label: 'Privacy Policy', href: '/privacy-policy' },
-  { label: 'Terms & Conditions', href: '/terms-of-service' },
-  { label: 'FAQs', href: '/faqs' },
-]
+/**
+ * Published pages in the API's order. The pages that predate the API keep a
+ * link while unpublished, since they still show their bundled content.
+ */
+const useContentPageLinks = () => {
+  const { data = [] } = useContentPages()
+  const published = new Set(data.map((p) => p.slug))
+  return [
+    ...data.map((p) => ({ label: p.title, href: contentPageRoute(p.slug) })),
+    ...LEGACY_CONTENT_PAGES.filter((p) => !published.has(p.slug)).map((p) => ({
+      label: p.label,
+      href: p.route,
+    })),
+  ]
+}
+
 const Footer = () => {
+  const footerLinksTwo = useContentPageLinks()
   return (
     <footer className='w-full bg-background text-neutral-10 py-10 border-t border-border'>
       <div className='mx-auto max-w-8xl px-6 py-12 sm:px-8 lg:px-12'>
@@ -102,7 +118,7 @@ const Footer = () => {
           </ul>
           <ul className='space-y-4 text-sm max-w-md min-w-md'>
             {footerLinksTwo.map((link) => (
-              <li key={link.label}>
+              <li key={link.href}>
                 <Link
                   to={link.href}
                   className='text-neutral-10 hover:underline hover:underline-offset-2 hover:text-black'

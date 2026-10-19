@@ -31,6 +31,7 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const ResponsibleGambling = lazy(() => import('./pages/ResponsibleGambling'))
 const ContactSupport = lazy(() => import('./pages/ContactSupport'))
 const Faqs = lazy(() => import('./pages/Faqs'))
+const ContentPage = lazy(() => import('./pages/ContentPage'))
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const RecoverPassword = lazy(() => import('./pages/auth/RecoverPassword'))
@@ -63,6 +64,7 @@ function App() {
             <Route path='/privacy-policy' element={<PrivacyPolicy />} />
             <Route path='/about-us' element={<AboutUs />} />
             <Route path='/faqs' element={<Faqs />} />
+            <Route path='/pages/:slug' element={<ContentPage />} />
             <Route path='/cookie-policy' element={<Cookie />} />
 
             <Route

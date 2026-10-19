@@ -104,7 +104,8 @@ const LoginPage = () => {
     )
   })
 
-  const handleAuthSuccess = (data: AuthResponse) => {
+  // A brand-new account goes straight to its profile to finish setting up.
+  const handleAuthSuccess = (data: AuthResponse, isNewAccount = false) => {
     if (data?.mfaRequired) {
       const params = new URLSearchParams({ authToken: data?.challengeId ?? '' })
       if (redirectTo) params.set(AUTH_REDIRECT_PARAM, redirectTo)
@@ -118,7 +119,9 @@ const LoginPage = () => {
       refreshToken: data.refreshToken,
     })
     dispatch(setUser(data.user))
-    navigate(redirectTo ?? '/', { replace: true })
+    navigate(isNewAccount ? '/account-profile' : (redirectTo ?? '/'), {
+      replace: true,
+    })
   }
 
   // Step 1 — identifier -> /auth/start
@@ -208,7 +211,7 @@ const LoginPage = () => {
       path: '/auth/complete',
       mutationOptions: {
         onError: handleMutationError,
-        onSuccess: handleAuthSuccess,
+        onSuccess: (data) => handleAuthSuccess(data, true),
       },
     })
 
@@ -283,7 +286,7 @@ const LoginPage = () => {
   >({
     path: '/auth/google',
     mutationOptions: {
-      onSuccess: handleAuthSuccess,
+      onSuccess: (data) => handleAuthSuccess(data),
       onError: (error) => {
         showWarningToast(error.message)
         navigate(buildAuthPath('/signin', redirectTo), { replace: true })
