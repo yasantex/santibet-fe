@@ -101,6 +101,22 @@ export interface ReferralProgress {
   rewards: ReferralReward[]
 }
 
+export type ReferredFriendStatus = 'PENDING' | 'QUALIFIED' | 'REJECTED'
+
+export interface ReferredFriend {
+  id: string
+  status: ReferredFriendStatus
+  /** Display name, else first name, else "Friend". Never contact details. */
+  name: string
+  createdAt: string
+  qualifiedAt: string | null
+}
+
+export interface ReferredFriendsResponse {
+  data: ReferredFriend[]
+  nextCursor: string | null
+}
+
 export type BadgeCriterion =
   | 'WINS'
   | 'WIN_STREAK'

@@ -19,6 +19,7 @@ import type {
   ReferralRewardKind,
   ReferralRewardStatus,
   ReferralTrigger,
+  ReferredFriendStatus,
 } from '../types/points.types'
 import { formatCurrency } from './functions'
 
@@ -77,6 +78,22 @@ export const referralRewardStatusHint: Record<ReferralRewardStatus, string> = {
   FAILED: 'We couldn’t send this. Please contact support.',
   CANCELLED: 'The referral was rejected.',
 }
+
+export const referredFriendStatusConfig: StatusConfig[] = [
+  { label: 'Pending', value: 'PENDING', color: 'orange' },
+  { label: 'Counted', value: 'QUALIFIED', color: 'green' },
+  { label: 'Rejected', value: 'REJECTED', color: 'red' },
+]
+
+export const referredFriendFilters: {
+  id: ReferredFriendStatus | 'ALL'
+  label: string
+}[] = [
+  { id: 'ALL', label: 'All' },
+  { id: 'PENDING', label: 'Pending' },
+  { id: 'QUALIFIED', label: 'Counted' },
+  { id: 'REJECTED', label: 'Rejected' },
+]
 
 /** "₦500.00 cash" / "₦1,000.00 airtime". Amounts are naira, not kobo. */
 export const formatReferralReward = (kind: ReferralRewardKind, amount: string) =>

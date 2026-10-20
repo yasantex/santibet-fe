@@ -18,6 +18,14 @@ const components: Components = {
       {children}
     </h2>
   ),
+  h3: ({ children }) => (
+    <h3 className='text-base font-bold text-black mt-6 mb-2'>{children}</h3>
+  ),
+  ol: ({ children }) => (
+    <ol className='list-decimal pl-5 text-neutral-10 mb-4 space-y-1'>
+      {children}
+    </ol>
+  ),
   p: ({ children }) => (
     <p className='text-neutral-10 leading-relaxed mb-4'>{children}</p>
   ),
