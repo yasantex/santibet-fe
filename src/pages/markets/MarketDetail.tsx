@@ -16,7 +16,9 @@ import {
   Flag01Icon,
 } from '@hugeicons/core-free-icons'
 import { useFavorites } from '../../hooks/useFavorites'
+import { isSportsMarket } from '../../hooks/useComboSlip'
 import TradePanel from '../../components/markets/TradePanel'
+import ComboMarketPanel from '../../components/combo/ComboMarketPanel'
 import { LiveBadge, ScoreBoard } from '../../components/markets/LiveBits'
 import ChartTooltip from '../../components/markets/ChartTooltip'
 import ChartRangeTabs from '../../components/markets/ChartRangeTabs'
@@ -479,13 +481,18 @@ const MarketDetail = () => {
           </div>
         </div>
 
-        {/* Trade panel */}
+        {/* Trade panel — sports default to the combo ticket, everything else
+            keeps the single-bet panel. */}
         <div className='lg:sticky lg:top-24 lg:self-start'>
-          <TradePanel
-            market={market}
-            selectedOutcome={selectedOutcome}
-            onSelectOutcome={(o) => setSelectedId(o.id)}
-          />
+          {isSportsMarket(market) ? (
+            <ComboMarketPanel market={market} />
+          ) : (
+            <TradePanel
+              market={market}
+              selectedOutcome={selectedOutcome}
+              onSelectOutcome={(o) => setSelectedId(o.id)}
+            />
+          )}
         </div>
       </div>
     </main>
