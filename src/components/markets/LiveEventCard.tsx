@@ -9,6 +9,7 @@ import {
 } from '../../utils/marketDisplay'
 import { formatSharePrice } from '../../utils/functions'
 import { useCountdown } from '../../hooks/useCountdown'
+import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
 import MarketMetaLine from './MarketMetaLine'
 import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
 
@@ -28,6 +29,18 @@ const LiveEventCard = ({
 }: LiveEventCardProps) => {
   const market = event.markets[0]
   const { label, display } = useCountdown(market?.openTime, market?.closeTime)
+
+  // Combo-by-default for sports: tap an outcome to add/remove it from the combo
+  // ticket, with the selection highlighted.
+  const combo = useComboSlip()
+  const comboEnabled = !!market && isSportsMarket(market)
+  const effectiveActiveOutcomeId = comboEnabled
+    ? combo.selectedOutcomeIdForMarket(market.id)
+    : activeOutcomeId
+  const handleOutcome = (m: UiMarket, o: UiOutcome) => {
+    if (comboEnabled) combo.toggle(m, o)
+    else onSelectOutcome(m, o)
+  }
 
   if (!market) return null
 
@@ -79,9 +92,11 @@ const LiveEventCard = ({
             <button
               key={o.id}
               type='button'
-              onClick={() => onSelectOutcome(market, o)}
+              onClick={() => handleOutcome(market, o)}
               className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg cursor-pointer px-1 py-2 text-xs font-bold ${TONE_STYLES[tone].button} ${
-                o.id === activeOutcomeId ? 'ring-2 ring-black ring-offset-1' : ''
+                o.id === effectiveActiveOutcomeId
+                  ? 'ring-2 ring-black ring-offset-1'
+                  : ''
               }`}
             >
               <span className='min-w-0 truncate uppercase'>{o.label}</span>

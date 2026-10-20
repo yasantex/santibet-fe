@@ -12,6 +12,7 @@ import {
 import { MarketCountdown } from '../globals/ReusedText'
 import ShareMarketButton from './ShareMarketButton'
 import MarketMetaLine from './MarketMetaLine'
+import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
 
 /** Binary (Yes/No) markets: one full stat row per side, price button inline. */
 const OutcomeRow = ({
@@ -158,8 +159,20 @@ const MarketCard = ({
         tone: outcomeTone(market, outcome.id, i),
       }))
   const moreCount = isBinary ? 0 : Math.max(0, outcomes.length - 3)
-  const handleOutcomeClick = (outcome: UiOutcome) =>
-    onSelectOutcome?.(market, outcome)
+
+  // Combo bets are enabled by default for sports: tapping an outcome on any
+  // sports card (anywhere in the app) adds/removes it from the combo ticket,
+  // and the selected outcome stays highlighted. Non-sports keep the caller's
+  // behaviour (open the market to trade singly).
+  const combo = useComboSlip()
+  const comboEnabled = isSportsMarket(market)
+  const effectiveActiveOutcomeId = comboEnabled
+    ? combo.selectedOutcomeIdForMarket(market.id)
+    : activeOutcomeId
+  const handleOutcomeClick = (outcome: UiOutcome) => {
+    if (comboEnabled) combo.toggle(market, outcome)
+    else onSelectOutcome?.(market, outcome)
+  }
 
   return (
     <div
@@ -221,8 +234,8 @@ const MarketCard = ({
                 key={outcome.id}
                 outcome={outcome}
                 tone={tone}
-                active={outcome.id === activeOutcomeId}
-                onClick={() => onSelectOutcome?.(market, outcome)}
+                active={outcome.id === effectiveActiveOutcomeId}
+                onClick={() => handleOutcomeClick(outcome)}
               />
             ))}
           </div>
@@ -233,7 +246,7 @@ const MarketCard = ({
             ))}
             <OutcomeButtonRow
               outcomes={shownOutcomes}
-              activeOutcomeId={activeOutcomeId}
+              activeOutcomeId={effectiveActiveOutcomeId}
               onClick={handleOutcomeClick}
             />
           </div>
