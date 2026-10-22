@@ -39,7 +39,7 @@ const socialLinks = [
 
 const footerLinks = [
   { label: 'About', href: '/about-us' },
-  { label: 'Cookie Policy', href: '#' },
+  { label: 'Cookie Policy', href: '/cookie-policy' },
   { label: 'Responsible Gambling', href: '/responsible-gambling' },
 ]
 
