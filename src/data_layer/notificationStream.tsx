@@ -25,6 +25,8 @@ import {
   type DepositSuccessEvent,
   type DepositFailedListener,
   type DepositFailedEvent,
+  type DepositStatusEvent,
+  type DepositStatusListener,
 } from './notificationStreamContext'
 import type { NotificationType } from '../types/notification.types'
 
@@ -142,6 +144,18 @@ export const NotificationStreamProvider = ({
       depositListeners.current.add(listener)
       return () => {
         depositListeners.current.delete(listener)
+      }
+    },
+    [],
+  )
+
+  const depositStatusListeners = useRef(new Set<DepositStatusListener>())
+
+  const subscribeToDepositStatus = useCallback(
+    (listener: DepositStatusListener) => {
+      depositStatusListeners.current.add(listener)
+      return () => {
+        depositStatusListeners.current.delete(listener)
       }
     },
     [],
@@ -283,6 +297,25 @@ export const NotificationStreamProvider = ({
         }
       })
 
+      // Live crypto deposit progress (seen on-chain → confirmed). Display only:
+      // the credit itself arrives as a DEPOSIT_SUCCESS notification.
+      source.addEventListener('deposit_status', (event) => {
+        let payload: DepositStatusEvent
+        try {
+          payload = JSON.parse((event as MessageEvent).data)
+        } catch (error) {
+          console.error('Malformed `deposit_status` payload', error)
+          return
+        }
+        depositStatusListeners.current.forEach((listener) => {
+          try {
+            listener(payload)
+          } catch (error) {
+            console.error('Deposit status listener failed', error)
+          }
+        })
+      })
+
       source.onerror = () => {
         if (cancelled) return
         setConnected(false)
@@ -312,8 +345,18 @@ export const NotificationStreamProvider = ({
   }, [hasSession, queryClient])
 
   const value = useMemo(
-    () => ({ connected, subscribeToDepositSuccess, subscribeToDepositFailed }),
-    [connected, subscribeToDepositSuccess, subscribeToDepositFailed],
+    () => ({
+      connected,
+      subscribeToDepositSuccess,
+      subscribeToDepositFailed,
+      subscribeToDepositStatus,
+    }),
+    [
+      connected,
+      subscribeToDepositSuccess,
+      subscribeToDepositFailed,
+      subscribeToDepositStatus,
+    ],
   )
 
   return (

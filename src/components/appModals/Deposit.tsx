@@ -12,8 +12,15 @@ import {
 } from '@hugeicons/core-free-icons'
 import { Button } from '../globals/Button'
 import { FormInput } from '../globals/FormInput'
-import { useSantiBetMutation, useSantiBetQuery } from '../../data_layer/utils'
-import { useNotificationStream } from '../../data_layer/notificationStreamContext'
+import {
+  apiClient,
+  useSantiBetMutation,
+  useSantiBetQuery,
+} from '../../data_layer/utils'
+import {
+  useNotificationStream,
+  type DepositStatusEvent,
+} from '../../data_layer/notificationStreamContext'
 import {
   WALLET_BALANCE_KEY,
   WALLET_TRANSACTIONS_KEY,
@@ -63,9 +70,11 @@ const NETWORK_LABELS: Record<CryptoNetwork, { label: string; subtitle: string }>
 
 /**
  * How long to wait on the push alone before also polling. Covers the case
- * where the stream is up but its event never lands.
+ * where the stream is up but its event never lands — or the provider's webhook
+ * reached the backend before its own status said "paid". Short, because the
+ * user is staring at this screen; verify is a cheap, rate-limited re-query.
  */
-const POLL_FALLBACK_DELAY = 3 * 60 * 1000
+const POLL_FALLBACK_DELAY = 15 * 1000
 
 /**
  * FALLBACK base Kudipal link. The backend normally returns the full checkout
@@ -154,12 +163,16 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     null,
   )
   const [cryptoNetwork, setCryptoNetwork] = useState<CryptoNetwork | null>(null)
+  // Live on-chain progress for a crypto deposit, from the `deposit_status` push.
+  const [cryptoProgress, setCryptoProgress] =
+    useState<DepositStatusEvent | null>(null)
 
   const queryClient = useQueryClient()
   const {
     connected: streamConnected,
     subscribeToDepositSuccess,
     subscribeToDepositFailed,
+    subscribeToDepositStatus,
   } = useNotificationStream()
 
   const resetAll = () => {
@@ -172,6 +185,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     setSettled(null)
     setCryptoCurrency(null)
     setCryptoNetwork(null)
+    setCryptoProgress(null)
   }
 
   // Reset to a clean slate each time the modal transitions closed → open.
@@ -207,29 +221,46 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
   const depositId = startResponse?.deposit.id ?? ''
 
+  // Resolve the waiting screen from a deposit record, whichever call returned it.
+  const settleFromRecord = (data: DepositRecord) => {
+    if (data.status === 'PENDING') return
+    if (data.status === 'COMPLETED') {
+      queryClient.invalidateQueries({ queryKey: WALLET_BALANCE_KEY })
+      queryClient.invalidateQueries({
+        queryKey: WALLET_TRANSACTIONS_KEY,
+      })
+    }
+    setSettled({
+      status: data.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+      reason: data.failureReason,
+    })
+    setStep('result')
+  }
+
   const { mutateAsync: verifyDeposit } = useSantiBetMutation<
     DepositRecord,
     void
   >({
     path: `/wallet/deposits/${depositId}/verify`,
     mutationOptions: {
-      onSuccess: (data) => {
-        if (data.status === 'PENDING') return
-        if (data.status === 'COMPLETED') {
-          queryClient.invalidateQueries({ queryKey: WALLET_BALANCE_KEY })
-          queryClient.invalidateQueries({
-            queryKey: WALLET_TRANSACTIONS_KEY,
-          })
-        }
-        setSettled({
-          status: data.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          reason: data.failureReason,
-        })
-        setStep('result')
-      },
+      onSuccess: settleFromRecord,
       // The fallback poll retries silently rather than toasting on every
-      // transient hiccup; a real failure arrives as a settled deposit record.
-      onError: () => {},
+      // transient hiccup. One error is meaningful: 409 DEPOSIT_NOT_PENDING
+      // means another path (webhook or the backend sweep) already settled it
+      // and the push was missed — read the record for its final state.
+      onError: (error) => {
+        if (
+          isAxiosError(error) &&
+          error.response?.status === 409 &&
+          error.response.data?.code === 'DEPOSIT_NOT_PENDING' &&
+          depositId
+        ) {
+          apiClient
+            .get<DepositRecord>(`/wallet/deposits/${depositId}`)
+            .then((res) => settleFromRecord(res.data))
+            .catch(() => {})
+        }
+      },
     },
   })
 
@@ -256,6 +287,24 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     subscribeToDepositSuccess,
     queryClient,
   ])
+
+  // Crypto progress: show "detected, confirming" as soon as the chain sees it,
+  // so the user is not left staring at "waiting" through the confirmations.
+  useEffect(() => {
+    if (step !== 'crypto-address') return
+    return subscribeToDepositStatus((event) => {
+      if (
+        cryptoCurrency &&
+        event.currency &&
+        event.currency.toUpperCase() !== cryptoCurrency.toUpperCase()
+      )
+        return
+      setCryptoProgress(event)
+      if (event.status === 'SUCCESSFUL') {
+        queryClient.invalidateQueries({ queryKey: WALLET_BALANCE_KEY })
+      }
+    })
+  }, [step, cryptoCurrency, subscribeToDepositStatus, queryClient])
 
   // Failure path: a DEPOSIT_FAILED push resolves the waiting screen to a
   // failure result instead of leaving it waiting indefinitely.
@@ -288,7 +337,23 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     }
 
     const intervalId = setInterval(poll, 5000)
-    return () => clearInterval(intervalId)
+
+    // Coming back to this tab — typically from the Kudipal checkout tab, or the
+    // bank app — is the moment the user has most likely just paid. Check now
+    // instead of waiting out the push grace period.
+    const checkNow = () => {
+      if (document.visibilityState !== 'visible') return
+      if (expiresAt && Date.now() > expiresAt) return
+      verifyDeposit().catch(() => {})
+    }
+    document.addEventListener('visibilitychange', checkNow)
+    window.addEventListener('focus', checkNow)
+
+    return () => {
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', checkNow)
+      window.removeEventListener('focus', checkNow)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, depositId, streamConnected])
 
@@ -798,7 +863,15 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
               <div className='flex items-center justify-center gap-2 text-xs text-neutral-10'>
                 <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-brand-green' />
-                Waiting for your deposit to arrive…
+                {cryptoProgress?.status === 'SUCCESSFUL'
+                  ? 'Deposit confirmed — crediting your balance…'
+                  : cryptoProgress?.status === 'PENDING'
+                    ? `Deposit detected${
+                        cryptoProgress.amount
+                          ? ` (${cryptoProgress.amount} ${cryptoProgress.currency ?? ''})`
+                          : ''
+                      } — confirming on the network…`
+                    : 'Waiting for your deposit to arrive…'}
               </div>
 
               <p className='text-xs text-center text-neutral-10'>
