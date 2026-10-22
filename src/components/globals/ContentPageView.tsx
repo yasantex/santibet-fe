@@ -1,49 +1,17 @@
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowDown01Icon, ArrowLeft02Icon } from '@hugeicons/core-free-icons'
+import { ArrowLeft02Icon } from '@hugeicons/core-free-icons'
 import { useNavigate } from 'react-router'
 import RenderMarkdown from './RenderMarkdown'
 import { TextLoader } from './ReusedText'
 import { Button } from './Button'
 import { isPageNotFound, useContentPage } from '../../data_layer/pages'
-import {
-  findLegacyContentPage,
-  splitMarkdownSections,
-} from '../../utils/contentPages'
+import { findLegacyContentPage } from '../../utils/contentPages'
 import { formatShortDate } from '../../utils/points'
-
-const FaqAccordion = ({ markdown }: { markdown: string }) => {
-  const { intro, sections } = splitMarkdownSections(markdown)
-
-  return (
-    <>
-      {intro && <RenderMarkdown usePreWrapper={false}>{intro}</RenderMarkdown>}
-      <div className='flex flex-col divide-y divide-border rounded-2xl border border-border bg-card'>
-        {sections.map((s, i) => (
-          <details key={`${i}-${s.heading}`} className='group px-4'>
-            <summary className='flex cursor-pointer list-none items-center justify-between gap-3 py-4 text-sm font-semibold text-black [&::-webkit-details-marker]:hidden'>
-              {s.heading}
-              <HugeiconsIcon
-                icon={ArrowDown01Icon}
-                size={18}
-                className='shrink-0 text-neutral-10 transition-transform group-open:rotate-180'
-              />
-            </summary>
-            <div className='pb-2'>
-              <RenderMarkdown usePreWrapper={false}>{s.body}</RenderMarkdown>
-            </div>
-          </details>
-        ))}
-      </div>
-    </>
-  )
-}
 
 interface ContentPageViewProps {
   slug: string
-  /** Show each `##` section as a collapsible question. */
-  accordion?: boolean
   /** Rendered between the title and the body. */
   children?: ReactNode
 }
@@ -53,11 +21,7 @@ interface ContentPageViewProps {
  * that predates the API shows its bundled Markdown; any other page says it
  * isn't available yet.
  */
-const ContentPageView = ({
-  slug,
-  accordion = false,
-  children,
-}: ContentPageViewProps) => {
+const ContentPageView = ({ slug, children }: ContentPageViewProps) => {
   const navigate = useNavigate()
   const legacy = findLegacyContentPage(slug)
   const page = useContentPage(slug)
@@ -116,11 +80,7 @@ const ContentPageView = ({
           />
         </div>
       ) : body !== undefined ? (
-        accordion ? (
-          <FaqAccordion markdown={body} />
-        ) : (
-          <RenderMarkdown usePreWrapper={false}>{body}</RenderMarkdown>
-        )
+        <RenderMarkdown usePreWrapper={false}>{body}</RenderMarkdown>
       ) : null}
     </main>
   )
