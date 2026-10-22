@@ -4,10 +4,11 @@ import { apiClient } from './utils'
 import type {
   ContentPage,
   ContentPageListResponse,
+  FaqListResponse,
 } from '../types/pages.types'
 
 /**
- * Admin-managed content pages (terms, privacy, FAQ, contact, …). Public — no
+ * Admin-managed content pages (terms, privacy, contact, …) and the FAQ. Public — no
  * session needed, so these go straight through `apiClient` rather than
  * `useSantiBetQuery`, which waits for a token. The API caches for 60s, so
  * there's no point re-reading more often than that.
@@ -38,5 +39,24 @@ export const useContentPage = (slug: string) =>
         .data,
     retry: (count, error) => !isPageNotFound(error) && count < 2,
     enabled: !!slug,
+    ...CACHE_FOR_A_MINUTE,
+  })
+
+export const FAQS_KEY = ['faqs']
+
+/** In the order admins set. Empty means there's no FAQ yet. */
+export const useFaqs = () =>
+  useQuery({
+    queryKey: FAQS_KEY,
+    queryFn: async () => {
+      try {
+        return (await apiClient.get<FaqListResponse>('/faqs')).data.data
+      } catch (error) {
+        // Endpoint not deployed yet — same as no FAQ.
+        if (isPageNotFound(error)) return []
+        throw error
+      }
+    },
+    retry: 2,
     ...CACHE_FOR_A_MINUTE,
   })

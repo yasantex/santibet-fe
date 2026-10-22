@@ -7,7 +7,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Link } from 'react-router'
-import { useContentPages } from '../data_layer/pages'
+import { useContentPages, useFaqs } from '../data_layer/pages'
 import {
   LEGACY_CONTENT_PAGES,
   contentPageRoute,
@@ -45,10 +45,12 @@ const footerLinks = [
 
 /**
  * Published pages in the API's order. The pages that predate the API keep a
- * link while unpublished, since they still show their bundled content.
+ * link while unpublished, since they still show their bundled content. The
+ * FAQ link only shows once there are questions.
  */
 const useContentPageLinks = () => {
   const { data = [] } = useContentPages()
+  const { data: faqs = [] } = useFaqs()
   const published = new Set(data.map((p) => p.slug))
   return [
     ...data.map((p) => ({ label: p.title, href: contentPageRoute(p.slug) })),
@@ -56,6 +58,7 @@ const useContentPageLinks = () => {
       label: p.label,
       href: p.route,
     })),
+    ...(faqs.length ? [{ label: 'FAQs', href: '/faqs' }] : []),
   ]
 }
 
