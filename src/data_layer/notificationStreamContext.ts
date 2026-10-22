@@ -14,6 +14,23 @@ export interface DepositFailedEvent {
 
 export type DepositFailedListener = (event: DepositFailedEvent) => void
 
+/**
+ * Live crypto deposit progress (`deposit_status` on the stream). Ephemeral and
+ * for display only — the balance is credited off DEPOSIT_SUCCESS, never this.
+ */
+export interface DepositStatusEvent {
+  status: 'PENDING' | 'SUCCESSFUL' | 'FAILED'
+  /** Provider's own label, e.g. `submitted`, `accepted`. */
+  rawStatus: string | null
+  depositRef: string
+  currency: string | null
+  /** Major-unit crypto amount, as a string. */
+  amount: string | null
+  txHash: string | null
+}
+
+export type DepositStatusListener = (event: DepositStatusEvent) => void
+
 export interface NotificationStreamValue {
   /**
    * False whenever the push connection is down. Callers that need guaranteed
@@ -25,6 +42,8 @@ export interface NotificationStreamValue {
   subscribeToDepositSuccess: (listener: DepositListener) => () => void
   /** Subscribe to DEPOSIT_FAILED pushes. Returns an unsubscribe function. */
   subscribeToDepositFailed: (listener: DepositFailedListener) => () => void
+  /** Subscribe to live crypto deposit progress. Returns an unsubscribe function. */
+  subscribeToDepositStatus: (listener: DepositStatusListener) => () => void
 }
 
 export const NotificationStreamContext =
@@ -32,6 +51,7 @@ export const NotificationStreamContext =
     connected: false,
     subscribeToDepositSuccess: () => () => {},
     subscribeToDepositFailed: () => () => {},
+    subscribeToDepositStatus: () => () => {},
   })
 
 export const useNotificationStream = () =>
