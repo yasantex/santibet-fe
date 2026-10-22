@@ -29,13 +29,6 @@ export const LEGACY_CONTENT_PAGES: LegacyContentPage[] = [
     fallbackFile: '/contents/terms.md',
   },
   {
-    slug: 'faq',
-    route: '/faqs',
-    title: 'Frequently Asked Questions',
-    label: 'FAQs',
-    fallbackFile: '/contents/faq.md',
-  },
-  {
     slug: 'contact',
     route: '/contact-us',
     title: 'Contact Us',
@@ -49,39 +42,3 @@ export const findLegacyContentPage = (slug: string) =>
 
 export const contentPageRoute = (slug: string) =>
   findLegacyContentPage(slug)?.route ?? `/pages/${encodeURIComponent(slug)}`
-
-export interface MarkdownSection {
-  heading: string
-  body: string
-}
-
-/**
- * Splits Markdown on `## ` headings — the FAQ uses one per question. Text
- * before the first heading comes back as `intro`. Headings inside fenced code
- * blocks are left alone.
- */
-export const splitMarkdownSections = (markdown: string) => {
-  const intro: string[] = []
-  const sections: { heading: string; lines: string[] }[] = []
-  let inFence = false
-
-  for (const line of markdown.split('\n')) {
-    if (/^\s*(```|~~~)/.test(line)) inFence = !inFence
-    const heading = !inFence && /^##\s+(.+?)\s*#*\s*$/.exec(line)
-    if (heading) {
-      sections.push({ heading: heading[1], lines: [] })
-    } else if (sections.length) {
-      sections[sections.length - 1].lines.push(line)
-    } else {
-      intro.push(line)
-    }
-  }
-
-  return {
-    intro: intro.join('\n').trim(),
-    sections: sections.map<MarkdownSection>((s) => ({
-      heading: s.heading,
-      body: s.lines.join('\n').trim(),
-    })),
-  }
-}
