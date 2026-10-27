@@ -121,6 +121,13 @@ const ComboSlip = ({
       setError(`Add at least ${minLegs} selections to place a combo.`)
       return
     }
+    const closedLeg = legs.find(
+      (l) => l.closeTime && new Date(l.closeTime).getTime() <= Date.now(),
+    )
+    if (closedLeg) {
+      setError(`${closedLeg.eventTitle} has closed. Remove it to continue.`)
+      return
+    }
     if (hasInvalidLeg) {
       setError('One of your selections is no longer priced. Remove it to continue.')
       return

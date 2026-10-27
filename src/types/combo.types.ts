@@ -25,6 +25,8 @@ export interface ComboLeg {
   price: number
   /** Per-market minimum stake (kobo), if known. */
   minStakeMinor?: number | null
+  /** Market close time; a leg past it can no longer be placed. */
+  closeTime?: string | null
   addedAt: number
 }
 

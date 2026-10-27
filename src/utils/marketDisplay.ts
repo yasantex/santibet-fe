@@ -156,6 +156,19 @@ export const marketHref = (
 }
 
 /**
+ * Whether a market still takes predictions. `status` only changes on refetch,
+ * so a market whose close time has already passed counts as closed too.
+ */
+export const isMarketOpen = (
+  market: { status: string; closeTime?: string | null },
+  now = Date.now(),
+): boolean => {
+  if (market.status !== 'open') return false
+  const close = market.closeTime ? new Date(market.closeTime).getTime() : NaN
+  return Number.isNaN(close) || now < close
+}
+
+/**
  * Short names for sibling markets in one event, by dropping the words every
  * title shares at the start and end: "Will Lula win the 2026 Brazilian
  * presidential election?" → "Lula"; "Kraken IPO by June 30, 2027?" → "June 30".
