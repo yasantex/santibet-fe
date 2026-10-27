@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { isAxiosError } from 'axios'
 import { Button } from '../globals/Button'
 import ConfirmationModal from '../globals/ConfirmationModal'
 import {
-  useBetPositions,
   useCashOut,
   useCashOutQuote,
+  useMarketPositions,
 } from '../../data_layer/bets'
 import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import { formatCurrency, formatSharePrice, toMajorUnits } from '../../utils/functions'
@@ -124,15 +124,7 @@ const SellPositionRow = ({
 }
 
 const SellPanel = ({ market }: { market: UiMarket }) => {
-  const { data, isLoading } = useBetPositions('OPEN')
-
-  const positions = useMemo<BetPosition[]>(
-    () =>
-      (data?.pages ?? [])
-        .flatMap((p) => p.data)
-        .filter((p) => p.marketId === market.id && p.status === 'OPEN'),
-    [data, market.id],
-  )
+  const { positions, isLoading } = useMarketPositions(market.id)
 
   if (isLoading) {
     return <div className='h-24 animate-pulse rounded-lg bg-hover' />

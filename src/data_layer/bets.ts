@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useSantiBetInfiniteQuery,
@@ -69,6 +70,19 @@ export const useBetPositions = (status?: string, limit = 20) =>
     enabled: true,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   })
+
+/** The player's open positions in one market, from the first page of OPEN positions. */
+export const useMarketPositions = (marketId?: string) => {
+  const query = useBetPositions('OPEN')
+  const positions = useMemo<BetPosition[]>(
+    () =>
+      (query.data?.pages ?? [])
+        .flatMap((p) => p.data)
+        .filter((p) => p.marketId === marketId && p.status === 'OPEN'),
+    [query.data, marketId],
+  )
+  return { ...query, positions }
+}
 
 /**
  * Read-only cash-out estimate for a position — same formula as the executed

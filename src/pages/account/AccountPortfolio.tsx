@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import PositionCard from '../../components/markets/PositionCard'
 import BetHistoryCard from '../../components/markets/BetHistoryCard'
+import TradingNotice from '../../components/markets/TradingNotice'
 import { Button } from '../../components/globals/Button'
 import { useBetPositions, useBets } from '../../data_layer/bets'
 import { formatCurrency, toMajorUnits } from '../../utils/functions'
@@ -152,6 +153,12 @@ const AccountPortfolio = () => {
               ))
             )}
           </div>
+
+          {/* Open positions can be cashed out from here, so the licence
+              notice applies. */}
+          {activeTab === 'OPEN' && !isEmpty && !listQuery.isLoading && (
+            <TradingNotice />
+          )}
 
           {listQuery.hasNextPage && (
             <div className='flex justify-center'>

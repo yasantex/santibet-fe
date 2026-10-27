@@ -4,6 +4,7 @@ import { useCookies } from 'react-cookie'
 import { isAxiosError } from 'axios'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
+  ArrowLeft02Icon,
   Cancel01Icon,
   MultiplicationSignIcon,
   TicketStarIcon,
@@ -183,6 +184,14 @@ const ComboSlip = ({
         {/* Header */}
         <div className='flex items-center justify-between border-b border-border px-5 py-4'>
           <div className='flex items-center gap-2'>
+            <button
+              type='button'
+              aria-label='Back'
+              onClick={onClose}
+              className='-ml-1.5 rounded-md p-1.5 text-black hover:bg-hover'
+            >
+              <HugeiconsIcon icon={ArrowLeft02Icon} size={20} />
+            </button>
             <HugeiconsIcon
               icon={TicketStarIcon}
               size={20}
@@ -219,17 +228,27 @@ const ComboSlip = ({
               Tap sports outcomes to build a combo. Every pick has to win for the
               combo to pay out.
             </p>
-            <Button
-              type='button'
-              text='Browse sports'
-              variation='plain'
-              size='medium'
-              className='w-fit!'
-              onClick={() => {
-                onClose()
-                navigate('/category/Sports')
-              }}
-            />
+            <div className='flex gap-2'>
+              <Button
+                type='button'
+                text='Browse sports'
+                variation='plain'
+                size='medium'
+                className='w-fit!'
+                onClick={() => {
+                  onClose()
+                  navigate('/category/Sports')
+                }}
+              />
+              <Button
+                type='button'
+                text='Close'
+                variation='plain'
+                size='medium'
+                className='w-fit!'
+                onClick={onClose}
+              />
+            </div>
           </div>
         ) : (
           <>
@@ -345,6 +364,14 @@ const ComboSlip = ({
                 loading={isPending}
                 disabled={isSignedIn && (!enoughLegs || hasInvalidLeg)}
                 onClick={handlePlace}
+              />
+              <Button
+                type='button'
+                text='Close'
+                variation='plain'
+                size='large'
+                className='w-full'
+                onClick={onClose}
               />
               <p className='text-center text-[11px] text-neutral-10'>
                 Odds are locked in when you place. Every leg must win.
