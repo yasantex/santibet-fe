@@ -15,10 +15,15 @@ import {
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { Bet, BetType } from '../../types/bet.types'
-import { outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
+import {
+  isMarketOpen,
+  outcomeTone,
+  TONE_STYLES,
+} from '../../utils/marketDisplay'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
 import SuspendedHint from '../globals/SuspendedHint'
 import useAuthNavigate from '../../hooks/useAuthNavigate'
+import useMarketOpen from '../../hooks/useMarketOpen'
 
 const QUICK_ADDS = [100, 200, 500, 1000]
 
@@ -91,7 +96,7 @@ const OrderForm = ({
   const marketMinNaira =
     market.minStakeMinor != null ? toMajorUnits(market.minStakeMinor) : null
 
-  const isOpen = market.status === 'open'
+  const isOpen = useMarketOpen(market)
 
   const price = useMemo(() => {
     if (type === 'limit') {
@@ -120,6 +125,10 @@ const OrderForm = ({
   }
 
   const handleSubmit = async () => {
+    if (!isMarketOpen(market)) {
+      showWarningToast('This market is closed')
+      return
+    }
     if (!isSignedIn) {
       goToSignIn()
       return
@@ -363,17 +372,17 @@ const OrderForm = ({
       <Button
         type='button'
         text={
-          !isSignedIn
-            ? 'Sign in to predict'
-            : !isOpen
-              ? 'Market closed'
+          !isOpen
+            ? 'Market closed'
+            : !isSignedIn
+              ? 'Sign in to predict'
               : submitText
         }
         variation='primary'
         size='large'
         className='w-full'
         loading={isPending}
-        disabled={isSignedIn && (!isOpen || suspended)}
+        disabled={!isOpen || (isSignedIn && suspended)}
         onClick={handleSubmit}
       />
       {isSignedIn && suspended && (
