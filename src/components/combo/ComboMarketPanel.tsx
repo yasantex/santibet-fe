@@ -4,6 +4,7 @@ import {
   CheckmarkCircle02Icon,
 } from '@hugeicons/core-free-icons'
 import { useComboSlip } from '../../hooks/useComboSlip'
+import useMarketOpen from '../../hooks/useMarketOpen'
 import { outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
 import { formatSharePrice } from '../../utils/functions'
 import type { UiMarket } from '../../types/market.types'
@@ -18,6 +19,7 @@ import type { UiMarket } from '../../types/market.types'
 const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
   const combo = useComboSlip()
   const selectedOutcomeId = combo.selectedOutcomeIdForMarket(market.id)
+  const isOpen = useMarketOpen(market)
 
   return (
     <div className='flex flex-col gap-4 rounded-2xl border border-border bg-card p-4'>
@@ -41,8 +43,10 @@ const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
             <button
               key={o.id}
               type='button'
+              // A pick already on the ticket stays tappable so it can be removed.
+              disabled={!isOpen && !active}
               onClick={() => combo.toggle(market, o)}
-              className={`flex items-center justify-between gap-2 rounded-lg px-4 py-3 text-sm font-bold cursor-pointer transition-all ${
+              className={`flex items-center justify-between gap-2 rounded-lg px-4 py-3 text-sm font-bold cursor-pointer transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
                 active ? TONE_STYLES[tone].solid : TONE_STYLES[tone].button
               }`}
             >
@@ -62,7 +66,11 @@ const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
         })}
       </div>
 
-      {combo.legCount > 0 ? (
+      {!isOpen ? (
+        <p className='text-center text-xs font-semibold text-error'>
+          Market closed
+        </p>
+      ) : combo.legCount > 0 ? (
         <p className='text-center text-xs font-semibold text-neutral-10'>
           {combo.legCount} selection{combo.legCount > 1 ? 's' : ''} in your bet
           slip

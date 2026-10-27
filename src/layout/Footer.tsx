@@ -119,7 +119,7 @@ const Footer = () => {
               </li>
             ))}
           </ul>
-          <ul className='space-y-4 text-sm max-w-md min-w-md'>
+          <ul className='space-y-4 text-sm max-w-md xl:min-w-md'>
             {footerLinksTwo.map((link) => (
               <li key={link.href}>
                 <Link

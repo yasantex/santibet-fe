@@ -6,7 +6,7 @@ import {
   removeLeg,
   MAX_COMBO_LEGS,
 } from '../redux/comboSlipSlice'
-import { marketSport } from '../utils/marketDisplay'
+import { isMarketOpen, marketSport } from '../utils/marketDisplay'
 import { toMajorUnits } from '../utils/functions'
 import { showWarningToast } from '../utils/toastUtils'
 import type { UiMarket, UiOutcome } from '../types/market.types'
@@ -40,6 +40,7 @@ const toLeg = (market: UiMarket, outcome: UiOutcome): ComboLeg => ({
   imageUrl: market.imageUrl ?? null,
   price: outcome.price,
   minStakeMinor: market.minStakeMinor ?? null,
+  closeTime: market.closeTime || null,
   addedAt: Date.now(),
 })
 
@@ -89,6 +90,10 @@ export const useComboSlip = () => {
     // Same outcome already selected → deselect.
     if (legs.some((l) => l.outcomeId === outcome.id)) {
       dispatch(removeLeg(outcome.id))
+      return
+    }
+    if (!isMarketOpen(market)) {
+      showWarningToast('This market is closed')
       return
     }
     const sameMarketOnTicket = legs.some((l) => l.marketId === market.id)
