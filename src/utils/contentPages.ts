@@ -1,10 +1,13 @@
 /**
  * Content pages come from the API (`/pages`), but every page starts
- * unpublished. These are the pages that existed before the API, with the
- * routes they already live on and the bundled Markdown to show until an admin
- * publishes them. Any other slug lives at `/pages/:slug`.
+ * unpublished. These are the pages with a route of their own, each with the
+ * bundled Markdown to show until an admin publishes it. Any other slug lives
+ * at `/pages/:slug` with no FE change needed.
+ *
+ * When an admin creates one of these pages, the only thing to do here is make
+ * its `slug` match the one the admin used.
  */
-export interface LegacyContentPage {
+export interface KnownContentPage {
   slug: string
   route: string
   title: string
@@ -13,7 +16,7 @@ export interface LegacyContentPage {
   fallbackFile: string
 }
 
-export const LEGACY_CONTENT_PAGES: LegacyContentPage[] = [
+export const KNOWN_CONTENT_PAGES: KnownContentPage[] = [
   {
     slug: 'privacy',
     route: '/privacy-policy',
@@ -35,10 +38,31 @@ export const LEGACY_CONTENT_PAGES: LegacyContentPage[] = [
     label: 'Contact Support',
     fallbackFile: '/contents/contact.md',
   },
+  {
+    slug: 'about',
+    route: '/about-us',
+    title: 'About SantiBet',
+    label: 'About',
+    fallbackFile: '/contents/about.md',
+  },
+  {
+    slug: 'cookie-policy',
+    route: '/cookie-policy',
+    title: 'Cookie Policy',
+    label: 'Cookie Policy',
+    fallbackFile: '/contents/cookie.md',
+  },
+  {
+    slug: 'responsible-gambling',
+    route: '/responsible-gambling',
+    title: 'Responsible Gambling',
+    label: 'Responsible Gambling',
+    fallbackFile: '/contents/responsibleGambling.md',
+  },
 ]
 
-export const findLegacyContentPage = (slug: string) =>
-  LEGACY_CONTENT_PAGES.find((p) => p.slug === slug)
+export const findKnownContentPage = (slug: string) =>
+  KNOWN_CONTENT_PAGES.find((p) => p.slug === slug)
 
 export const contentPageRoute = (slug: string) =>
-  findLegacyContentPage(slug)?.route ?? `/pages/${encodeURIComponent(slug)}`
+  findKnownContentPage(slug)?.route ?? `/pages/${encodeURIComponent(slug)}`
