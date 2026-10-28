@@ -11,7 +11,11 @@ const AUTH_PATHS = [
   '/two-fa',
   '/forgot-password',
   '/recover-password',
+  '/agent-signup',
 ]
+
+/** Where the KYC flow lives. `/kyc` (linked from agent SMS reminders) lands here. */
+export const KYC_PATH = '/account-profile?tab=kyc'
 
 export const isAuthPath = (pathname: string) =>
   AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))

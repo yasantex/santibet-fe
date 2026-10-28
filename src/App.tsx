@@ -7,6 +7,8 @@ import AppLayout from './layout/AppLayout'
 import AuthRoute from './routes/AuthRoute'
 import ProtectedRoute from './routes/ProtectedRoute'
 import AccountLayout from './pages/account/AccountLayout'
+import ReferralRedirect from './routes/ReferralRedirect'
+import KycRedirect from './routes/KycRedirect'
 import { KNOWN_CONTENT_PAGES } from './utils/contentPages'
 
 /** Contact Us adds the support actions above its content. */
@@ -38,6 +40,7 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const RecoverPassword = lazy(() => import('./pages/auth/RecoverPassword'))
 const TwoFaPage = lazy(() => import('./pages/auth/TwoFaPage'))
 const VerifyAccount = lazy(() => import('./pages/auth/VerifyAccount'))
+const AgentSignup = lazy(() => import('./pages/auth/AgentSignup'))
 
 const RouteFallback = () => (
   <div className='flex min-h-[60vh] w-full items-center justify-center'>
@@ -77,6 +80,12 @@ function App() {
             <Route path='/leaderboard' element={<Leaderboard />} />
             <Route path='/help-center' element={<HelpCenter />} />
             <Route path='/verify-account' element={<VerifyAccount />} />
+
+            {/* Partner programme: short referral links, agent-assisted
+                signups, and the KYC link agents text to customers. */}
+            <Route path='/r/:code' element={<ReferralRedirect />} />
+            <Route path='/agent-signup' element={<AgentSignup />} />
+            <Route path='/kyc' element={<KycRedirect />} />
 
             <Route element={<AuthRoute />}>
               <Route path='/signin' element={<LoginPage />} />
