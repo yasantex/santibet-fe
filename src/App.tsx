@@ -7,6 +7,10 @@ import AppLayout from './layout/AppLayout'
 import AuthRoute from './routes/AuthRoute'
 import ProtectedRoute from './routes/ProtectedRoute'
 import AccountLayout from './pages/account/AccountLayout'
+import { KNOWN_CONTENT_PAGES } from './utils/contentPages'
+
+/** Contact Us adds the support actions above its content. */
+const CONTACT_ROUTE = '/contact-us'
 
 // Route components are code-split so the initial bundle stays small; heavy deps
 // (recharts, qrcode) load only with the pages that use them.
@@ -26,9 +30,6 @@ const ReferEarn = lazy(() => import('./pages/ReferEarn'))
 const Leaderboard = lazy(() => import('./pages/Leaderboard'))
 const Rewards = lazy(() => import('./pages/Rewards'))
 const HelpCenter = lazy(() => import('./pages/HelpCenter'))
-const TermsOfService = lazy(() => import('./pages/TermsOfService'))
-const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
-const ResponsibleGambling = lazy(() => import('./pages/ResponsibleGambling'))
 const ContactSupport = lazy(() => import('./pages/ContactSupport'))
 const Faqs = lazy(() => import('./pages/Faqs'))
 const ContentPage = lazy(() => import('./pages/ContentPage'))
@@ -37,8 +38,6 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const RecoverPassword = lazy(() => import('./pages/auth/RecoverPassword'))
 const TwoFaPage = lazy(() => import('./pages/auth/TwoFaPage'))
 const VerifyAccount = lazy(() => import('./pages/auth/VerifyAccount'))
-const AboutUs = lazy(() => import('./pages/AboutUs'))
-const Cookie = lazy(() => import('./pages/Cookie'))
 
 const RouteFallback = () => (
   <div className='flex min-h-[60vh] w-full items-center justify-center'>
@@ -60,18 +59,21 @@ function App() {
             <Route path='/live' element={<LiveMarkets />} />
             <Route path='/browse' element={<CategoryPage />} />
             <Route path='/category/:category' element={<CategoryPage />} />
-            <Route path='/terms-of-service' element={<TermsOfService />} />
-            <Route path='/privacy-policy' element={<PrivacyPolicy />} />
-            <Route path='/about-us' element={<AboutUs />} />
-            <Route path='/faqs' element={<Faqs />} />
+            {KNOWN_CONTENT_PAGES.map(({ slug, route }) => (
+              <Route
+                key={slug}
+                path={route}
+                element={
+                  route === CONTACT_ROUTE ? (
+                    <ContactSupport slug={slug} />
+                  ) : (
+                    <ContentPage slug={slug} />
+                  )
+                }
+              />
+            ))}
             <Route path='/pages/:slug' element={<ContentPage />} />
-            <Route path='/cookie-policy' element={<Cookie />} />
-
-            <Route
-              path='/responsible-gambling'
-              element={<ResponsibleGambling />}
-            />
-            <Route path='/contact-us' element={<ContactSupport />} />
+            <Route path='/faqs' element={<Faqs />} />
             <Route path='/leaderboard' element={<Leaderboard />} />
             <Route path='/help-center' element={<HelpCenter />} />
             <Route path='/verify-account' element={<VerifyAccount />} />

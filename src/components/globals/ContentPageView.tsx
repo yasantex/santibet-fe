@@ -7,7 +7,7 @@ import RenderMarkdown from './RenderMarkdown'
 import { TextLoader } from './ReusedText'
 import { Button } from './Button'
 import { isPageNotFound, useContentPage } from '../../data_layer/pages'
-import { findLegacyContentPage } from '../../utils/contentPages'
+import { findKnownContentPage } from '../../utils/contentPages'
 import { formatShortDate } from '../../utils/points'
 
 interface ContentPageViewProps {
@@ -23,25 +23,25 @@ interface ContentPageViewProps {
  */
 const ContentPageView = ({ slug, children }: ContentPageViewProps) => {
   const navigate = useNavigate()
-  const legacy = findLegacyContentPage(slug)
+  const known = findKnownContentPage(slug)
   const page = useContentPage(slug)
 
-  const useFallback = page.isError && !!legacy
+  const useFallback = page.isError && !!known
   const fallback = useQuery({
-    queryKey: ['content-fallback', legacy?.fallbackFile],
+    queryKey: ['content-fallback', known?.fallbackFile],
     queryFn: async () => {
-      const res = await fetch(legacy!.fallbackFile)
-      if (!res.ok) throw new Error(`Failed to load ${legacy!.fallbackFile}`)
+      const res = await fetch(known!.fallbackFile)
+      if (!res.ok) throw new Error(`Failed to load ${known!.fallbackFile}`)
       return res.text()
     },
     enabled: useFallback,
     staleTime: Infinity,
   })
 
-  const title = page.data?.title ?? legacy?.title ?? ''
+  const title = page.data?.title ?? known?.title ?? ''
   const body = page.data?.body ?? (useFallback ? fallback.data : undefined)
   const loading = page.isLoading || (useFallback && fallback.isLoading)
-  const notPublished = page.isError && !legacy && isPageNotFound(page.error)
+  const notPublished = page.isError && !known && isPageNotFound(page.error)
   const failed =
     !loading && body === undefined && !notPublished && (page.isError || fallback.isError)
 
