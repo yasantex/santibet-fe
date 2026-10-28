@@ -143,3 +143,36 @@ export const UpdateProfileSchema = Yup.object({
     .max(2000, 'Avatar URL must be 2000 characters or fewer')
     .nullable(),
 })
+/**
+ * Nigerian numbers typed locally (0803…, 234803…) become +234803…; anything
+ * else is only stripped of spaces, dashes and brackets.
+ */
+export const normalizePhoneNumber = (value: string) => {
+  const compact = value.replace(/[\s\-().]/g, '')
+  if (/^0\d{10}$/.test(compact)) return `+234${compact.slice(1)}`
+  if (/^234\d{10}$/.test(compact)) return `+${compact}`
+  return compact
+}
+
+export const AgentSignupSchema = Yup.object({
+  phone: Yup.string()
+    .trim()
+    .required('Phone number is required')
+    .test('is-phone', 'Enter a valid phone number', (value) =>
+      phoneRegExp.test(normalizePhoneNumber(value ?? '')),
+    ),
+  code: Yup.string()
+    .required('Enter the code from the SMS')
+    .matches(/^\d{6}$/, 'Code must be 6 digits'),
+  password: Yup.string()
+    .required('Password is required')
+    .min(8, 'Password must be at least 8 characters')
+    .matches(
+      /^(?=.*[a-zA-Z])(?=.*\d)/,
+      'Password must contain letters and numbers',
+    ),
+  acceptTerms: Yup.boolean().oneOf(
+    [true],
+    'Please accept the Terms and Privacy Policy',
+  ),
+})
