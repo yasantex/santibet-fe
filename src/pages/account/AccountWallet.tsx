@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import Deposit from '../../components/appModals/Deposit'
 import type {
   DepositRecord,
+  Transaction,
   TransactionResponse,
   TransactionStatus,
   TransactionType,
@@ -28,6 +29,12 @@ import useAccountSuspended from '../../hooks/useAccountSuspended'
 import { useQueryClient } from '@tanstack/react-query'
 
 type TransactionFilterValues = Record<'type' | 'status', string[]>
+
+// A FEE credit is a refund, e.g. the welcome offer's "Fee rebate".
+const transactionTypeLabel = (item: Transaction) =>
+  item.type === 'FEE' && item.direction === 'CREDIT'
+    ? 'Fee rebate'
+    : item.type.replaceAll('_', ' ').toLowerCase()
 
 const transactionStatus: Partial<Record<TransactionType, string>> = {
   DEPOSIT: '/wallet/deposits',
@@ -239,7 +246,7 @@ const AccountWallet = () => {
                           />
                           <div className='flex flex-col'>
                             <span className='text-sm font-semibold text-black capitalize'>
-                              {item.type.replaceAll('_', ' ').toLowerCase()}
+                              {transactionTypeLabel(item)}
                             </span>
                             <span className='text-sm text-black'>
                               {item.description}

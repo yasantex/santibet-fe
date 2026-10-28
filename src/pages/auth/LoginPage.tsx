@@ -46,7 +46,17 @@ import {
   getSafeRedirect,
   rememberAuthRedirect,
 } from '../../utils/authRedirect'
-import { clearReferralCode, getReferralCode } from '../../utils/referral'
+import {
+  REFERRAL_HINT,
+  REFERRAL_PARAM,
+  clearReferralCode,
+  getAffiliateCode,
+  getReferralCode,
+  normalizeReferralCode,
+  referralSignupFields,
+  rememberReferralCode,
+} from '../../utils/referral'
+import { deviceFingerprintHeaders } from '../../utils/deviceFingerprint'
 
 type Step = 'identifier' | 'password' | 'otp' | 'setPassword'
 
@@ -57,6 +67,12 @@ interface StartAuthResponse {
 
 interface VerifyResponse {
   verificationTicket: string
+}
+
+// Codes sent with a new account (see utils/referral.ts).
+interface ReferralFields {
+  referralCode?: string
+  affiliateCode?: string
 }
 
 const PASSKEY_TRY_AGAIN =
@@ -103,6 +119,43 @@ const LoginPage = () => {
       (params.has('code') ? getRememberedAuthRedirect() : null)
     )
   })
+  // The signup form's Referral code field: pre-filled from the link (read
+  // from the URL too, since the link capture runs after this first render),
+  // editable, and kept in storage so it survives the Google round trip.
+  const [referralInput, setReferralInput] = useState(
+    () =>
+      normalizeReferralCode(
+        new URLSearchParams(window.location.search).get(REFERRAL_PARAM),
+      ) ??
+      getReferralCode() ??
+      getAffiliateCode() ??
+      '',
+  )
+
+  const handleReferralChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const value = e.target.value.replace(/\s+/g, '').slice(0, 200)
+    setReferralInput(value)
+    rememberReferralCode(value)
+  }
+
+  const referralField = (
+    <FormInput
+      type='text'
+      name='referralCode'
+      value={referralInput}
+      hasTitle
+      title='Referral code'
+      optional
+      placeholder='Enter a referral code'
+      onChange={handleReferralChange}
+      onBlur={() => {}}
+      autoCapitalize='characters'
+      spellCheck={false}
+      infoElement={<span className='text-neutral-10'>{REFERRAL_HINT}</span>}
+    />
+  )
 
   // A brand-new account goes straight to its profile to finish setting up.
   const handleAuthSuccess = (data: AuthResponse, isNewAccount = false) => {
@@ -206,9 +259,10 @@ const LoginPage = () => {
   const { mutateAsync: completeAuth, isPending: isCompleting } =
     useSantiBetMutation<
       AuthResponse,
-      { verificationTicket: string; password: string; referralCode?: string }
+      { verificationTicket: string; password: string } & ReferralFields
     >({
       path: '/auth/complete',
+      headers: deviceFingerprintHeaders(),
       mutationOptions: {
         onError: handleMutationError,
         onSuccess: (data) => handleAuthSuccess(data, true),
@@ -223,7 +277,7 @@ const LoginPage = () => {
         await completeAuth({
           verificationTicket,
           password: vals.password,
-          referralCode: getReferralCode(),
+          ...referralSignupFields(referralInput),
         })
       } catch (error) {
         console.error(error)
@@ -281,10 +335,10 @@ const LoginPage = () => {
       code: string
       redirectUri: string
       codeVerifier: string
-      referralCode?: string
-    }
+    } & ReferralFields
   >({
     path: '/auth/google',
+    headers: deviceFingerprintHeaders(),
     mutationOptions: {
       onSuccess: (data) => handleAuthSuccess(data),
       onError: (error) => {
@@ -308,12 +362,12 @@ const LoginPage = () => {
       return
     }
 
-    // The backend only uses referralCode if this call creates the account.
+    // The backend only uses the codes if this call creates the account.
     finishGoogleSignIn({
       code,
       codeVerifier,
       redirectUri,
-      referralCode: getReferralCode(),
+      ...referralSignupFields(getReferralCode()),
     })
       .catch(() => {
         showWarningToast('Google sign-in failed. Please try again.')
@@ -374,6 +428,7 @@ const LoginPage = () => {
             iconClassName='mb-1'
             onClick={() => {
               rememberAuthRedirect(redirectTo)
+              rememberReferralCode(referralInput)
               startGoogleOAuth().catch((error) => {
                 showWarningToast(error.message)
               })
@@ -420,6 +475,9 @@ const LoginPage = () => {
                   : ''
               }
             />
+            {/* Sign-up only, so a Google sign-up can carry a code too. A new
+                account made from /signin gets the field at the password step. */}
+            {pathname === '/signup' && referralField}
             <Button
               type='submit'
               text='Continue'
@@ -535,6 +593,7 @@ const LoginPage = () => {
                 : ''
             }
           />
+          {referralField}
           <Button
             type='submit'
             text='Create account'

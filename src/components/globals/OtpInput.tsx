@@ -64,9 +64,29 @@ export const OtpInput = ({
     }
   }
 
+  const fillFrom = (index: number, digits: string) => {
+    const next = [...values]
+    let cursor = index
+    for (const char of digits) {
+      if (cursor >= length) break
+      next[cursor] = char
+      cursor++
+    }
+    setValues(next)
+    emitChange(next)
+    inputRefs.current[Math.min(cursor, length - 1)]?.focus()
+  }
+
   const handleChange = (index: number, raw: string) => {
+    const digits = raw.replace(/[^0-9]/g, '')
+    // SMS one-time-code autofill drops the whole code into one box — spread it
+    // across the boxes like a paste.
+    if (digits.length > 2 || (digits.length === 2 && !values[index])) {
+      fillFrom(index, digits)
+      return
+    }
     // only keep the last typed character, digits only
-    const char = raw.replace(/[^0-9]/g, '').slice(-1)
+    const char = digits.slice(-1)
 
     const next = [...values]
     next[index] = char
@@ -108,19 +128,7 @@ export const OtpInput = ({
     e.preventDefault()
     const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '')
     if (!pasted) return
-
-    const next = [...values]
-    let cursor = index
-    for (const char of pasted) {
-      if (cursor >= length) break
-      next[cursor] = char
-      cursor++
-    }
-    setValues(next)
-    emitChange(next)
-
-    const focusIndex = Math.min(cursor, length - 1)
-    inputRefs.current[focusIndex]?.focus()
+    fillFrom(index, pasted)
   }
 
   return (
@@ -147,7 +155,6 @@ export const OtpInput = ({
             type='text'
             inputMode='numeric'
             autoComplete={index === 0 ? 'one-time-code' : 'off'}
-            maxLength={1}
             name={`${name}-${index}`}
             value={values[index] || ''}
             disabled={disabled}
