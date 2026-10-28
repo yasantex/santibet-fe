@@ -1,9 +1,12 @@
 import { useParams } from 'react-router'
 import ContentPageView from '../components/globals/ContentPageView'
 
-/** Any admin-managed page without a route of its own. */
-const ContentPage = () => {
-  const { slug = '' } = useParams()
+/**
+ * An admin-managed page: one of the known pages on its own route (`slug`
+ * given), or any other page at `/pages/:slug`.
+ */
+const ContentPage = ({ slug: fixedSlug }: { slug?: string }) => {
+  const { slug = fixedSlug ?? '' } = useParams()
   return <ContentPageView key={slug} slug={slug} />
 }
 

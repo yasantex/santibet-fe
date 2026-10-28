@@ -9,7 +9,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Link } from 'react-router'
 import { useContentPages, useFaqs } from '../data_layer/pages'
 import {
-  LEGACY_CONTENT_PAGES,
+  KNOWN_CONTENT_PAGES,
   contentPageRoute,
 } from '../utils/contentPages'
 
@@ -43,10 +43,13 @@ const footerLinks = [
   { label: 'Responsible Gambling', href: '/responsible-gambling' },
 ]
 
+const firstColumnHrefs = new Set(footerLinks.map((l) => l.href))
+
 /**
- * Published pages in the API's order. The pages that predate the API keep a
- * link while unpublished, since they still show their bundled content. The
- * FAQ link only shows once there are questions.
+ * Published pages in the API's order. The known pages keep a link while
+ * unpublished, since they still show their bundled content. Pages already in
+ * the first column stay there. The FAQ link only shows once there are
+ * questions.
  */
 const useContentPageLinks = () => {
   const { data = [] } = useContentPages()
@@ -54,12 +57,13 @@ const useContentPageLinks = () => {
   const published = new Set(data.map((p) => p.slug))
   return [
     ...data.map((p) => ({ label: p.title, href: contentPageRoute(p.slug) })),
-    ...LEGACY_CONTENT_PAGES.filter((p) => !published.has(p.slug)).map((p) => ({
+    ...KNOWN_CONTENT_PAGES.filter((p) => !published.has(p.slug)).map((p) => ({
       label: p.label,
       href: p.route,
     })),
-    ...(faqs.length ? [{ label: 'FAQs', href: '/faqs' }] : []),
   ]
+    .filter((l) => !firstColumnHrefs.has(l.href))
+    .concat(faqs.length ? [{ label: 'FAQs', href: '/faqs' }] : [])
 }
 
 const Footer = () => {
