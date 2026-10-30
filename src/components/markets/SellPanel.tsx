@@ -1,124 +1,91 @@
-import { useState } from 'react'
-import { isAxiosError } from 'axios'
-import { Button } from '../globals/Button'
-import ConfirmationModal from '../globals/ConfirmationModal'
+import CashOutButton from './CashOutButton'
+import { useMarketPositions } from '../../data_layer/bets'
 import {
-  useCashOut,
-  useCashOutQuote,
-  useMarketPositions,
-} from '../../data_layer/bets'
-import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
-import { formatCurrency, formatSharePrice, toMajorUnits } from '../../utils/functions'
+  formatCurrency,
+  formatSharePrice,
+  isPoolPosition,
+  openPositionMark,
+} from '../../utils/functions'
+import { outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
 import type { UiMarket } from '../../types/market.types'
 import type { BetPosition } from '../../types/bet.types'
-import useAccountSuspended from '../../hooks/useAccountSuspended'
-import { SUSPENDED_CTA_HINT } from '../../utils/constants'
 
-const SellPositionRow = ({
+/**
+ * One open position in a market: what's held, what it's worth now, and a
+ * cash-out. Used in the Trade modal's sell tab and inline on the market page.
+ */
+export const MarketPositionRow = ({
   position,
   market,
 }: {
   position: BetPosition
   market: UiMarket
 }) => {
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const { mutateAsync: cashOut, isPending } = useCashOut(position.id)
-  // Fetch a live cash-out quote once the confirm dialog opens.
-  const { data: quote, isLoading: quoteLoading } = useCashOutQuote(
-    position.id,
-    confirmOpen,
-  )
-  const suspended = useAccountSuspended()
-
-  const outcome = market.outcomes.find((o) => o.id === position.outcomeId)
-  const isYes = market.yes?.id === position.outcomeId
+  const index = market.outcomes.findIndex((o) => o.id === position.outcomeId)
+  const outcome = market.outcomes[index]
+  const label = outcome?.label ?? position.outcomeLabel ?? ''
+  const tone = outcomeTone(market, position.outcomeId, Math.max(index, 0))
   const shares = Number(position.shares) || 0 // ₦1-unit count (money math)
   const contracts =
     position.contracts != null ? Number(position.contracts) : shares / 100
   const avgPrice = Number(position.avgPrice) || 0
-  const staked = shares * avgPrice
-  const value = toMajorUnits(position.currentValue?.amount ?? 0)
-  const pnl = value - staked
+  const currentPrice = Number(position.currentPrice) || 0
+  // value/pnl are null on a pool position — it isn't valued until close.
+  const { value, pnl, estPayout } = openPositionMark(position)
   const currency = position.currentValue?.currency
-  // Quoted proceeds (kobo → naira), falling back to mark-to-market value.
-  const quotedValue = quote ? toMajorUnits(quote.valueMinor) : value
-  const quotedCurrency = quote?.currency ?? currency
-
-  const handleCashOut = async () => {
-    try {
-      await cashOut()
-      showSuccessToast('Position cashed out')
-      setConfirmOpen(false)
-    } catch (error) {
-      showWarningToast(
-        isAxiosError(error)
-          ? (error.response?.data?.message ?? 'Cash out failed')
-          : 'Cash out failed',
-      )
-    }
-  }
 
   return (
     <div className='flex flex-col gap-3 rounded-lg border border-border p-3'>
-      <div className='flex items-center justify-between'>
+      <div className='flex items-center justify-between gap-2'>
         <span
-          className={`text-xs font-bold uppercase ${
-            isYes ? 'text-success' : 'text-error'
-          }`}
+          className={`truncate text-xs font-bold uppercase ${TONE_STYLES[tone].percent}`}
         >
-          {outcome?.label ?? (isYes ? 'YES' : 'NO')}
+          {label}
         </span>
-        <span className='text-xs text-neutral-10'>
-          {contracts.toLocaleString(undefined, { maximumFractionDigits: 2 })}{' '}
-          shares @ {formatSharePrice(avgPrice)}
-        </span>
+        {!isPoolPosition(position) && (
+          <span className='shrink-0 text-xs text-neutral-10'>
+            {contracts.toLocaleString(undefined, { maximumFractionDigits: 2 })}{' '}
+            @ {formatSharePrice(avgPrice)}
+            {currentPrice > 0 && ` · now ${formatSharePrice(currentPrice)}`}
+          </span>
+        )}
       </div>
 
-      <div className='flex items-end justify-between'>
-        <div className='flex flex-col'>
-          <span className='text-xs text-neutral-10'>Current value</span>
-          <span className='text-lg font-bold text-black'>
-            {formatCurrency(value, currency)}
-          </span>
-          <span
-            className={`text-xs font-semibold ${
-              pnl >= 0 ? 'text-success' : 'text-error'
-            }`}
-          >
-            {pnl >= 0 ? '+' : '-'}
-            {formatCurrency(String(Math.abs(pnl)), currency)}
-          </span>
-        </div>
-        <span title={suspended ? SUSPENDED_CTA_HINT : undefined}>
-          <Button
-            type='button'
-            text='Cash out'
-            variation='primary'
-            size='medium'
-            className='w-fit!'
-            disabled={suspended}
-            onClick={() => setConfirmOpen(true)}
-          />
-        </span>
+      <div className='flex items-end justify-between gap-2'>
+        {value == null || pnl == null ? (
+          <div className='flex flex-col'>
+            <span className='text-xs text-neutral-10'>
+              Est. payout if it wins
+            </span>
+            <span className='text-lg font-bold text-black'>
+              {formatCurrency(estPayout ?? 0, currency)}
+            </span>
+            <span className='text-xs text-neutral-10'>
+              Pool bet · paid when the market closes
+            </span>
+          </div>
+        ) : (
+          <div className='flex flex-col'>
+            <span className='text-xs text-neutral-10'>Current value</span>
+            <span className='text-lg font-bold text-black'>
+              {formatCurrency(value, currency)}
+            </span>
+            <span
+              className={`text-xs font-semibold ${
+                pnl >= 0 ? 'text-success' : 'text-error'
+              }`}
+            >
+              {pnl >= 0 ? '+' : '-'}
+              {formatCurrency(String(Math.abs(pnl)), currency)}
+            </span>
+          </div>
+        )}
+        <CashOutButton
+          position={position}
+          title={market.title}
+          outcomeLabel={label}
+        />
       </div>
-
-      <ConfirmationModal
-        open={confirmOpen}
-        title='Cash out position'
-        description={
-          quoteLoading
-            ? `Fetching the latest cash-out value for your ${outcome?.label ?? ''} position in "${market.title}"…`
-            : `Cash out your ${outcome?.label ?? ''} position in "${market.title}" for ${formatCurrency(quotedValue, quotedCurrency)}? The final amount may vary slightly with the market.`
-        }
-        confirmText={
-          quoteLoading
-            ? 'Cash out'
-            : `Cash out ${formatCurrency(quotedValue, quotedCurrency)}`
-        }
-        isConfirming={isPending}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={handleCashOut}
-      />
     </div>
   )
 }
@@ -142,7 +109,7 @@ const SellPanel = ({ market }: { market: UiMarket }) => {
   return (
     <div className='flex flex-col gap-3'>
       {positions.map((position) => (
-        <SellPositionRow
+        <MarketPositionRow
           key={position.id}
           position={position}
           market={market}

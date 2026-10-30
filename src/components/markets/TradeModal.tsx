@@ -5,7 +5,7 @@ import OrderForm from './OrderForm'
 import SellPanel from './SellPanel'
 import TradingNotice from './TradingNotice'
 import { showSuccessToast } from '../../utils/toastUtils'
-import { formatCurrency, formatSharePrice } from '../../utils/functions'
+import { formatCurrency } from '../../utils/functions'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 
 export type TradeSide = 'buy' | 'sell'
@@ -76,13 +76,10 @@ const TradeModal = ({
             market={market}
             outcome={outcome}
             onSelectOutcome={(o) => setOutcomeId(o.id)}
-            allowLimit
             submitText='Buy'
             onPlaced={(order) =>
               showSuccessToast(
-                order.type === 'limit'
-                  ? `Limit order placed at ${formatSharePrice(order.price)}`
-                  : `Bought ${order.outcomeLabel} · ${formatCurrency(order.toWin)} to win`,
+                `Bought ${order.outcomeLabel} · pays ${formatCurrency(order.payout)} if it wins`,
               )
             }
           />

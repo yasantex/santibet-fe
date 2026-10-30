@@ -5,8 +5,11 @@ import {
 } from '@hugeicons/core-free-icons'
 import { useComboSlip } from '../../hooks/useComboSlip'
 import useMarketOpen from '../../hooks/useMarketOpen'
-import { outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
-import { formatSharePrice } from '../../utils/functions'
+import {
+  outcomePriceLabel,
+  outcomeTone,
+  TONE_STYLES,
+} from '../../utils/marketDisplay'
 import type { UiMarket } from '../../types/market.types'
 
 /**
@@ -60,7 +63,7 @@ const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
                 )}
                 <span className='min-w-0 truncate uppercase'>{o.label}</span>
               </span>
-              <span className='shrink-0'>{formatSharePrice(o.cents)}</span>
+              <span className='shrink-0'>{outcomePriceLabel(market, o, { withPercent: true })}</span>
             </button>
           )
         })}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -131,13 +131,21 @@ export const normalizeEvent = (e: ApiEvent): UiEvent => ({
 
 // ── Lobby normalizers ─────────────────────────────────────────────────
 
+/** A bid/ask strictly inside (0, 1), else null (0 means "no quote"). */
+const toQuotePrice = (raw: number | null | undefined): number | null =>
+  typeof raw === 'number' && raw > 0 && raw < 1 ? raw : null
+
+/** Decimal odds above 1, else null (the feed sends 0 when unpriced). */
+const toDecimalOdds = (raw: number | null | undefined): number | null =>
+  typeof raw === 'number' && raw > 1 ? raw : null
+
 const LOBBY_STATUS: Record<LobbyStatus, MarketStatus> = {
   OPEN: 'open',
   CLOSED: 'closed',
   PAUSED: 'paused',
   SETTLED: 'settled',
-  VOIDED: 'unknown',
-  DISPUTED: 'unknown',
+  VOIDED: 'voided',
+  DISPUTED: 'disputed',
   UNKNOWN: 'unknown',
 }
 
@@ -154,6 +162,10 @@ export const normalizeLobbyMarket = (
     price: o.price,
     cents: toCents(o.price),
     percent: toPercent(o.price),
+    ask: toQuotePrice(o.ask),
+    bid: toQuotePrice(o.bid),
+    stale: o.stale ?? false,
+    decimalOdds: toDecimalOdds(o.decimalOdds),
   }))
   const yes =
     outcomes.find((o) => YES_LABELS.includes(o.label.toLowerCase())) ??
@@ -181,6 +193,8 @@ export const normalizeLobbyMarket = (
     resolvedOutcomeId: m.resolvedOutcomeId,
     rules: m.rules,
     minStakeMinor: toMinStakeMinor(m.minStakeMinor),
+    executionModel: m.executionModel ?? null,
+    tradeCount: typeof m.tradeCount === 'number' ? m.tradeCount : null,
     outcomes,
     yes,
     no,
@@ -354,11 +368,17 @@ export const fetchMarketById = async (
   }
 }
 
-export const useMarket = (id?: string, eventId?: string) =>
+export const useMarket = (
+  id?: string,
+  eventId?: string,
+  // Poll when the live stream can't push this market's prices.
+  refetchInterval: number | false = false,
+) =>
   useQuery({
     queryKey: ['market', id, eventId],
     enabled: !!id,
     retry: false,
+    refetchInterval,
     queryFn: () => fetchMarketById(id as string, eventId),
   })
 
@@ -393,10 +413,15 @@ const fetchEvents = async (
   return { events: (res.data ?? []).map(normalizeEvent), cursor: res.cursor }
 }
 
+// List pages aren't on the live stream, so their prices refresh on a timer
+// (paused while the tab is in the background).
+const LIST_REFRESH_MS = 30_000
+
 export const useEvents = (params: EventQueryParams = {}, enabled = true) =>
   useQuery({
     queryKey: ['events', params],
     enabled,
+    refetchInterval: LIST_REFRESH_MS,
     queryFn: () => fetchEvents(params),
   })
 
@@ -445,6 +470,7 @@ export const useEventsInfinite = (
     queryFn: ({ pageParam }) => fetchEvents(params, pageParam),
     getNextPageParam: (last) => last.cursor ?? undefined,
     placeholderData: keepPrevious ? keepPreviousData : undefined,
+    refetchInterval: LIST_REFRESH_MS,
   })
 
 /**
@@ -549,14 +575,28 @@ interface OddsTick {
  * cached market so outcome prices, the trade panel and the "% chance" header
  * update live with no refetch. Price chart movement is separate (candle poll).
  */
+export interface StreamSubscription {
+  markets: string[]
+  /** Markets with no live feed: they only send the opening snapshot, so the
+   *  client has to keep polling them. */
+  pollingOnly: string[]
+}
+
 export const useLobbyStream = (opts: {
   marketIds?: string[]
   eventId?: string
   enabled?: boolean
+  /** Called with the stream's `subscribed` message (sent once per connect). */
+  onSubscribed?: (subscription: StreamSubscription) => void
 }) => {
   const qc = useQueryClient()
-  const { marketIds, eventId, enabled = true } = opts
+  const { marketIds, eventId, enabled = true, onSubscribed } = opts
   const key = (marketIds ?? []).join(',')
+  // Latest callback without reconnecting the stream when it changes.
+  const onSubscribedRef = useRef(onSubscribed)
+  useEffect(() => {
+    onSubscribedRef.current = onSubscribed
+  })
 
   useEffect(() => {
     if (!enabled || (!key && !eventId)) return
@@ -578,7 +618,18 @@ export const useLobbyStream = (opts: {
 
     const applyOutcome = (o: UiOutcome, tick: OddsTick, price: number) =>
       o.id === tick.outcomeId
-        ? { ...o, price, cents: toCents(price), percent: toPercent(price) }
+        ? {
+            ...o,
+            price,
+            cents: toCents(price),
+            percent: toPercent(price),
+            ...(tick.ask !== undefined ? { ask: toQuotePrice(tick.ask) } : {}),
+            ...(tick.bid !== undefined ? { bid: toQuotePrice(tick.bid) } : {}),
+            ...(tick.stale !== undefined ? { stale: tick.stale } : {}),
+            ...(tick.decimalOdds !== undefined
+              ? { decimalOdds: toDecimalOdds(tick.decimalOdds) }
+              : {}),
+          }
         : o
 
     const applyOdds = (raw: string) => {
@@ -620,6 +671,17 @@ export const useLobbyStream = (opts: {
     }
 
     es.addEventListener('odds', (e) => applyOdds((e as MessageEvent).data))
+    es.addEventListener('subscribed', (e) => {
+      try {
+        const data = JSON.parse((e as MessageEvent).data)
+        onSubscribedRef.current?.({
+          markets: Array.isArray(data?.markets) ? data.markets : [],
+          pollingOnly: Array.isArray(data?.pollingOnly) ? data.pollingOnly : [],
+        })
+      } catch {
+        /* malformed message — keep relying on pushed odds */
+      }
+    })
     es.onmessage = (e) => applyOdds(e.data) // fallback if unnamed channel is used
     es.onerror = () => {
       /* EventSource auto-reconnects; ignore transient errors */
@@ -641,6 +703,7 @@ export interface LobbyHomeNormalized {
 export const useLobbyHome = (limit = 12) =>
   useQuery({
     queryKey: ['lobby-home', limit],
+    refetchInterval: LIST_REFRESH_MS,
     queryFn: async (): Promise<LobbyHomeNormalized> => {
       const feed = await resolveFeed()
       if (feed !== 'lobby') {

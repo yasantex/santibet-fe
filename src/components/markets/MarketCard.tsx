@@ -1,10 +1,10 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Bookmark02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
-import { formatSharePrice } from '../../utils/functions'
 import {
   categoryIcon,
   marketDisplayTitle,
+  outcomePriceLabel,
   outcomeTone,
   TONE_STYLES,
   type OutcomeTone,
@@ -17,11 +17,14 @@ import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
 /** Binary (Yes/No) markets: one full stat row per side, price button inline. */
 const OutcomeRow = ({
   outcome,
+  priceLabel,
   tone,
   active = false,
   onClick,
 }: {
   outcome?: UiOutcome
+  /** "₦63", or the odds on a pool market. */
+  priceLabel: string
   tone: OutcomeTone
   active?: boolean
   onClick?: () => void
@@ -56,7 +59,7 @@ const OutcomeRow = ({
           active ? 'ring-2 ring-black ring-offset-1' : ''
         }`}
       >
-        {formatSharePrice(outcome.cents)}
+        {priceLabel}
       </button>
     </div>
   )
@@ -86,10 +89,12 @@ const OutcomeStatRow = ({
 /** Shared single-line row of pill buttons, one per outcome — used for 3+ way
  *  markets so every side sits on the same line regardless of outcome count. */
 const OutcomeButtonRow = ({
+  market,
   outcomes,
   activeOutcomeId,
   onClick,
 }: {
+  market: UiMarket
   outcomes: { outcome: UiOutcome; tone: OutcomeTone }[]
   activeOutcomeId?: string | null
   onClick?: (outcome: UiOutcome) => void
@@ -108,7 +113,7 @@ const OutcomeButtonRow = ({
         }`}
       >
         <span className='min-w-0 truncate uppercase'>{outcome.label}</span>
-        <span className='shrink-0'>{formatSharePrice(outcome.cents)}</span>
+        <span className='shrink-0'>{outcomePriceLabel(market, outcome)}</span>
       </button>
     ))}
   </div>
@@ -233,6 +238,7 @@ const MarketCard = ({
               <OutcomeRow
                 key={outcome.id}
                 outcome={outcome}
+                priceLabel={outcome ? outcomePriceLabel(market, outcome) : ''}
                 tone={tone}
                 active={outcome.id === effectiveActiveOutcomeId}
                 onClick={() => handleOutcomeClick(outcome)}
@@ -245,6 +251,7 @@ const MarketCard = ({
               <OutcomeStatRow key={outcome.id} outcome={outcome} tone={tone} />
             ))}
             <OutcomeButtonRow
+              market={market}
               outcomes={shownOutcomes}
               activeOutcomeId={effectiveActiveOutcomeId}
               onClick={handleOutcomeClick}

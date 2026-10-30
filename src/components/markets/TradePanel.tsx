@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import OrderForm, { type PlacedOrder } from './OrderForm'
 import PredictionSuccessModal from './PredictionSuccessModal'
 import TradeModal, { type TradeSide } from './TradeModal'
+import { MarketPositionRow } from './SellPanel'
 import { useMarketPositions } from '../../data_layer/bets'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 
@@ -14,9 +13,9 @@ interface TradePanelProps {
 }
 
 /**
- * The prediction panel on a market. Buying and selling positions lives on
- * its own screen (TradeModal), offered after a prediction is placed or when
- * the player already holds a position here.
+ * The prediction panel on a market. Positions already held here sit at the
+ * top with their live value and a cash-out; the buy/sell screen (TradeModal)
+ * is offered after a prediction is placed.
  */
 const TradePanel = ({
   market,
@@ -50,23 +49,18 @@ const TradePanel = ({
       </div>
 
       {positions.length > 0 && (
-        <button
-          type='button'
-          onClick={() => setTrade({ side: 'sell', outcome })}
-          className='flex items-center justify-between gap-2 rounded-lg bg-hover/60 px-3 py-2 text-left text-xs text-neutral-10 hover:text-black'
-        >
-          <span>
-            You have{' '}
-            {positions.length === 1
-              ? 'a position'
-              : `${positions.length} positions`}{' '}
-            in this market
+        <section className='flex flex-col gap-2'>
+          <span className='text-xs font-semibold text-neutral-10 uppercase'>
+            Your {positions.length === 1 ? 'position' : 'positions'}
           </span>
-          <span className='flex items-center gap-0.5 font-semibold text-black'>
-            Trade
-            <HugeiconsIcon icon={ArrowRight01Icon} size={14} />
-          </span>
-        </button>
+          {positions.map((position) => (
+            <MarketPositionRow
+              key={position.id}
+              position={position}
+              market={market}
+            />
+          ))}
+        </section>
       )}
 
       <OrderForm

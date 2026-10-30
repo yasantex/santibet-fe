@@ -15,3 +15,4 @@ export const DEPOSITS_KEY = ['/wallet/deposits']
 
 export const BETS_KEY = ['bets']
 export const BET_POSITIONS_KEY = ['bet-positions']
+export const BET_PORTFOLIO_KEY = ['bet-portfolio']

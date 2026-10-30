@@ -8,6 +8,7 @@ import { useMarketPositions } from '../../data_layer/bets'
 import {
   formatCurrency,
   formatSharePrice,
+  openPositionMark,
   toMajorUnits,
 } from '../../utils/functions'
 import type { UiMarket } from '../../types/market.types'
@@ -57,22 +58,35 @@ const PredictionSuccessModal = ({
   const stake = order.bet.stake
     ? toMajorUnits(order.bet.stake.amount)
     : order.stake
-  const toWin = order.bet.potentialReturn
+  // Pool (parimutuel) bets have no share price (`price` is null) and their
+  // odds are the live effective odds, moving with the pool until close.
+  const pool = order.bet.executionModel
+    ? order.bet.executionModel === 'PARIMUTUEL'
+    : (order.bet.estimated ?? false)
+  const fee = order.bet.fee ? toMajorUnits(order.bet.fee.amount) : order.fee
+  const returned = order.bet.potentialReturn
     ? toMajorUnits(order.bet.potentialReturn.amount)
-    : order.toWin
+    : null
+  // netReturn = potentialReturn − fee (pool: fee 0). An API without it: take
+  // the quoted fee off the gross fixed-odds return.
+  const payout = order.bet.netReturn
+    ? toMajorUnits(order.bet.netReturn.amount)
+    : returned == null
+      ? order.payout
+      : pool
+        ? returned
+        : Math.max(returned - order.fee, 0)
+  const profit = payout - stake
   const price = Number(order.bet.price) || order.price
+  const odds =
+    Number(order.bet.odds) ||
+    (pool ? (stake > 0 ? payout / stake : 0) : price > 0 ? 1 / price : 0)
 
   const shares = Number(position?.shares) || 0
   const contracts =
     position?.contracts != null ? Number(position.contracts) : shares / 100
   const avgPrice = Number(position?.avgPrice) || 0
-  const staked = position?.stake
-    ? toMajorUnits(position.stake.amount)
-    : shares * avgPrice
-  const value = toMajorUnits(position?.currentValue?.amount ?? 0)
-  const pnl = position?.unrealizedPnl
-    ? toMajorUnits(position.unrealizedPnl.amount)
-    : value - staked
+  const mark = position ? openPositionMark(position) : null
 
   return (
     <ModalComponent
@@ -96,11 +110,21 @@ const PredictionSuccessModal = ({
           </h3>
           <Row label='Outcome' value={order.outcomeLabel} />
           <Row label='Amount' value={formatCurrency(stake)} />
-          <Row label='Price per share' value={formatSharePrice(price)} />
+          {!pool && (
+            <Row label='Price per share' value={formatSharePrice(price)} />
+          )}
+          {odds > 0 && (
+            <Row label={pool ? 'Est. odds' : 'Odds'} value={odds.toFixed(2)} />
+          )}
+          {fee > 0 && <Row label='Fee' value={formatCurrency(fee)} />}
           <Row
-            label='To win'
-            value={formatCurrency(toWin)}
-            tone='text-success'
+            label={pool ? 'Est. payout if it wins' : 'Payout if it wins'}
+            value={formatCurrency(payout)}
+          />
+          <Row
+            label='Profit'
+            value={`${profit >= 0 ? '+' : '-'}${formatCurrency(Math.abs(profit))}`}
+            tone={profit >= 0 ? 'text-success' : 'text-error'}
           />
         </section>
 
@@ -110,21 +134,38 @@ const PredictionSuccessModal = ({
           </h3>
           {isLoading ? (
             <div className='h-16 animate-pulse rounded-lg bg-hover' />
-          ) : position ? (
-            <>
-              <Row
-                label='Shares'
-                value={`${contracts.toLocaleString(undefined, {
-                  maximumFractionDigits: 2,
-                })} @ ${formatSharePrice(avgPrice)}`}
-              />
-              <Row label='Current value' value={formatCurrency(value)} />
-              <Row
-                label='Profit / loss'
-                value={`${pnl >= 0 ? '+' : '-'}${formatCurrency(Math.abs(pnl))}`}
-                tone={pnl >= 0 ? 'text-success' : 'text-error'}
-              />
-            </>
+          ) : position && mark ? (
+            mark.value == null || mark.pnl == null ? (
+              // Pool position: nothing to mark to market until close.
+              <>
+                <Row label='Total staked' value={formatCurrency(mark.staked)} />
+                {mark.estPayout != null && (
+                  <Row
+                    label='Est. payout if it wins'
+                    value={formatCurrency(mark.estPayout)}
+                  />
+                )}
+                <p className='text-xs text-neutral-10'>
+                  Pool bets are paid from the pool when the market closes, so
+                  the payout can still move until then.
+                </p>
+              </>
+            ) : (
+              <>
+                <Row
+                  label='Shares'
+                  value={`${contracts.toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })} @ ${formatSharePrice(avgPrice)}`}
+                />
+                <Row label='Current value' value={formatCurrency(mark.value)} />
+                <Row
+                  label='Profit / loss'
+                  value={`${mark.pnl >= 0 ? '+' : '-'}${formatCurrency(Math.abs(mark.pnl))}`}
+                  tone={mark.pnl >= 0 ? 'text-success' : 'text-error'}
+                />
+              </>
+            )
           ) : (
             <p className='text-xs text-neutral-10'>
               Your position will show in your portfolio once the order fills.
@@ -133,18 +174,27 @@ const PredictionSuccessModal = ({
         </section>
 
         <div className='flex flex-col gap-2'>
-          <p className='text-center text-xs text-neutral-10'>
-            Prices move while the market is open. You can sell your position
-            before it resolves, or buy more.
-          </p>
-          <Button
-            type='button'
-            text='Trade this position'
-            variation='primary'
-            size='large'
-            className='w-full'
-            onClick={onTrade}
-          />
+          {pool ? (
+            <p className='text-center text-xs text-neutral-10'>
+              Pool bets can’t be cashed out. Winners are paid from the pool
+              when the market closes.
+            </p>
+          ) : (
+            <>
+              <p className='text-center text-xs text-neutral-10'>
+                Prices move while the market is open. You can sell your position
+                before it resolves, or buy more.
+              </p>
+              <Button
+                type='button'
+                text='Trade this position'
+                variation='primary'
+                size='large'
+                className='w-full'
+                onClick={onTrade}
+              />
+            </>
+          )}
           <div className='flex gap-2'>
             <Button
               type='button'

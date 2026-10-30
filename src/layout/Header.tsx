@@ -35,8 +35,13 @@ import useLogout from '../hooks/useLogout'
 import useAccountSuspended from '../hooks/useAccountSuspended'
 import { SUSPENDED_CTA_HINT } from '../utils/constants'
 import ProfileDropdownMenu from '../components/globals/ProfileDropdownMenu'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSantiBetQuery } from '../data_layer/utils'
-import { useBetPositions } from '../data_layer/bets'
+import {
+  WALLET_BALANCE_KEY,
+  WALLET_TRANSACTIONS_KEY,
+} from '../data_layer/queryKeys'
+import { usePortfolioSummary } from '../data_layer/bets'
 import { useUnreadNotificationCount } from '../data_layer/notifications'
 import { formatCurrency, scrollToTop, toMajorUnits } from '../utils/functions'
 import type { WalletBalance } from '../types/wallet.types'
@@ -253,19 +258,27 @@ const Header = () => {
   const { events: liveBets } = useLiveBets({ limit: 100 })
   const liveCount = liveBets.length
 
-  const { data: openPositions } = useBetPositions('OPEN', 100)
-  // Portfolio = unspent cash + the live market value of open positions;
-  // cash alone (shown separately below) is just the available balance.
-  const openPositionsValue = useMemo(
-    () =>
-      (openPositions?.pages ?? [])
-        .flatMap((page) => page?.data ?? [])
-        .reduce(
-          (sum, p) => sum + toMajorUnits(p?.currentValue?.amount ?? 0),
-          0,
-        ),
-    [openPositions],
-  )
+  // Portfolio = cash + the live value of open positions, from the server
+  // summary so it covers every position, not just one page of them.
+  const { data: portfolio } = usePortfolioSummary()
+  const openPositionsValue = toMajorUnits(portfolio?.currentValue.amount ?? 0)
+
+  // Backstop for the notification stream: a bet settling or being voided moves
+  // a position from open to settled (and pays out or refunds), so when the
+  // settled count goes up, re-read the balance. Catches settlements that
+  // arrive with no notification, or while the stream was down.
+  const queryClient = useQueryClient()
+  const settledCount = portfolio?.settledPositions
+  const lastSettledCount = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    if (settledCount == null) return
+    const previous = lastSettledCount.current
+    lastSettledCount.current = settledCount
+    if (previous != null && settledCount > previous) {
+      queryClient.invalidateQueries({ queryKey: WALLET_BALANCE_KEY })
+      queryClient.invalidateQueries({ queryKey: WALLET_TRANSACTIONS_KEY })
+    }
+  }, [settledCount, queryClient])
   const portfolioValue = toMajorUnits(wallet?.total ?? 0) + openPositionsValue
 
   const [searchTerm, setSearchTerm] = useState('')

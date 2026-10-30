@@ -16,7 +16,7 @@ import {
   Flag01Icon,
 } from '@hugeicons/core-free-icons'
 import { useFavorites } from '../../hooks/useFavorites'
-import { isSportsMarket } from '../../hooks/useComboSlip'
+import { isSportsMarket, useComboSlip } from '../../hooks/useComboSlip'
 import TradePanel from '../../components/markets/TradePanel'
 import ComboMarketPanel from '../../components/combo/ComboMarketPanel'
 import { LiveBadge, ScoreBoard } from '../../components/markets/LiveBits'
@@ -24,7 +24,13 @@ import ChartTooltip from '../../components/markets/ChartTooltip'
 import ChartRangeTabs from '../../components/markets/ChartRangeTabs'
 import { chartDomain, formatChartTick } from '../../utils/chartFormat'
 import { useCountdown } from '../../hooks/useCountdown'
-import { categoryIcon, outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
+import {
+  categoryIcon,
+  MARKET_STATUS_LABELS,
+  outcomePriceLabel,
+  outcomeTone,
+  TONE_STYLES,
+} from '../../utils/marketDisplay'
 import {
   chartTimeLabel,
   useMarket,
@@ -44,6 +50,8 @@ import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
 
 // How often the Live view extends its tail / pulls a fresh quote.
 const LIVE_TICK_MS = 3000
+// Price refresh for a market the live stream reports as polling-only.
+const MARKET_POLL_MS = 10_000
 
 const MarketDetail = () => {
   const { openReport } = useSupport()
@@ -56,9 +64,18 @@ const MarketDetail = () => {
   const [chartMode, setChartMode] = useState<ChartMode>('live')
   const [userPickedMode, setUserPickedMode] = useState(false)
   const [infoTab, setInfoTab] = useState<'rules' | 'trades'>('rules')
+  // Sports markets take a single bet or a combo leg; null = not picked yet.
+  const [sportsMode, setSportsMode] = useState<'single' | 'combo' | null>(null)
+  const combo = useComboSlip()
 
   const eventId = searchParams.get('event') ?? undefined
-  const { data: market, isLoading, isError } = useMarket(id, eventId)
+  // Markets the stream can't push live prices for; poll those instead.
+  const [pollingOnly, setPollingOnly] = useState<string[]>([])
+  const { data: market, isLoading, isError } = useMarket(
+    id,
+    eventId,
+    pollingOnly.length > 0 ? MARKET_POLL_MS : false,
+  )
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
   // Live score/period/clock (team crests aren't in the feed, only names) — only
   // fetched for live markets, where the event's liveState actually has data.
@@ -142,6 +159,7 @@ const MarketDetail = () => {
   useLobbyStream({
     marketIds: marketId ? [marketId] : [],
     enabled: !!marketId,
+    onSubscribed: (sub) => setPollingOnly(sub.pollingOnly),
   })
   const countdown = useCountdown(market?.openTime, market?.closeTime)
 
@@ -165,6 +183,13 @@ const MarketDetail = () => {
     setUserPickedMode(true)
     setChartMode(mode)
   }
+
+  // Until the player picks, open on the combo tab when a slip is in progress.
+  const activeSportsMode = sportsMode ?? (combo.legCount > 0 ? 'combo' : 'single')
+
+  const winner = market?.resolvedOutcomeId
+    ? market.outcomes.find((o) => o.id === market.resolvedOutcomeId)
+    : undefined
 
   if (isLoading) {
     return (
@@ -267,6 +292,19 @@ const MarketDetail = () => {
               </div>
             </div>
             {event?.liveState && <ScoreBoard state={event.liveState} />}
+            {winner ? (
+              <p className='rounded-lg bg-success-bg px-3 py-2 text-sm font-semibold text-success'>
+                Resolved · {winner.label} won
+              </p>
+            ) : market.status === 'voided' ? (
+              <p className='rounded-lg bg-hover/60 px-3 py-2 text-sm font-semibold text-black'>
+                This market was voided.
+              </p>
+            ) : market.status === 'disputed' ? (
+              <p className='rounded-lg bg-warning/10 px-3 py-2 text-sm font-semibold text-warning'>
+                This market’s result is under dispute.
+              </p>
+            ) : null}
             <div className='flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-10'>
               {market.live ? (
                 <LiveBadge />
@@ -278,7 +316,7 @@ const MarketDetail = () => {
                       : 'bg-hover/60 text-neutral-10'
                   }`}
                 >
-                  {market.status}
+                  {MARKET_STATUS_LABELS[market.status] ?? market.status}
                 </span>
               )}
               <span>Volume: {formatNairaCompact(market.volume)}</span>
@@ -390,8 +428,11 @@ const MarketDetail = () => {
             {/* Outcome quick buttons */}
             <div className='flex items-stretch gap-3'>
               {market.outcomes.map((o, i) => {
-                const active = o.id === selectedOutcome?.id
                 const tone = outcomeTone(market, o.id, i)
+                // Once resolved, the winner is the highlighted outcome.
+                const active = winner
+                  ? o.id === winner.id
+                  : o.id === selectedOutcome?.id
                 const colorClasses = active
                   ? TONE_STYLES[tone].solid
                   : TONE_STYLES[tone].button
@@ -400,10 +441,14 @@ const MarketDetail = () => {
                     key={o.id}
                     type='button'
                     onClick={() => setSelectedId(o.id)}
-                    className={`flex min-w-0 flex-1 items-center justify-between gap-1.5 cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses}`}
+                    className={`flex min-w-0 flex-1 items-center justify-between gap-1.5 cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses} ${
+                      winner && !active ? 'opacity-50' : ''
+                    }`}
                   >
                     <span className='min-w-0 truncate uppercase'>{o.label}</span>
-                    <span className='shrink-0'>{formatSharePrice(o.cents)}</span>
+                    <span className='shrink-0'>
+                      {winner ? (active ? 'Won' : 'Lost') : outcomePriceLabel(market, o, { withPercent: true })}
+                    </span>
                   </button>
                 )
               })}
@@ -481,10 +526,28 @@ const MarketDetail = () => {
           </div>
         </div>
 
-        {/* Trade panel — sports default to the combo ticket, everything else
-            keeps the single-bet panel. */}
-        <div className='lg:sticky lg:top-24 lg:self-start'>
-          {isSportsMarket(market) ? (
+        {/* Trade panel — sports offer a single bet or a combo leg; everything
+            else gets the single-bet panel. */}
+        <div className='flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start'>
+          {isSportsMarket(market) && (
+            <div className='flex items-center gap-1 rounded-full bg-hover p-1'>
+              {(['single', 'combo'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type='button'
+                  onClick={() => setSportsMode(mode)}
+                  className={`flex-1 rounded-full py-1.5 text-sm font-semibold transition-colors ${
+                    activeSportsMode === mode
+                      ? 'bg-white text-black shadow-sm'
+                      : 'text-neutral-10 hover:text-black'
+                  }`}
+                >
+                  {mode === 'single' ? 'Single bet' : 'Add to combo'}
+                </button>
+              ))}
+            </div>
+          )}
+          {isSportsMarket(market) && activeSportsMode === 'combo' ? (
             <ComboMarketPanel market={market} />
           ) : (
             <TradePanel

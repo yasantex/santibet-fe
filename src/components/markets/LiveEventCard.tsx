@@ -4,10 +4,11 @@ import { LiveBadge, ScoreBoard } from './LiveBits'
 import {
   categoryIcon,
   marketDisplayTitle,
+  isPoolMarket,
+  outcomePriceLabel,
   outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
-import { formatSharePrice } from '../../utils/functions'
 import { useCountdown } from '../../hooks/useCountdown'
 import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
 import MarketMetaLine from './MarketMetaLine'
@@ -93,14 +94,22 @@ const LiveEventCard = ({
               key={o.id}
               type='button'
               onClick={() => handleOutcome(market, o)}
-              className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg cursor-pointer px-1 py-2 text-xs font-bold ${TONE_STYLES[tone].button} ${
+              className={`flex min-w-0 flex-1 flex-col items-center justify-center rounded-lg cursor-pointer px-1 py-2 text-xs font-bold ${TONE_STYLES[tone].button} ${
                 o.id === effectiveActiveOutcomeId
                   ? 'ring-2 ring-black ring-offset-1'
                   : ''
               }`}
             >
-              <span className='min-w-0 truncate uppercase'>{o.label}</span>
-              <span className='shrink-0'>{formatSharePrice(o.cents)}</span>
+              <span className='flex w-full min-w-0 items-center justify-center gap-1'>
+                <span className='min-w-0 truncate uppercase'>{o.label}</span>
+                <span className='shrink-0'>{outcomePriceLabel(market, o)}</span>
+              </span>
+              {/* No room inline: a pool's chance goes on a line of its own. */}
+              {isPoolMarket(market) && (
+                <span className='text-[10px] font-semibold opacity-75'>
+                  {o.percent}%
+                </span>
+              )}
             </button>
           )
         })}

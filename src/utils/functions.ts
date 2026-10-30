@@ -1,5 +1,7 @@
 import type { MarketCardVM, OutcomeVM, RawMarket } from '../types/market.types'
 import type { FormatDateTimeOptions } from '../types/types'
+import type { WalletBalance } from '../types/wallet.types'
+import type { Bet, BetPosition } from '../types/bet.types'
 
 export function getInitials(first: string, last: string): string {
   return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase()
@@ -28,6 +30,69 @@ export const toMinorUnits = (amount: string | number): number =>
 
 export const toMajorUnits = (amount: string | number): number =>
   ((typeof amount === 'number' ? amount : parseFloat(amount)) || 0) / 100
+
+/**
+ * Naira the player can stake right now. A bet draws on trading first, then
+ * winnings, and `total` is exactly trading + winnings (pending deposits and
+ * withdrawals are not in it).
+ */
+export const spendableBalance = (wallet?: WalletBalance | null): number =>
+  toMajorUnits(wallet?.total ?? 0)
+
+/** A pool (parimutuel) position: no share price, no live value, no cash-out. */
+export const isPoolPosition = (position: BetPosition): boolean =>
+  position.executionModel
+    ? position.executionModel === 'PARIMUTUEL'
+    : (position.estimated ?? false)
+
+/** A pool (parimutuel) bet: no share price; `odds` are the live effective odds. */
+export const isPoolBet = (bet: Bet): boolean =>
+  bet.executionModel ? bet.executionModel === 'PARIMUTUEL' : (bet.estimated ?? false)
+
+/** "₦63" a share, or a pool bet's odds ("×1.79"). */
+export const betPriceLabel = (bet: Bet): string =>
+  isPoolBet(bet)
+    ? Number(bet.odds) > 0
+      ? `×${Number(bet.odds).toFixed(2)}`
+      : 'Pool'
+    : formatSharePrice(Number(bet.price))
+
+/** Whether to offer Cash out. Falls back to "open and not a pool" on an API
+ *  that doesn't send `cashOutAvailable` yet. */
+export const canCashOut = (position: BetPosition): boolean =>
+  position.cashOutAvailable ??
+  (position.status === 'OPEN' && !isPoolPosition(position))
+
+/**
+ * Live mark for an OPEN position, in naira. Pool (parimutuel) positions have no
+ * value until the market closes, so `value`/`pnl` come back null — show the
+ * estimated payout instead of a ₦0 value and a full-stake "loss".
+ */
+export const openPositionMark = (position: BetPosition) => {
+  const staked = position.stake
+    ? toMajorUnits(position.stake.amount)
+    : (Number(position.shares) || 0) * (Number(position.avgPrice) || 0)
+  // What lands in the wallet on a win: net of fees when the API says so.
+  const payoutMoney = position.netReturn ?? position.potentialReturn
+  const estPayout = payoutMoney ? toMajorUnits(payoutMoney.amount) : null
+  if (position.estimated || position.currentValue == null) {
+    return { staked, value: null, pnl: null, estPayout }
+  }
+  const value = toMajorUnits(position.currentValue.amount)
+  const pnl = position.unrealizedPnl
+    ? toMajorUnits(position.unrealizedPnl.amount)
+    : value - staked
+  return { staked, value, pnl, estPayout }
+}
+
+/**
+ * Clean a typed naira amount: digits with at most one decimal point and two
+ * decimal places (a second "." is dropped: "1.2." → "1.2"; "5.678" → "5.67").
+ */
+export const sanitizeAmount = (raw: string): string => {
+  const [whole, ...rest] = raw.replace(/[^\d.]/g, '').split('.')
+  return rest.length ? `${whole}.${rest.join('').slice(0, 2)}` : whole
+}
 
 /**
  * Format a money amount in Naira. The optional currency arg is accepted for

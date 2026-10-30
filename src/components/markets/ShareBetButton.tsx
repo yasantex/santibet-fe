@@ -9,7 +9,7 @@ type ShareBetButtonProps = {
   title: string
   outcomeLabel: string
   /** Price per share the bettor got, formatted for display (e.g. "₦50"). */
-  price: string
+  price?: string
   /** Stake formatted for display (e.g. "₦200.00"). */
   stake: string
 }
@@ -30,7 +30,7 @@ const ShareBetButton = ({
   const [open, setOpen] = useState(false)
 
   const link = `${window.location.origin}/markets/${marketId}?outcome=${encodeURIComponent(outcomeId)}`
-  const message = `I predicted ${outcomeLabel ? `"${outcomeLabel}"` : 'an outcome'} on "${title}" at ${price} a share (staked ${stake}) on SantiBet. Copy my bet:`
+  const message = `I predicted ${outcomeLabel ? `"${outcomeLabel}"` : 'an outcome'} on "${title}"${price ? ` at ${price} a share` : ''} (staked ${stake}) on SantiBet. Copy my bet:`
 
   return (
     <>
@@ -49,7 +49,7 @@ const ShareBetButton = ({
         onClose={() => setOpen(false)}
         heading='Share this bet'
         title={title}
-        detail={`${outcomeLabel} · ${price} a share · Staked ${stake}`}
+        detail={`${outcomeLabel}${price ? ` · ${price} a share` : ''} · Staked ${stake}`}
         hint='Anyone who opens your link can copy this bet at the market’s current price.'
         message={message}
         link={link}

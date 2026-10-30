@@ -34,6 +34,23 @@ export interface ComboBetPayload {
   /** Stake for the whole combo, in kobo (minor units). */
   stake: string
   legs: { marketId: string; outcomeId: string }[]
+  /** Combined odds the player accepted; the API answers 409
+   *  `COMBO_ODDS_MOVED` if the live odds drifted past tolerance. */
+  expectedCombinedOdds?: string
+}
+
+/** POST /bets/combo/quote — server-authoritative combo pricing. */
+export interface ComboQuote {
+  combinedOdds: string | null
+  potentialReturn: Money
+  minStakeMinor: string
+  legs: {
+    marketId: string
+    outcomeId: string
+    price: string | null
+    /** False once the leg can no longer be bet (closed, suspended, unpriced). */
+    available: boolean
+  }[]
 }
 
 export interface ComboBetResponse {

@@ -43,7 +43,7 @@ const writeCookie = (value: string) => {
   }
 }
 
-const randomId = () => {
+export const randomId = () => {
   try {
     // Only exists on https / localhost.
     return crypto.randomUUID()

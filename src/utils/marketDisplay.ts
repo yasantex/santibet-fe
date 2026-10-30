@@ -1,3 +1,5 @@
+import { formatSharePrice } from './functions'
+
 /**
  * Outcome colour. Binary markets use yes/no (green/red). In 3+ outcome markets
  * the first is green, the last red, and each outcome in between gets its own
@@ -104,6 +106,21 @@ export const outcomeTone = (
   return MID_TONES[(index - 1) % MID_TONES.length]
 }
 
+const NO_LABELS = ['no', 'down', 'under', 'lose', 'false']
+const YES_LABELS = ['yes', 'up', 'over', 'win', 'true']
+
+/**
+ * Text colour for an outcome label shown without its market (portfolio,
+ * orders): green for yes-like, red for no-like, neutral for everything else —
+ * so "Draw" or a team name doesn't read as a loser.
+ */
+export const outcomeLabelClass = (label?: string | null): string => {
+  const l = (label ?? '').trim().toLowerCase()
+  if (YES_LABELS.includes(l)) return 'text-success'
+  if (NO_LABELS.includes(l)) return 'text-error'
+  return 'text-black'
+}
+
 export const categoryIcons: Record<string, string> = {
   Politics: '🏛️',
   Sports: '🏴',
@@ -153,6 +170,45 @@ export const marketHref = (
   if (market.eventId) params.set('event', market.eventId)
   const qs = params.toString()
   return `/markets/${market.id}${qs ? `?${qs}` : ''}`
+}
+
+/** A pool (parimutuel) market: odds float until close and there's no share
+ *  price. Only known on the lobby feed. */
+export const isPoolMarket = (market: { executionModel?: string | null }) =>
+  market.executionModel === 'PARIMUTUEL'
+
+/**
+ * What an outcome button shows: the share price ("₦63"), or on a pool market —
+ * which has no share price — its current odds ("×1.68"). `withPercent` adds
+ * the pool's chance in front ("54% · ×1.68") where the button has room; a
+ * share price already reads as a percentage (₦63 = 63%), so it's left as is.
+ */
+export const outcomePriceLabel = (
+  market: { executionModel?: string | null },
+  outcome: {
+    cents: number
+    price: number
+    percent: number
+    decimalOdds?: number | null
+  },
+  { withPercent = false }: { withPercent?: boolean } = {},
+): string => {
+  if (!isPoolMarket(market)) return formatSharePrice(outcome.cents)
+  const odds =
+    outcome.decimalOdds ?? (outcome.price > 0 ? 1 / outcome.price : 0)
+  const label = odds > 0 ? `×${odds.toFixed(2)}` : '—'
+  return withPercent ? `${outcome.percent}% · ${label}` : label
+}
+
+/** Badge text for a market's status ("settled" reads as "Resolved"). */
+export const MARKET_STATUS_LABELS: Record<string, string> = {
+  open: 'Open',
+  closed: 'Closed',
+  paused: 'Paused',
+  settled: 'Resolved',
+  voided: 'Voided',
+  disputed: 'Disputed',
+  unknown: 'Unavailable',
 }
 
 /**
