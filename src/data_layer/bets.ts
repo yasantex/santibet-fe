@@ -5,6 +5,7 @@ import {
   useSantiBetMutation,
   useSantiBetQuery,
 } from './utils'
+import { BONUS_KEY } from './queryKeys'
 import type {
   Bet,
   BetListResponse,
@@ -26,6 +27,8 @@ const invalidateAfterTrade = (qc: ReturnType<typeof useQueryClient>) => {
   qc.invalidateQueries({ queryKey: ['bet-positions'] })
   qc.invalidateQueries({ queryKey: ['/wallet', {}] })
   qc.invalidateQueries({ queryKey: ['wallet-transactions'] })
+  // Bonus bets move the bonus balance, progress and eligibility.
+  qc.invalidateQueries({ queryKey: BONUS_KEY })
 }
 
 export const usePlaceBet = () => {

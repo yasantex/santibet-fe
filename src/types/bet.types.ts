@@ -1,3 +1,5 @@
+import type { BonusQuote, FundedBy } from './bonus.types'
+
 export type BetType = 'market' | 'limit'
 
 export type BetStatus =
@@ -33,6 +35,8 @@ export interface PlaceBetPayload {
   type: BetType
   limitPrice?: number
   clientOrderId?: string
+  /** Stake bonus credit instead of cash. Market bets only. */
+  useBonus?: boolean
 }
 
 export interface Bet {
@@ -49,6 +53,8 @@ export interface Bet {
   filledShares: string
   market?: MarketSummary | null
   outcomeLabel?: string | null
+  /** Whether the stake came from cash or bonus credit. */
+  fundedBy?: FundedBy
   createdAt: string
 }
 
@@ -80,6 +86,8 @@ export interface BetPosition {
   realizedPnl?: Money | null
   market?: MarketSummary | null
   outcomeLabel?: string | null
+  /** Bonus-funded positions cannot be cashed out. */
+  fundedBy?: FundedBy
   openedAt: string
   settledAt?: string | null
 }
@@ -98,4 +106,18 @@ export interface CashOutQuote {
   /** Estimated proceeds, in kobo (minor units). */
   valueMinor: string | number
   currency: string
+}
+
+export type BetQuotePayload = PlaceBetPayload
+
+/** `POST /bets/quote` — only the fields the UI reads. */
+export interface BetQuote {
+  marketId: string
+  outcomeId: string
+  price: string | null
+  shares: string | null
+  potentialReturn: Money
+  profit?: Money
+  /** Present only when the quote was asked with `useBonus: true`. */
+  bonus?: BonusQuote | null
 }
