@@ -22,6 +22,7 @@ import {
   ACCOUNT_SUSPENDED_MESSAGE,
 } from '../utils/constants'
 import { showSuspendedToast } from '../utils/toastUtils'
+import { deviceFingerprintHeaders } from '../utils/deviceFingerprint'
 
 export type QueryParams = Record<
   string,
@@ -84,6 +85,21 @@ export const apiClient = axios.create({
   timeout: 180000,
 })
 apiClient.defaults.withCredentials = true
+
+// "Once per person" checks for bonuses (and partner self-referral) rest on the
+// device ID, so every sign-in/sign-up and deposit call carries it.
+const FINGERPRINTED_PATHS = ['/auth/', '/wallet/deposits']
+
+apiClient.interceptors.request.use((config) => {
+  const path = config.url ?? ''
+  if (FINGERPRINTED_PATHS.some((prefix) => path.startsWith(prefix))) {
+    const headers = deviceFingerprintHeaders()
+    Object.entries(headers).forEach(([key, value]) => {
+      config.headers.set(key, value)
+    })
+  }
+  return config
+})
 
 const COOKIE_OPTIONS = {
   path: '/',

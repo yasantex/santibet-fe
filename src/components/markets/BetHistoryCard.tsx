@@ -7,6 +7,7 @@ import {
   toMajorUnits,
 } from '../../utils/functions'
 import type { Bet, Money } from '../../types/bet.types'
+import BonusBetBadge from '../bonus/BonusBetBadge'
 
 const money = (m?: Money | null) =>
   formatCurrency(toMajorUnits(m?.amount ?? 0), m?.currency)
@@ -29,12 +30,15 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
   return (
     <div className='flex flex-col gap-3 rounded-lg bg-card p-4'>
       <div className='flex items-center justify-between'>
-        <span
-          className={`text-xs font-bold uppercase ${
-            isYes ? 'text-success' : 'text-error'
-          }`}
-        >
-          {label} · {bet.type}
+        <span className='flex items-center gap-2'>
+          <span
+            className={`text-xs font-bold uppercase ${
+              isYes ? 'text-success' : 'text-error'
+            }`}
+          >
+            {label} · {bet.type}
+          </span>
+          {bet.fundedBy === 'BONUS' && <BonusBetBadge />}
         </span>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusBadge(bet.status)}`}

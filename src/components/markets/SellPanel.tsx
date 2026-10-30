@@ -13,6 +13,7 @@ import type { UiMarket } from '../../types/market.types'
 import type { BetPosition } from '../../types/bet.types'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
 import { SUSPENDED_CTA_HINT } from '../../utils/constants'
+import BonusBetBadge from '../bonus/BonusBetBadge'
 
 const SellPositionRow = ({
   position,
@@ -29,6 +30,7 @@ const SellPositionRow = ({
     confirmOpen,
   )
   const suspended = useAccountSuspended()
+  const isBonus = position.fundedBy === 'BONUS'
 
   const outcome = market.outcomes.find((o) => o.id === position.outcomeId)
   const isYes = market.yes?.id === position.outcomeId
@@ -61,12 +63,15 @@ const SellPositionRow = ({
   return (
     <div className='flex flex-col gap-3 rounded-lg border border-border p-3'>
       <div className='flex items-center justify-between'>
-        <span
-          className={`text-xs font-bold uppercase ${
-            isYes ? 'text-success' : 'text-error'
-          }`}
-        >
-          {outcome?.label ?? (isYes ? 'YES' : 'NO')}
+        <span className='flex items-center gap-2'>
+          <span
+            className={`text-xs font-bold uppercase ${
+              isYes ? 'text-success' : 'text-error'
+            }`}
+          >
+            {outcome?.label ?? (isYes ? 'YES' : 'NO')}
+          </span>
+          {isBonus && <BonusBetBadge />}
         </span>
         <span className='text-xs text-neutral-10'>
           {contracts.toLocaleString(undefined, { maximumFractionDigits: 2 })}{' '}
@@ -89,17 +94,23 @@ const SellPositionRow = ({
             {formatCurrency(String(Math.abs(pnl)), currency)}
           </span>
         </div>
-        <span title={suspended ? SUSPENDED_CTA_HINT : undefined}>
-          <Button
-            type='button'
-            text='Cash out'
-            variation='primary'
-            size='medium'
-            className='w-fit!'
-            disabled={suspended}
-            onClick={() => setConfirmOpen(true)}
-          />
-        </span>
+        {isBonus ? (
+          <span className='max-w-36 text-right text-xs text-neutral-10'>
+            Bonus bets can’t be cashed out
+          </span>
+        ) : (
+          <span title={suspended ? SUSPENDED_CTA_HINT : undefined}>
+            <Button
+              type='button'
+              text='Cash out'
+              variation='primary'
+              size='medium'
+              className='w-fit!'
+              disabled={suspended}
+              onClick={() => setConfirmOpen(true)}
+            />
+          </span>
+        )}
       </div>
 
       <ConfirmationModal

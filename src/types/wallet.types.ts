@@ -5,6 +5,10 @@ export interface WalletBalance {
   pendingWithdrawal: string
   pendingDeposit: string
   total: string
+  /** Bonus credit (kobo). Never part of `total` and never withdrawable. */
+  bonus?: string
+  /** Locked bonus winnings (kobo). Never part of `total`. */
+  bonusLocked?: string
 }
 export type TransactionType =
   | 'DEPOSIT'
@@ -66,8 +70,17 @@ export interface DepositInstructions {
   expiresAt: string
 }
 
+export interface StartDepositPayload {
+  amount: string
+  channel?: string
+  /** The first-deposit bonus tickbox. Send it whenever the box was shown. */
+  bonusOptIn?: boolean
+}
+
 export interface StartDepositResponse {
   deposit: DepositRecord
+  /** Echo of the request's `bonusOptIn`. */
+  bonusOptIn?: boolean | null
   /** Bank-transfer (virtual account) rail only; absent for hosted checkout. */
   instructions?: DepositInstructions
   /**

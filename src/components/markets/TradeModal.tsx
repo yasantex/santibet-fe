@@ -82,7 +82,9 @@ const TradeModal = ({
               showSuccessToast(
                 order.type === 'limit'
                   ? `Limit order placed at ${formatSharePrice(order.price)}`
-                  : `Bought ${order.outcomeLabel} · ${formatCurrency(order.toWin)} to win`,
+                  : order.fundedBy === 'BONUS'
+                    ? `Bonus bet on ${order.outcomeLabel} · ${formatCurrency(order.toWin)} if it wins`
+                    : `Bought ${order.outcomeLabel} · ${formatCurrency(order.toWin)} to win`,
               )
             }
           />

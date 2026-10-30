@@ -49,7 +49,13 @@ const PredictionSuccessModal = ({
   const { positions, isLoading } = useMarketPositions(
     order ? market.id : undefined,
   )
-  const position = positions.find((p) => p.outcomeId === order?.bet.outcomeId)
+  const isBonus = order?.fundedBy === 'BONUS'
+  // Bonus and cash positions never merge, so match the funding too.
+  const position = positions.find(
+    (p) =>
+      p.outcomeId === order?.bet.outcomeId &&
+      (p.fundedBy ?? 'CASH') === (order?.fundedBy ?? 'CASH'),
+  )
 
   if (!order) return null
 
@@ -57,9 +63,12 @@ const PredictionSuccessModal = ({
   const stake = order.bet.stake
     ? toMajorUnits(order.bet.stake.amount)
     : order.stake
-  const toWin = order.bet.potentialReturn
-    ? toMajorUnits(order.bet.potentialReturn.amount)
-    : order.toWin
+  // A bonus win credits the bonus (whole return, or only the profit for the
+  // deposit bonus), which the slip worked out; cash uses the API's figure.
+  const toWin =
+    !isBonus && order.bet.potentialReturn
+      ? toMajorUnits(order.bet.potentialReturn.amount)
+      : order.toWin
   const price = Number(order.bet.price) || order.price
 
   const shares = Number(position?.shares) || 0
@@ -86,7 +95,9 @@ const PredictionSuccessModal = ({
           <div className='flex h-12 w-12 items-center justify-center rounded-full bg-surface-success text-success'>
             <HugeiconsIcon icon={CheckmarkCircle02Icon} size={26} />
           </div>
-          <h2 className='text-lg font-bold text-black'>Prediction placed</h2>
+          <h2 className='text-lg font-bold text-black'>
+            {isBonus ? 'Bonus bet placed' : 'Prediction placed'}
+          </h2>
           <p className='text-xs text-neutral-10'>{market.title}</p>
         </div>
 
@@ -98,10 +109,17 @@ const PredictionSuccessModal = ({
           <Row label='Amount' value={formatCurrency(stake)} />
           <Row label='Price per share' value={formatSharePrice(price)} />
           <Row
-            label='To win'
+            label={
+              !isBonus
+                ? 'To win'
+                : order.bonusCreditsTo === 'LOCKED_WINNINGS'
+                  ? 'Win (locked winnings)'
+                  : 'Win (to bonus balance)'
+            }
             value={formatCurrency(toWin)}
             tone='text-success'
           />
+          {isBonus && <Row label='Paid with' value='Bonus credit' />}
         </section>
 
         <section className='flex flex-col gap-2 rounded-2xl border border-border p-4'>
@@ -134,8 +152,9 @@ const PredictionSuccessModal = ({
 
         <div className='flex flex-col gap-2'>
           <p className='text-center text-xs text-neutral-10'>
-            Prices move while the market is open. You can sell your position
-            before it resolves, or buy more.
+            {isBonus
+              ? 'Bonus bets can’t be cashed out — this one settles when the market resolves.'
+              : 'Prices move while the market is open. You can sell your position before it resolves, or buy more.'}
           </p>
           <Button
             type='button'
