@@ -10,6 +10,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { Cookies, useCookies } from 'react-cookie'
 import { apiClient } from './utils'
 import {
+  BONUS_KEY,
   BETS_KEY,
   BET_POSITIONS_KEY,
   DEPOSITS_KEY,
@@ -55,6 +56,20 @@ const WALLET_MOVING_TYPES: NotificationType[] = [
   'WITHDRAWAL_COMPLETED',
   'CASH_OUT_COMPLETED',
   'WINNINGS_CREDITED',
+  'BONUS_UPDATE',
+]
+
+/**
+ * Types that can change the live bonus: bonus events themselves, a deposit
+ * (forfeits the new-member bonus / grants the deposit bonus), KYC (activates a
+ * PENDING_KYC bonus) and settlement of a bonus bet.
+ */
+const BONUS_MOVING_TYPES: NotificationType[] = [
+  'BONUS_UPDATE',
+  'DEPOSIT_SUCCESS',
+  'KYC_UPDATE',
+  'MARKET_RESOLVED',
+  'WINNINGS_CREDITED',
 ]
 
 /** Types that report bad news, so they must not surface as a success toast. */
@@ -70,7 +85,11 @@ const BET_MOVING_TYPES: NotificationType[] = [
   'CASH_OUT_COMPLETED',
   'MARKET_RESOLVED',
   'WINNINGS_CREDITED',
+  'BONUS_UPDATE',
 ]
+
+/** Bonus endings are not a success, so they toast neutrally-as-warning. */
+const BONUS_BAD_EVENTS = ['EXPIRED', 'LOST', 'FORFEITED', 'VOIDED', 'CANCELLED']
 
 const RECONNECT_BASE_DELAY = 1000
 const RECONNECT_MAX_DELAY = 30000
@@ -114,6 +133,9 @@ const invalidateForNotification = (
   if (BET_MOVING_TYPES.includes(notificationType)) {
     qc.invalidateQueries({ queryKey: BETS_KEY })
     qc.invalidateQueries({ queryKey: BET_POSITIONS_KEY })
+  }
+  if (BONUS_MOVING_TYPES.includes(notificationType)) {
+    qc.invalidateQueries({ queryKey: BONUS_KEY })
   }
 }
 
@@ -288,8 +310,16 @@ export const NotificationStreamProvider = ({
           })
         }
 
-        if (title) {
-          if (FAILURE_TYPES.includes(notificationType)) {
+        const isBadBonusEvent =
+          notificationType === 'BONUS_UPDATE' &&
+          typeof data?.event === 'string' &&
+          BONUS_BAD_EVENTS.includes(data.event)
+        // A fresh grant is announced by the "bonus added" banner instead.
+        const isBonusGrant =
+          notificationType === 'BONUS_UPDATE' && data?.event === 'GRANTED'
+
+        if (title && !isBonusGrant) {
+          if (FAILURE_TYPES.includes(notificationType) || isBadBonusEvent) {
             showWarningToast(title)
           } else {
             showSuccessToast(title)

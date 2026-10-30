@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useLocation } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { useCookies } from 'react-cookie'
 import { isAxiosError } from 'axios'
 import { Button } from '../globals/Button'
@@ -24,6 +24,11 @@ import useAccountSuspended from '../../hooks/useAccountSuspended'
 import SuspendedHint from '../globals/SuspendedHint'
 import useAuthNavigate from '../../hooks/useAuthNavigate'
 import useMarketOpen from '../../hooks/useMarketOpen'
+import useBonusSlip from '../../hooks/useBonusSlip'
+import BonusSlipToggle from '../bonus/BonusSlipToggle'
+import { BONUS_KYC_CODE } from '../../utils/bonus'
+import { KYC_PATH } from '../../utils/authRedirect'
+import type { FundedBy } from '../../types/bonus.types'
 
 const QUICK_ADDS = [100, 200, 500, 1000]
 
@@ -36,8 +41,12 @@ export interface PlacedOrder {
   stake: number
   /** 0–1. */
   price: number
-  /** Naira. */
+  /** Naira. For a bonus bet, what a win credits (bonus balance or locked winnings). */
   toWin: number
+  /** Cash or bonus credit. */
+  fundedBy: FundedBy
+  /** Bonus bets only: where a win is credited. */
+  bonusCreditsTo?: 'BONUS_BALANCE' | 'LOCKED_WINNINGS'
 }
 
 interface OrderFormProps {
@@ -60,6 +69,7 @@ const OrderForm = ({
   onPlaced,
 }: OrderFormProps) => {
   const authNavigate = useAuthNavigate()
+  const navigate = useNavigate()
   const location = useLocation()
   const [cookies] = useCookies(['token'])
   const isSignedIn = !!cookies?.token
@@ -73,10 +83,12 @@ const OrderForm = ({
   // minimum-bet error). `minStake` is the structured minimum from the API's
   // error `details`, offered as a one-tap fill.
   const [betError, setBetError] = useState<string | null>(null)
+  const [betErrorCode, setBetErrorCode] = useState<string | null>(null)
   const [minStake, setMinStake] = useState<number | null>(null)
 
   const clearBetError = () => {
     if (betError) setBetError(null)
+    if (betErrorCode) setBetErrorCode(null)
     if (minStake != null) setMinStake(null)
   }
 
@@ -111,6 +123,20 @@ const OrderForm = ({
   const potentialReturn = shares // each share settles at 1 unit if it wins
   const toWin = Math.max(potentialReturn, 0)
 
+  // Bonus credit: while "Use bonus" is on, the stake comes out of the bonus
+  // balance and bonus rules (price band, live, min/max stake…) apply.
+  const bonusSlip = useBonusSlip({
+    market,
+    outcome,
+    type,
+    stake: stakeNum,
+    price,
+    isSignedIn,
+  })
+  const usingBonus = bonusSlip.active
+  const spendable = usingBonus ? bonusSlip.balance : cash
+  const selectedBonusReason = bonusSlip.ineligibleReason(outcome?.id)
+
   // Send guests to sign in, then back to this market with their pick kept.
   const goToSignIn = () => {
     const params = new URLSearchParams(location.search)
@@ -139,7 +165,34 @@ const OrderForm = ({
       showWarningToast('Enter an amount to predict')
       return
     }
-    if (isSignedIn && stakeNum > cash) {
+    if (bonusSlip.offered && bonusSlip.useBonus && bonusSlip.pendingKyc) {
+      setBetErrorCode(BONUS_KYC_CODE)
+      setBetError('Verify your identity to start using your bonus')
+      return
+    }
+    if (usingBonus) {
+      if (selectedBonusReason) {
+        setBetError(selectedBonusReason)
+        return
+      }
+      if (stakeNum > bonusSlip.balance) {
+        setBetError('Not enough bonus credit for this stake')
+        return
+      }
+      if (bonusSlip.minStake != null && stakeNum < bonusSlip.minStake) {
+        setMinStake(Math.min(bonusSlip.minStake, bonusSlip.balance))
+        setBetError(
+          `The minimum bonus bet is ${symbol}${bonusSlip.minStake.toLocaleString()}`,
+        )
+        return
+      }
+      if (bonusSlip.maxStake != null && stakeNum > bonusSlip.maxStake) {
+        setBetError(
+          `The maximum bonus bet is ${symbol}${bonusSlip.maxStake.toLocaleString()}`,
+        )
+        return
+      }
+    } else if (isSignedIn && stakeNum > cash) {
       showWarningToast('Amount exceeds your total balance')
       return
     }
@@ -165,14 +218,22 @@ const OrderForm = ({
         stake: String(toMinorUnits(stakeNum)),
         type,
         ...(type === 'limit' ? { limitPrice: Number(limitCents) / 100 } : {}),
+        // Say it explicitly whenever a bonus is live: the new-member bonus
+        // otherwise defaults to bonus on the server.
+        ...(bonusSlip.offered ? { useBonus: usingBonus } : {}),
       })
+      const fundedBy = bet.fundedBy ?? (usingBonus ? 'BONUS' : 'CASH')
       onPlaced({
         bet,
         outcomeLabel: outcome.label,
         type,
         stake: stakeNum,
         price,
-        toWin,
+        toWin: fundedBy === 'BONUS' ? bonusSlip.creditOnWin : toWin,
+        fundedBy,
+        ...(fundedBy === 'BONUS'
+          ? { bonusCreditsTo: bonusSlip.creditsTo }
+          : {}),
       })
       setAmount('')
       setLimitCents('')
@@ -200,6 +261,7 @@ const OrderForm = ({
             ? toMajorUnits(data.details.minimumStakeMinor)
             : undefined)
         if (typeof min === 'number' && Number.isFinite(min)) setMinStake(min)
+        setBetErrorCode(data?.code ?? null)
         setBetError(message)
       } else {
         setBetError(fallback)
@@ -234,25 +296,45 @@ const OrderForm = ({
         {market.outcomes.map((o, i) => {
           const active = o.id === outcome?.id
           const tone = outcomeTone(market, o.id, i)
+          // Greyed while betting bonus: still selectable, so the player can
+          // see why, or switch the bonus off and bet cash.
+          const noBonus = bonusSlip.ineligibleReason(o.id)
           return (
             <button
               key={o.id}
               type='button'
-              onClick={() => onSelectOutcome(o)}
+              onClick={() => {
+                clearBetError()
+                onSelectOutcome(o)
+              }}
+              title={noBonus ?? undefined}
               className={`flex min-w-0 flex-1 flex-col items-center rounded-lg border py-2 text-sm font-bold transition-colors ${
                 active
                   ? TONE_STYLES[tone].active
                   : 'border-border text-neutral-10 hover:text-black'
-              }`}
+              } ${noBonus ? 'opacity-45' : ''}`}
             >
               <span className='w-full min-w-0 truncate text-center uppercase'>
                 {o.label}
               </span>
               <span>{formatSharePrice(o.cents)}</span>
+              {noBonus && (
+                <span className='text-[10px] font-semibold normal-case text-neutral-10'>
+                  No bonus
+                </span>
+              )}
             </button>
           )
         })}
       </div>
+
+      {isSignedIn && <BonusSlipToggle slip={bonusSlip} />}
+
+      {usingBonus && selectedBonusReason && !betError && (
+        <p className='-mt-2 rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-black'>
+          {selectedBonusReason}
+        </p>
+      )}
 
       {/* Limit price */}
       {type === 'limit' && (
@@ -276,9 +358,9 @@ const OrderForm = ({
         <div className='flex items-center justify-between text-xs'>
           <span className='text-neutral-10'>Amount</span>
           {isSignedIn && (
-            <span className='text-neutral-10'>
-              Cash: {symbol}
-              {cash.toLocaleString()}
+            <span className={usingBonus ? 'font-semibold text-success' : 'text-neutral-10'}>
+              {usingBonus ? 'Bonus' : 'Cash'}: {symbol}
+              {spendable.toLocaleString()}
             </span>
           )}
         </div>
@@ -308,10 +390,13 @@ const OrderForm = ({
               {v.toLocaleString()}
             </button>
           ))}
-          {isSignedIn && cash > 0 && (
+          {isSignedIn && spendable > 0 && (
             <button
               type='button'
-              onClick={() => setAmount(String(cash))}
+              onClick={() => {
+                clearBetError()
+                setAmount(String(spendable))
+              }}
               className='rounded-full bg-hover px-3 py-1 text-xs font-semibold text-neutral-10 hover:text-black'
             >
               MAX
@@ -319,16 +404,37 @@ const OrderForm = ({
           )}
         </div>
 
-        {marketMinNaira != null && !betError && (
-          <p className='text-xs text-neutral-10'>
-            Minimum bet {symbol}
-            {marketMinNaira.toLocaleString()}
+        {!betError &&
+          (usingBonus && bonusSlip.minStake != null ? (
+            <p className='text-xs text-neutral-10'>
+              Minimum bonus bet {symbol}
+              {Math.max(bonusSlip.minStake, marketMinNaira ?? 0).toLocaleString()}
+            </p>
+          ) : marketMinNaira != null ? (
+            <p className='text-xs text-neutral-10'>
+              Minimum bet {symbol}
+              {marketMinNaira.toLocaleString()}
+            </p>
+          ) : null)}
+
+        {usingBonus && bonusSlip.quoteRefusal && !betError && (
+          <p className='text-xs font-medium text-warning'>
+            {bonusSlip.quoteRefusal}
           </p>
         )}
 
         {betError && (
           <div className='flex flex-col gap-2 rounded-lg bg-error-bg px-3 py-2.5'>
             <p className='text-xs font-medium text-error'>{betError}</p>
+            {betErrorCode === BONUS_KYC_CODE && (
+              <button
+                type='button'
+                onClick={() => navigate(KYC_PATH)}
+                className='self-start rounded-full bg-error/15 px-3 py-1 text-xs font-semibold text-error hover:bg-error/25'
+              >
+                Verify identity
+              </button>
+            )}
             {minStake != null && (
               <button
                 type='button'
@@ -360,13 +466,31 @@ const OrderForm = ({
             {Math.round(price * 100)}%
           </span>
         </div>
-        <div className='flex justify-between'>
-          <span className='text-neutral-10'>To win</span>
-          <span className='font-semibold text-success'>
-            {symbol}
-            {toWin.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </span>
-        </div>
+        {usingBonus ? (
+          <div className='flex justify-between gap-3'>
+            <span className='text-neutral-10'>
+              {bonusSlip.creditsTo === 'LOCKED_WINNINGS'
+                ? 'Win (locked winnings)'
+                : 'Win (to bonus balance)'}
+            </span>
+            <span
+              className={`font-semibold text-success ${bonusSlip.quoteLoading ? 'opacity-60' : ''}`}
+            >
+              {symbol}
+              {bonusSlip.creditOnWin.toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}
+            </span>
+          </div>
+        ) : (
+          <div className='flex justify-between'>
+            <span className='text-neutral-10'>To win</span>
+            <span className='font-semibold text-success'>
+              {symbol}
+              {toWin.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </span>
+          </div>
+        )}
       </div>
 
       <Button
@@ -376,7 +500,9 @@ const OrderForm = ({
             ? 'Market closed'
             : !isSignedIn
               ? 'Sign in to predict'
-              : submitText
+              : usingBonus
+                ? `${submitText} with bonus`
+                : submitText
         }
         variation='primary'
         size='large'

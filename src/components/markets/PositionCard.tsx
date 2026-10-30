@@ -15,6 +15,7 @@ import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import type { BetPosition } from '../../types/bet.types'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
 import { SUSPENDED_CTA_HINT } from '../../utils/constants'
+import BonusBetBadge from '../bonus/BonusBetBadge'
 
 const YES_LABELS = ['yes', 'up', 'over', 'win', 'true']
 
@@ -55,6 +56,8 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
     ? toMajorUnits(position.stake.amount)
     : shares * avgPrice
   const isOpen = position.status === 'OPEN'
+  // Bonus positions settle on the market only — no cash-out.
+  const isBonus = position.fundedBy === 'BONUS'
   const result = position.result ?? null
 
   // OPEN positions mark-to-market against currentValue/unrealizedPnl; once
@@ -122,6 +125,7 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
             >
               {outcomeLabel || (isYes ? 'YES' : 'NO')}
             </span>
+            {isBonus && <BonusBetBadge />}
           </div>
 
           <button
@@ -168,7 +172,12 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
       </div>
 
       <div className='flex items-center justify-between'>
-        {isOpen && (
+        {isOpen && isBonus && (
+          <span className='text-xs text-neutral-10'>
+            Bonus bets can’t be cashed out
+          </span>
+        )}
+        {isOpen && !isBonus && (
           <span title={suspended ? SUSPENDED_CTA_HINT : undefined}>
             <Button
               type='button'
