@@ -1,5 +1,6 @@
 import ShareBetButton from './ShareBetButton'
 import MarketTitleLink from './MarketTitleLink'
+import BonusBetBadge from '../bonus/BonusBetBadge'
 import {
   betPriceLabel,
   formatCurrency,
@@ -53,8 +54,11 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
   return (
     <div className='flex flex-col gap-3 rounded-lg bg-card p-4'>
       <div className='flex items-center justify-between'>
-        <span className={`text-xs font-bold uppercase ${outcomeLabelClass(label)}`}>
-          {label} · {bet.type}
+        <span className='flex items-center gap-2'>
+          <span className={`text-xs font-bold uppercase ${outcomeLabelClass(label)}`}>
+            {label} · {bet.type}
+          </span>
+          {bet.fundedBy === 'BONUS' && <BonusBetBadge />}
         </span>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${badge.className}`}
@@ -66,6 +70,7 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
 
       <MarketTitleLink
         marketId={bet.marketId}
+        marketStatus={bet.market?.status}
         settled={bet.result != null}
         className='line-clamp-2 text-left text-sm font-semibold text-black'
       >

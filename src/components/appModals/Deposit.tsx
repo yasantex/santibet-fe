@@ -9,6 +9,7 @@ import {
   BitcoinIcon,
   BankIcon,
   ArrowRight01Icon,
+  GiftIcon,
 } from '@hugeicons/core-free-icons'
 import { Button } from '../globals/Button'
 import { FormInput } from '../globals/FormInput'
@@ -31,6 +32,7 @@ import type {
   CryptoAddressResponse,
   CryptoNetworksResponse,
   CryptoNetworkId,
+  StartDepositPayload,
 } from '../../types/wallet.types'
 import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
@@ -44,6 +46,9 @@ import {
 } from '../../utils/functions'
 import { CopyButton } from '../globals/CopyButton'
 import type { UserData } from '../../types/types'
+import DepositBonusOffer from '../bonus/DepositBonusOffer'
+import { invalidateBonuses, useBonusOffer } from '../../data_layer/bonuses'
+import { formatKobo, koboToNumber } from '../../utils/bonus'
 
 type DepositStep =
   | 'method'
@@ -167,6 +172,14 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   const [cryptoProgress, setCryptoProgress] =
     useState<DepositStatusEvent | null>(null)
 
+  // First-deposit bonus tickbox. `null` = untouched, so the offer's own
+  // default (pre-ticked) applies.
+  const { data: bonusOffer } = useBonusOffer(open)
+  const [bonusOptIn, setBonusOptIn] = useState<boolean | null>(null)
+  const optedIn = bonusOptIn ?? bonusOffer?.defaultChecked ?? true
+  // What the result screen should say about the bonus, captured at submit.
+  const [bonusExpected, setBonusExpected] = useState(false)
+
   const queryClient = useQueryClient()
   const {
     connected: streamConnected,
@@ -186,6 +199,8 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     setCryptoCurrency(null)
     setCryptoNetwork(null)
     setCryptoProgress(null)
+    setBonusOptIn(null)
+    setBonusExpected(false)
   }
 
   // Reset to a clean slate each time the modal transitions closed → open.
@@ -202,7 +217,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
   const { mutateAsync: startDeposit, isPending: isStarting } =
     useSantiBetMutation<
       StartDepositResponse,
-      { amount: string; channel?: string }
+      StartDepositPayload
     >({
       path: '/wallet/deposits',
       mutationOptions: {
@@ -229,6 +244,9 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
       queryClient.invalidateQueries({
         queryKey: WALLET_TRANSACTIONS_KEY,
       })
+      // The deposit may have granted the deposit bonus or ended the
+      // new-member one.
+      invalidateBonuses(queryClient)
     }
     setSettled({
       status: data.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
@@ -371,10 +389,18 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     const checkoutTab = isCheckout ? window.open('', '_blank') : null
 
     try {
+      const amountKobo = toMinorUnits(numeric)
       const data = await startDeposit({
-        amount: String(toMinorUnits(numeric)),
+        amount: String(amountKobo),
         ...(isCheckout ? { channel: 'kudipal' } : {}),
+        // Send the tickbox whenever it was shown: unticked declines for good.
+        ...(bonusOffer?.show ? { bonusOptIn: optedIn } : {}),
       })
+      setBonusExpected(
+        !!bonusOffer?.show &&
+          (data.bonusOptIn ?? optedIn) &&
+          amountKobo >= koboToNumber(bonusOffer.minDepositKobo),
+      )
 
       if (isCheckout) {
         // Prefer the backend-supplied checkout URL (reference + amount appended
@@ -539,6 +565,16 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
     >
       {step === 'method' && (
         <div className='flex flex-col gap-2.5'>
+          {bonusOffer?.show && bonusOffer.label && (
+            <div className='flex items-center gap-2 rounded-lg bg-surface-success/60 px-3 py-2'>
+              <HugeiconsIcon icon={GiftIcon} size={16} className='shrink-0 text-success' />
+              <p className='text-xs font-semibold text-black'>
+                {bonusOffer.label}
+                {bonusOffer.minDepositKobo &&
+                  ` on a first deposit of ${formatKobo(bonusOffer.minDepositKobo)} or more`}
+              </p>
+            </div>
+          )}
           {DEPOSIT_METHODS.map((m) => (
             <button
               key={m.id}
@@ -578,6 +614,13 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
             }}
             onBlur={() => {}}
             errors={amountError}
+          />
+          <DepositBonusOffer
+            offer={bonusOffer}
+            checked={optedIn}
+            onChange={setBonusOptIn}
+            amount={Number(amount) || 0}
+            onNavigate={handleClose}
           />
           <Button
             type='button'
@@ -814,6 +857,13 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
 
           {cryptoAddress && !isGeneratingAddress && (
             <>
+              <DepositBonusOffer
+                offer={bonusOffer}
+                checked
+                onChange={() => {}}
+                informational
+                onNavigate={handleClose}
+              />
               <p className='text-sm text-left text-neutral-10'>
                 Send only {cryptoAddress.currency} on the{' '}
                 {cryptoAddress.network} network to this address. Your balance
@@ -920,6 +970,24 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
               ? 'Your deposit has been credited to your wallet.'
               : settled.reason || 'This deposit could not be completed.'}
           </p>
+          {settled.status === 'COMPLETED' && bonusExpected && (
+            <div className='flex w-full items-center gap-2 rounded-lg bg-surface-success/60 px-3 py-2.5'>
+              <HugeiconsIcon icon={GiftIcon} size={16} className='shrink-0 text-success' />
+              <p className='flex-1 text-xs text-black'>
+                Your first deposit bonus is on its way.{' '}
+                <button
+                  type='button'
+                  onClick={() => {
+                    handleDone()
+                    navigate('/bonuses')
+                  }}
+                  className='font-semibold underline underline-offset-2'
+                >
+                  View bonus
+                </button>
+              </p>
+            </div>
+          )}
           <Button
             type='button'
             text='Done'

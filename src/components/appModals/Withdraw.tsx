@@ -16,6 +16,8 @@ import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
 import { useQueryClient } from '@tanstack/react-query'
 import ConfirmWithdrawal from './ConfirmWithdrawal'
+import { useNavigate } from 'react-router'
+import { KYC_PATH } from '../../utils/authRedirect'
 import {
   formatCurrency,
   toMajorUnits,
@@ -104,6 +106,26 @@ const Withdraw = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, accountsData])
 
+  const navigate = useNavigate()
+
+  // 403 KYC_REQUIRED — e.g. `reason: BONUS_CASH`: cash released by a bonus can
+  // only be withdrawn after KYC. Send the player to verify.
+  const showKycPrompt = (errorData: { message?: string; reason?: string }) => {
+    showWarningToast(
+      errorData?.message ??
+        (errorData?.reason === 'BONUS_CASH'
+          ? 'Verify your identity to withdraw bonus winnings'
+          : 'Verify your identity to withdraw'),
+      {
+        label: 'Verify identity',
+        onClick: () => {
+          handleClose()
+          navigate(KYC_PATH)
+        },
+      },
+    )
+  }
+
   const { mutateAsync: requestWithdrawal, isPending } = useSantiBetMutation<
     WithdrawalRecord,
     { amount: string; paymentMethodId: string }
@@ -126,6 +148,10 @@ const Withdraw = ({
       onError: (error) => {
         if (isAxiosError(error)) {
           const errorData = error.response?.data
+          if (errorData?.code === 'KYC_REQUIRED') {
+            showKycPrompt(errorData)
+            return
+          }
           if (errorData?.code === 'AMOUNT_BELOW_MINIMUM' && errorData?.minimum) {
             const minimum = Number(errorData.minimum)
             setMinWithdrawalMinor(minimum)
@@ -154,6 +180,10 @@ const Withdraw = ({
       onError: (error) => {
         if (isAxiosError(error)) {
           const errorData = error.response?.data
+          if (errorData?.code === 'KYC_REQUIRED') {
+            showKycPrompt(errorData)
+            return
+          }
           if (errorData?.code === 'AMOUNT_BELOW_MINIMUM' && errorData?.minimum) {
             const minimum = Number(errorData.minimum)
             setMinWithdrawalMinor(minimum)
@@ -387,6 +417,12 @@ const Withdraw = ({
               onBlur={() => {}}
               errors={amountError}
             />
+            {Number(wallet?.bonus ?? 0) + Number(wallet?.bonusLocked ?? 0) > 0 && (
+              <p className='-mt-2 text-xs text-neutral-10'>
+                Bonus credit and locked winnings can’t be withdrawn. They turn
+                into cash once your bonus terms are met.
+              </p>
+            )}
 
             <Button
               type='button'

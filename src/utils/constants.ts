@@ -6,6 +6,7 @@ import {
   ComputerIcon,
   CreditCardIcon,
   GiftFreeIcons,
+  GiftCardIcon,
   HelpSquareFreeIcons,
   Invoice01Icon,
   Moon02Icon,
@@ -294,6 +295,16 @@ export const accountMenuItems: ProfileAction[] = [
     },
   },
 
+  {
+    id: 'bonuses',
+    label: 'Bonuses',
+    icon: GiftCardIcon,
+    path: '/bonuses',
+    action: (navigate, close) => {
+      navigate('/bonuses')
+      close()
+    },
+  },
   {
     id: 'rewards',
     label: 'Rewards',

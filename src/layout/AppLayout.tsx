@@ -13,6 +13,7 @@ import BackToTop from '../components/globals/BackToTop'
 import SupportProvider from '../support/SupportProvider'
 import SupportLauncher from '../components/support/SupportLauncher'
 import BadgeCelebration from '../components/points/BadgeCelebration'
+import BonusGrantedModal from '../components/bonus/BonusGrantedModal'
 import useReferralCapture from '../hooks/useReferralCapture'
 
 const AppLayout = () => {
@@ -55,6 +56,7 @@ const AppLayout = () => {
         />
         <PasskeyOffer />
         <BadgeCelebration />
+        <BonusGrantedModal />
         <ComboSlipMount />
         <BackToTop />
         <SupportLauncher />

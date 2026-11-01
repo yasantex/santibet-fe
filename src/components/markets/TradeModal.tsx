@@ -79,7 +79,9 @@ const TradeModal = ({
             submitText='Buy'
             onPlaced={(order) =>
               showSuccessToast(
-                `Bought ${order.outcomeLabel} · pays ${formatCurrency(order.payout)} if it wins`,
+                order.fundedBy === 'BONUS'
+                  ? `Bonus bet on ${order.outcomeLabel} · ${formatCurrency(order.payout)} if it wins`
+                  : `Bought ${order.outcomeLabel} · pays ${formatCurrency(order.payout)} if it wins`,
               )
             }
           />

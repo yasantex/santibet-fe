@@ -125,9 +125,16 @@ export interface MarketTrade {
   id: string
   marketId: string
   outcomeId: string
-  price: number
-  size: number
+  /** 0–1; null on pool markets. */
+  price: number | null
+  /** Shares; null on pool bets and combo legs. */
+  size: number | null
+  /** `sell` = a cash-out. */
   side: 'buy' | 'sell'
+  /** Naira: the stake, or the cash-out paid. Null on combo legs. */
+  amount?: number | null
+  /** A leg of a combo (no amount of its own). */
+  combo?: boolean
   ts: string
 }
 
@@ -143,8 +150,12 @@ export interface MarketCandle {
 
 export interface MarketHistoryTick {
   outcomeId: string
-  price: number
-  size: number
+  side?: 'buy' | 'sell'
+  price: number | null
+  size: number | null
+  /** Kobo, as a string: the stake, or the cash-out paid. */
+  amount?: string | null
+  combo?: boolean
   at: string
 }
 

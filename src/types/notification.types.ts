@@ -14,6 +14,8 @@ export type NotificationType =
   | 'SECURITY_ALERT'
   /** An agent replied to a support report / chat (via Chatwoot webhook). */
   | 'SUPPORT_REPLY'
+  /** Bonus granted / activated / won / completed / ended — see `data.event`. */
+  | 'BONUS_UPDATE'
 
 export interface AppNotification {
   id: string

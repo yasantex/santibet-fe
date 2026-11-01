@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons'
 import {
@@ -29,15 +30,19 @@ const typeLabels: Record<NotificationType, string> = {
   WINNINGS_CREDITED: 'Winnings',
   SECURITY_ALERT: 'Security',
   SUPPORT_REPLY: 'Support',
+  BONUS_UPDATE: 'Bonus',
 }
 
 
 const NotificationRow = ({ notification }: { notification: AppNotification }) => {
+  const navigate = useNavigate()
   const { mutate: markRead } = useMarkNotificationRead(notification.id)
   const isRead = !!notification.readAt
 
   const open = () => {
     if (!isRead) markRead()
+    // Bonus updates open the bonus screen.
+    if (notification.type === 'BONUS_UPDATE') navigate('/bonuses')
   }
 
   return (

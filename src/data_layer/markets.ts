@@ -10,7 +10,7 @@ import {
 import { isAxiosError } from 'axios'
 import { useDebounce } from 'use-debounce'
 import { apiClient, type QueryParams } from './utils'
-import { toCents, toPercent } from '../utils/functions'
+import { toCents, toMajorUnits, toPercent } from '../utils/functions'
 import { categoryIcon } from '../utils/marketDisplay'
 import type { SearchResult, SearchSection } from '../utils/constants'
 import type {
@@ -844,7 +844,12 @@ const tradesToPoints = (
   outcomeId: string | undefined,
   mode: ChartMode,
 ): ChartPoint[] =>
-  [...(outcomeId ? trades.filter((t) => t.outcomeId === outcomeId) : trades)]
+  // Pool trades have no price (null), so they can't be charted.
+  trades
+    .filter(
+      (t): t is MarketTrade & { price: number } =>
+        t.price != null && (!outcomeId || t.outcomeId === outcomeId),
+    )
     .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
     .map((t) => toPoint(new Date(t.ts).getTime(), toPercentValue(t.price), mode))
 
@@ -900,7 +905,9 @@ export const fetchMarketChart = async (
       outcomeId: t.outcomeId,
       price: t.price,
       size: t.size,
-      side: 'buy',
+      side: t.side ?? 'buy',
+      amount: t.amount != null ? toMajorUnits(t.amount) : null,
+      combo: t.combo ?? false,
       ts: t.at,
     }))
     const candlePoints = (h.candles ?? []).map((c) =>

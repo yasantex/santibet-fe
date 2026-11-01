@@ -27,6 +27,10 @@ import { Button } from '../../components/globals/Button'
 import SuspendedHint from '../../components/globals/SuspendedHint'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
 import { useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router'
+import BonusCard from '../../components/bonus/BonusCard'
+import { useCurrentBonus } from '../../data_layer/bonuses'
+import { formatKobo, koboToNumber } from '../../utils/bonus'
 
 type TransactionFilterValues = Record<'type' | 'status', string[]>
 
@@ -35,6 +39,10 @@ const transactionTypeLabel = (item: Transaction) =>
   item.type === 'FEE' && item.direction === 'CREDIT'
     ? 'Fee rebate'
     : item.type.replaceAll('_', ' ').toLowerCase()
+
+/** Rows that moved bonus credit rather than cash (bonus bets, wins, grants). */
+const isBonusTransaction = (item: Transaction) =>
+  item.bucket === 'BONUS' || item.type === 'BONUS'
 
 const transactionStatus: Partial<Record<TransactionType, string>> = {
   DEPOSIT: '/wallet/deposits',
@@ -94,6 +102,10 @@ const AccountWallet = () => {
   const { data: wallet, isLoading } = useSantiBetQuery<WalletBalance>({
     path: '/wallet',
   })
+  // Bonus credit is shown apart from cash and never added to `total`.
+  const { bonus } = useCurrentBonus()
+  const bonusBalance = koboToNumber(wallet?.bonus)
+  const bonusLocked = koboToNumber(wallet?.bonusLocked)
 
   const {
     data: walletTransactions,
@@ -194,6 +206,34 @@ const AccountWallet = () => {
             </div>
           )}
 
+          {bonus ? (
+            <div className='border-b border-border/40 p-4'>
+              <BonusCard bonus={bonus} compact />
+            </div>
+          ) : (
+            (bonusBalance > 0 || bonusLocked > 0) && (
+              <div className='flex items-center justify-between gap-3 border-b border-border/40 p-4'>
+                <div className='flex flex-col'>
+                  <span className='text-sm text-placeholder'>Bonus</span>
+                  <span className='text-base font-bold text-black'>
+                    {formatKobo(bonusBalance)}
+                    {bonusLocked > 0 && (
+                      <span className='ml-2 text-xs font-medium text-neutral-10'>
+                        + {formatKobo(bonusLocked)} locked
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <Link
+                  to='/bonuses'
+                  className='text-xs font-semibold text-black hover:underline'
+                >
+                  View bonus
+                </Link>
+              </div>
+            )
+          )}
+
           <WithdrawalAccounts />
         </div>
         <div className='flex flex-col gap-4 w-full'>
@@ -245,8 +285,15 @@ const AccountWallet = () => {
                             }`}
                           />
                           <div className='flex flex-col'>
-                            <span className='text-sm font-semibold text-black capitalize'>
-                              {transactionTypeLabel(item)}
+                            <span className='flex items-center gap-2'>
+                              <span className='text-sm font-semibold text-black capitalize'>
+                                {transactionTypeLabel(item)}
+                              </span>
+                              {isBonusTransaction(item) && (
+                                <span className='rounded-full bg-surface-success px-2 py-0.5 text-[10px] font-semibold text-success'>
+                                  Bonus
+                                </span>
+                              )}
                             </span>
                             <span className='text-sm text-black'>
                               {item.description}

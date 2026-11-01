@@ -57,11 +57,16 @@ export const betPriceLabel = (bet: Bet): string =>
       : 'Pool'
     : formatSharePrice(Number(bet.price))
 
-/** Whether to offer Cash out. Falls back to "open and not a pool" on an API
- *  that doesn't send `cashOutAvailable` yet. */
+/** Bonus-funded: settles on the market only, never cashed out. */
+export const isBonusPosition = (position: BetPosition): boolean =>
+  position.fundedBy === 'BONUS'
+
+/** Whether to offer Cash out. Never on a bonus bet; otherwise falls back to
+ *  "open and not a pool" on an API that doesn't send `cashOutAvailable`. */
 export const canCashOut = (position: BetPosition): boolean =>
-  position.cashOutAvailable ??
-  (position.status === 'OPEN' && !isPoolPosition(position))
+  !isBonusPosition(position) &&
+  (position.cashOutAvailable ??
+    (position.status === 'OPEN' && !isPoolPosition(position)))
 
 /**
  * Live mark for an OPEN position, in naira. Pool (parimutuel) positions have no

@@ -1,4 +1,5 @@
 import type { ExecutionModel } from './market.types'
+import type { BonusQuote, FundedBy } from './bonus.types'
 
 export type BetType = 'market' | 'limit'
 
@@ -26,6 +27,9 @@ export interface MarketSummary {
   title: string
   slug: string
   imageUrl: string | null
+  /** The market's lobby status (OPEN, CLOSED, PAUSED, SETTLED, VOIDED,
+   *  DISPUTED, UNKNOWN). */
+  status?: string
 }
 
 export interface PlaceBetPayload {
@@ -38,6 +42,8 @@ export interface PlaceBetPayload {
    *  `PRICE_MOVED`. Ignored on pool markets. */
   maxPrice?: number
   clientOrderId?: string
+  /** Stake bonus credit instead of cash. Market bets only. */
+  useBonus?: boolean
 }
 
 /** POST /bets/quote — read-only pricing for a stake. Money is minor units. */
@@ -67,6 +73,8 @@ export interface BetQuote {
     rakeBps: number
   } | null
   note: string | null
+  /** Present only when the quote was asked with `useBonus: true`. */
+  bonus?: BonusQuote | null
 }
 
 export interface Bet {
@@ -97,6 +105,8 @@ export interface Bet {
   estimated?: boolean
   market?: MarketSummary | null
   outcomeLabel?: string | null
+  /** Whether the stake came from cash or bonus credit. */
+  fundedBy?: FundedBy
   createdAt: string
 }
 
@@ -177,6 +187,8 @@ export interface BetPosition {
   estimated?: boolean
   market?: MarketSummary | null
   outcomeLabel?: string | null
+  /** Bonus-funded positions cannot be cashed out. */
+  fundedBy?: FundedBy
   openedAt: string
   settledAt?: string | null
 }
@@ -190,11 +202,21 @@ export interface BetPositionListResponse {
 
 /** Read-only estimate of what a position would return if cashed out now. */
 export interface CashOutQuote {
-  /** Contracts/quantity being sold. */
+  /** Shares this quote is for (same units as the position's `shares`): what
+   *  was asked, else the whole position. */
   quantity: string | number
   /** Price the position would sell at. */
   sellPrice: string | number
-  /** Estimated proceeds, in kobo (minor units). */
+  /** Estimated proceeds for `quantity`, in kobo (minor units). */
   valueMinor: string | number
   currency: string
+  /** Every share held: the most a sale can take. */
+  positionQuantity?: string
+  /** The fewest shares a part sale can sell. */
+  minQuantity?: string
+  /** The fewest shares a part sale must leave behind. */
+  minRemainingQuantity?: string
+  /** False when the position is too small to split: only selling it all works. */
+  partialAvailable?: boolean
 }
+

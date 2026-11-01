@@ -1,11 +1,13 @@
 import ShareBetButton from './ShareBetButton'
 import CashOutButton from './CashOutButton'
+import BonusBetBadge from '../bonus/BonusBetBadge'
 import MarketTitleLink from './MarketTitleLink'
 import { useMarket } from '../../data_layer/markets'
 import {
   formatCurrency,
   formatDate,
   formatSharePrice,
+  isBonusPosition,
   isPoolPosition,
   openPositionMark,
   toMajorUnits,
@@ -58,6 +60,9 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
       ? toMajorUnits(position.realizedPnl.amount)
       : 0
   const isProfit = pnl >= 0
+  // Profit or loss from part cash-outs of a still-open position.
+  const soldPnl =
+    isOpen && position.realizedPnl ? toMajorUnits(position.realizedPnl.amount) : 0
   // Amount actually returned to the user for a settled/closed position.
   const payout = staked + pnl
 
@@ -93,12 +98,14 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
                 {outcomeLabel}
               </span>
             )}
+            {isBonusPosition(position) && <BonusBetBadge />}
           </div>
 
           {/* Won, lost or void = the market settled. A cashed-out position's
               market is usually still open, so it keeps its link. */}
           <MarketTitleLink
             marketId={position.marketId}
+            marketStatus={position.market?.status}
             settled={result === 'WON' || result === 'LOST' || result === 'VOID'}
             className='line-clamp-2 text-left text-sm font-semibold text-black'
           >
@@ -156,6 +163,19 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
           if {outcomeLabel || 'it'} wins
         </p>
       )}
+      {/* After a part cash-out the position stays open; realizedPnl holds
+          what the sold shares made. */}
+      {isOpen && soldPnl !== 0 && (
+        <p className='text-xs text-neutral-10'>
+          Already cashed out:{' '}
+          <span
+            className={`font-semibold ${soldPnl > 0 ? 'text-success' : 'text-error'}`}
+          >
+            {soldPnl > 0 ? '+' : '-'}
+            {formatCurrency(Math.abs(soldPnl), currency)}
+          </span>
+        </p>
+      )}
       {!isOpen && position.settledAt && (
         <p className='text-xs text-placeholder'>
           {result === 'CASHED_OUT' ? 'Cashed out' : 'Settled'}{' '}
@@ -165,7 +185,12 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
 
       {(isOpen || shareable) && (
         <div className='flex items-center justify-between'>
-          {isOpen ? (
+          {isOpen && isBonusPosition(position) ? (
+            // Bonus positions settle on the market only — no cash-out.
+            <span className='text-xs text-neutral-10'>
+              Bonus bets can’t be cashed out
+            </span>
+          ) : isOpen ? (
             <CashOutButton
               position={position}
               title={title}

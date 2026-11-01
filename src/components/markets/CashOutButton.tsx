@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { isAxiosError } from 'axios'
+import { useQueryClient } from '@tanstack/react-query'
+import { useDebounce } from 'use-debounce'
 import ModalComponent from '../globals/ModalComponent'
 import { Button } from '../globals/Button'
 import { useCashOut, useCashOutQuote } from '../../data_layer/bets'
+import { BET_POSITIONS_KEY } from '../../data_layer/queryKeys'
 import {
   canCashOut,
   formatCurrency,
@@ -30,6 +33,12 @@ const Row = ({
   </div>
 )
 
+const PRESETS = [25, 50, 75, 100]
+
+/** Shares as the API takes them: a decimal string, at most 6 places. */
+const toQuantity = (shares: number) =>
+  String(Number(shares.toFixed(6)))
+
 interface CashOutButtonProps {
   position: BetPosition
   /** Market title, for the dialog. */
@@ -41,12 +50,14 @@ interface CashOutButtonProps {
 }
 
 /**
- * "Cash out" for an open position, with a confirm dialog that holds a live
- * quote: re-priced every few seconds, and the confirm stays disabled until a
- * quote is in, so the player always sees the amount they're agreeing to — and
- * the cash-out is sent with that amount as its floor. Renders nothing when the
- * position can't be cashed out (pool positions, closed or unpriced markets).
- * One implementation for the portfolio and the market's sell panel.
+ * "Cash out" for an open position: sell all of it, or part of it. The confirm
+ * dialog holds a live quote — re-priced every few seconds, and the confirm
+ * stays disabled until a quote for the chosen amount is in, so the player
+ * always sees what they're agreeing to — and the sale is sent with that amount
+ * as its floor. A part sale stays inside the range the quote allows (partner
+ * markets have a minimum order size). Renders nothing when the position can't
+ * be cashed out (pool or bonus positions, closed or unpriced markets). One
+ * implementation for the portfolio and the market's sell panel.
  */
 const CashOutButton = ({
   position,
@@ -56,49 +67,114 @@ const CashOutButton = ({
   size = 'medium',
   className = 'w-fit!',
 }: CashOutButtonProps) => {
+  const qc = useQueryClient()
   const [open, setOpen] = useState(false)
+  // Share of the position to sell, 1–100.
+  const [percent, setPercent] = useState(100)
   const suspended = useAccountSuspended()
   const { mutateAsync: cashOut, isPending } = useCashOut(position.id)
+
+  // The whole-position quote carries the range a part sale must stay in.
   const {
-    data: quote,
+    data: fullQuote,
     isLoading,
     isError,
     error,
-    refetch: refetchQuote,
+    refetch: refetchFull,
   } = useCashOutQuote(position.id, open)
+  const held = Number(fullQuote?.positionQuantity) || 0
+  const minQty = Number(fullQuote?.minQuantity) || 0
+  const minLeft = Number(fullQuote?.minRemainingQuantity) || 0
+  // An API without ranges (or a position too small to split): sell all only.
+  const canSplit = held > 0 && fullQuote?.partialAvailable === true
+  const minPercent = canSplit ? Math.max(1, Math.ceil((minQty / held) * 100)) : 100
+  const maxPartPercent = canSplit
+    ? Math.floor(((held - minLeft) / held) * 100)
+    : 0
+
+  const sellAll = !canSplit || percent >= 100
+  const partValid = sellAll || (percent >= minPercent && percent <= maxPartPercent)
+  const shares = sellAll ? held : (held * percent) / 100
+  const quantity = sellAll ? undefined : toQuantity(shares)
+
+  // Price the chosen part once the slider settles.
+  const [quotedQuantity] = useDebounce(quantity, 250)
+  const { data: partQuote, refetch: refetchPart } = useCashOutQuote(
+    position.id,
+    open && !!quotedQuantity && partValid,
+    quotedQuantity,
+  )
+  const quote = sellAll ? fullQuote : partQuote
+  // Only trust a quote for exactly the amount on screen.
+  const quoteMatches =
+    !!quote &&
+    (sellAll
+      ? quote === fullQuote
+      : Number(quote.quantity) === Number(quantity))
 
   const { staked } = openPositionMark(position)
-  const proceeds = quote ? toMajorUnits(quote.valueMinor) : null
-  const result = proceeds != null ? proceeds - staked : null
+  const proceeds = quoteMatches ? toMajorUnits(quote.valueMinor) : null
+  // The stake behind the shares being sold.
+  const stakedPart = sellAll || held <= 0 ? staked : (staked * shares) / held
+  const result = proceeds != null ? proceeds - stakedPart : null
   const quoteError = isError
     ? ((isAxiosError(error) && error.response?.data?.message) ||
       'Cash-out isn’t available for this position right now.')
     : null
 
+  const refetchQuotes = () => {
+    void refetchFull()
+    if (!sellAll) void refetchPart()
+  }
+
   const close = () => {
-    if (!isPending) setOpen(false)
+    if (isPending) return
+    setOpen(false)
+    setPercent(100)
   }
 
   const handleConfirm = async () => {
+    if (!quoteMatches || !quote) return
     try {
       // Never pay out less than the amount on the button.
-      // The endpoint takes a JSON body, even an empty one.
-      await cashOut(quote ? { minValueMinor: String(quote.valueMinor) } : {})
+      await cashOut({
+        minValueMinor: String(quote.valueMinor),
+        ...(quantity ? { quantity } : {}),
+      })
       showSuccessToast(
-        proceeds != null
-          ? `Cashed out · ${formatCurrency(proceeds)} added to your winnings`
-          : 'Position cashed out',
+        sellAll
+          ? `Cashed out · ${formatCurrency(proceeds ?? 0)} added to your winnings`
+          : `Sold ${percent}% · ${formatCurrency(proceeds ?? 0)} added to your winnings`,
       )
-      setOpen(false)
+      close()
     } catch (err) {
       const data = isAxiosError(err) ? err.response?.data : undefined
+      // Nothing was sold on any of these: re-quote and let them try again.
       if (data?.code === 'CASH_OUT_VALUE_MOVED') {
-        // Position untouched; re-quote so the button shows the new amount.
-        void refetchQuote()
+        refetchQuotes()
         showWarningToast(
           data.valueMinor
             ? `The cash-out value dropped to ${formatCurrency(toMajorUnits(data.valueMinor))}. Check it and confirm again.`
             : 'The cash-out value dropped. Check it and confirm again.',
+        )
+        return
+      }
+      if (
+        data?.code === 'CASH_OUT_BELOW_MINIMUM' ||
+        data?.code === 'CASH_OUT_QUANTITY_INVALID'
+      ) {
+        // The allowed range moves with the live price on partner markets.
+        refetchQuotes()
+        showWarningToast(
+          data.message ?? 'That amount can’t be sold on its own. Pick another.',
+        )
+        return
+      }
+      if (data?.code === 'POSITION_CHANGED') {
+        qc.invalidateQueries({ queryKey: BET_POSITIONS_KEY })
+        refetchQuotes()
+        showWarningToast(
+          'This position just changed. Check the new amount and confirm again.',
         )
         return
       }
@@ -143,32 +219,96 @@ const CashOutButton = ({
             <p className='rounded-lg bg-error-bg px-3 py-2.5 text-sm text-error'>
               {quoteError}
             </p>
-          ) : isLoading || proceeds == null ? (
+          ) : isLoading || !fullQuote ? (
             <div className='h-24 animate-pulse rounded-lg bg-hover' />
           ) : (
-            <section className='flex flex-col gap-2 rounded-2xl border border-border p-4'>
-              <Row label='You staked' value={formatCurrency(staked)} />
-              {Number(quote?.sellPrice) > 0 && (
-                <Row
-                  label='Sell price'
-                  value={formatSharePrice(Number(quote?.sellPrice))}
-                />
+            <>
+              {/* How much to sell */}
+              {canSplit ? (
+                <section className='flex flex-col gap-2'>
+                  <div className='flex items-center justify-between text-sm'>
+                    <span className='text-neutral-10'>Amount to sell</span>
+                    <span className='font-semibold text-black'>
+                      {sellAll ? 'All' : `${percent}%`}
+                    </span>
+                  </div>
+                  <input
+                    type='range'
+                    min={1}
+                    max={100}
+                    value={percent}
+                    onChange={(e) => setPercent(Number(e.target.value))}
+                    aria-label='Share of the position to sell'
+                    className='w-full accent-brand-green'
+                  />
+                  <div className='flex gap-2'>
+                    {PRESETS.map((p) => (
+                      <button
+                        key={p}
+                        type='button'
+                        onClick={() => setPercent(p)}
+                        className={`flex-1 rounded-full py-1 text-xs font-semibold transition-colors ${
+                          percent === p
+                            ? 'bg-brand-green text-black'
+                            : 'bg-hover text-neutral-10 hover:text-black'
+                        }`}
+                      >
+                        {p === 100 ? 'All' : `${p}%`}
+                      </button>
+                    ))}
+                  </div>
+                  {!partValid && (
+                    <p className='text-xs font-medium text-warning'>
+                      {maxPartPercent >= minPercent
+                        ? `You can sell between ${minPercent}% and ${maxPartPercent}% of this position, or all of it.`
+                        : 'This position can only be sold in full.'}
+                    </p>
+                  )}
+                </section>
+              ) : (
+                fullQuote.partialAvailable === false && (
+                  <p className='text-xs text-neutral-10'>
+                    This position is too small to split, so it can only be sold
+                    in full.
+                  </p>
+                )
               )}
-              <Row label='You get now' value={formatCurrency(proceeds)} />
-              {result != null && (
+
+              <section
+                className={`flex flex-col gap-2 rounded-2xl border border-border p-4 ${
+                  partValid && !quoteMatches ? 'opacity-60' : ''
+                }`}
+              >
                 <Row
-                  label={result >= 0 ? 'Profit' : 'Loss'}
-                  value={`${result >= 0 ? '+' : '-'}${formatCurrency(Math.abs(result))}`}
-                  tone={result >= 0 ? 'text-success' : 'text-error'}
+                  label={sellAll ? 'You staked' : 'Stake on this part'}
+                  value={formatCurrency(stakedPart)}
                 />
-              )}
-            </section>
+                {Number(quote?.sellPrice) > 0 && (
+                  <Row
+                    label='Sell price'
+                    value={formatSharePrice(Number(quote?.sellPrice))}
+                  />
+                )}
+                <Row
+                  label='You get now'
+                  value={proceeds != null ? formatCurrency(proceeds) : '—'}
+                />
+                {result != null && (
+                  <Row
+                    label={result >= 0 ? 'Profit' : 'Loss'}
+                    value={`${result >= 0 ? '+' : '-'}${formatCurrency(Math.abs(result))}`}
+                    tone={result >= 0 ? 'text-success' : 'text-error'}
+                  />
+                )}
+              </section>
+            </>
           )}
 
           {!quoteError && (
             <p className='text-xs text-neutral-10'>
               The amount updates live with the market and may move slightly
               before your cash-out lands. It’s paid into your winnings.
+              {!sellAll && ' The rest of your position stays open.'}
             </p>
           )}
 
@@ -187,14 +327,14 @@ const CashOutButton = ({
                 type='button'
                 text={
                   proceeds != null
-                    ? `Cash out ${formatCurrency(proceeds)}`
+                    ? `${sellAll ? 'Cash out' : `Sell ${percent}%`} · ${formatCurrency(proceeds)}`
                     : 'Cash out'
                 }
                 variation='primary'
                 size='large'
                 className='w-full'
                 loading={isPending}
-                disabled={proceeds == null || suspended}
+                disabled={proceeds == null || !partValid || suspended}
                 onClick={handleConfirm}
               />
             )}

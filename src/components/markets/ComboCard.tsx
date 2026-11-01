@@ -63,6 +63,7 @@ const ComboCard = ({ combo }: { combo: ComboTicket }) => {
               </span>
               <MarketTitleLink
                 marketId={leg.marketId}
+                marketStatus={leg.market?.status}
                 settled={leg.status !== 'OPEN'}
                 className='min-w-0 flex-1 text-left'
               >

@@ -26,6 +26,7 @@ import {
 } from '../../utils/functions'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { ComboLeg } from '../../types/combo.types'
+import { useCurrentBonus } from '../../data_layer/bonuses'
 
 const QUICK_ADDS = [100, 500, 1000, 2000]
 
@@ -103,6 +104,7 @@ const ComboSlip = ({
   const authNavigate = useAuthNavigate()
   const [cookies] = useCookies(['token'])
   const isSignedIn = !!cookies?.token
+  const { bonus } = useCurrentBonus(isSignedIn)
 
   const {
     legs,
@@ -419,6 +421,11 @@ const ComboSlip = ({
                   </span>
                 )}
               </div>
+              {bonus && (
+                <p className='-mt-1 text-xs text-neutral-10'>
+                  Combo bets use cash only — bonus credit can’t be used here.
+                </p>
+              )}
               <div className='flex items-center rounded-lg border-2 border-black px-3 py-2.5'>
                 <span className='text-sm font-bold text-neutral-10'>
                   {NAIRA}

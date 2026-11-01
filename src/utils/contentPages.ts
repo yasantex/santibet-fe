@@ -14,6 +14,8 @@ export interface KnownContentPage {
   /** Footer label while the page isn't published. */
   label: string
   fallbackFile: string
+  /** Linked from elsewhere (e.g. a bonus), not listed in the footer. */
+  hideFromFooter?: boolean
 }
 
 export const KNOWN_CONTENT_PAGES: KnownContentPage[] = [
@@ -58,6 +60,24 @@ export const KNOWN_CONTENT_PAGES: KnownContentPage[] = [
     title: 'Responsible Gambling',
     label: 'Responsible Gambling',
     fallbackFile: '/contents/responsibleGambling.md',
+  },
+  // Bonus T&Cs: the bonus API's `termsUrl` points at these routes. Publish a
+  // page with the same slug in admin to replace the bundled summary.
+  {
+    slug: 'new-member-bonus',
+    route: '/terms/new-member-bonus',
+    title: '₦1,010 Free Deposit — Terms & Conditions',
+    label: 'New member bonus terms',
+    fallbackFile: '/contents/new-member-bonus.md',
+    hideFromFooter: true,
+  },
+  {
+    slug: '1000-bonus',
+    route: '/terms/1000-bonus',
+    title: '100% First Deposit Bonus — Terms & Conditions',
+    label: 'First deposit bonus terms',
+    fallbackFile: '/contents/1000-bonus.md',
+    hideFromFooter: true,
   },
 ]
 

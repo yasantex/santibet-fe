@@ -16,3 +16,7 @@ export const DEPOSITS_KEY = ['/wallet/deposits']
 export const BETS_KEY = ['bets']
 export const BET_POSITIONS_KEY = ['bet-positions']
 export const BET_PORTFOLIO_KEY = ['bet-portfolio']
+
+export const BONUS_KEY = ['bonuses']
+export const CURRENT_BONUS_KEY = ['bonuses', 'current']
+export const BONUS_OFFER_KEY = ['bonuses', 'offer']

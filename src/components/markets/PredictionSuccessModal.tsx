@@ -50,7 +50,13 @@ const PredictionSuccessModal = ({
   const { positions, isLoading } = useMarketPositions(
     order ? market.id : undefined,
   )
-  const position = positions.find((p) => p.outcomeId === order?.bet.outcomeId)
+  const isBonus = order?.fundedBy === 'BONUS'
+  // Bonus and cash positions never merge, so match the funding too.
+  const position = positions.find(
+    (p) =>
+      p.outcomeId === order?.bet.outcomeId &&
+      (p.fundedBy ?? 'CASH') === (order?.fundedBy ?? 'CASH'),
+  )
 
   if (!order) return null
 
@@ -67,9 +73,13 @@ const PredictionSuccessModal = ({
   const returned = order.bet.potentialReturn
     ? toMajorUnits(order.bet.potentialReturn.amount)
     : null
-  // netReturn = potentialReturn − fee (pool: fee 0). An API without it: take
-  // the quoted fee off the gross fixed-odds return.
-  const payout = order.bet.netReturn
+  // A bonus win credits the bonus (the whole return, or only the profit for
+  // the deposit bonus), which the slip worked out. Otherwise netReturn =
+  // potentialReturn − fee (pool: fee 0); an API without it: take the quoted
+  // fee off the gross fixed-odds return.
+  const payout = isBonus
+    ? order.payout
+    : order.bet.netReturn
     ? toMajorUnits(order.bet.netReturn.amount)
     : returned == null
       ? order.payout
@@ -100,7 +110,9 @@ const PredictionSuccessModal = ({
           <div className='flex h-12 w-12 items-center justify-center rounded-full bg-surface-success text-success'>
             <HugeiconsIcon icon={CheckmarkCircle02Icon} size={26} />
           </div>
-          <h2 className='text-lg font-bold text-black'>Prediction placed</h2>
+          <h2 className='text-lg font-bold text-black'>
+            {isBonus ? 'Bonus bet placed' : 'Prediction placed'}
+          </h2>
           <p className='text-xs text-neutral-10'>{market.title}</p>
         </div>
 
@@ -117,15 +129,32 @@ const PredictionSuccessModal = ({
             <Row label={pool ? 'Est. odds' : 'Odds'} value={odds.toFixed(2)} />
           )}
           {fee > 0 && <Row label='Fee' value={formatCurrency(fee)} />}
-          <Row
-            label={pool ? 'Est. payout if it wins' : 'Payout if it wins'}
-            value={formatCurrency(payout)}
-          />
-          <Row
-            label='Profit'
-            value={`${profit >= 0 ? '+' : '-'}${formatCurrency(Math.abs(profit))}`}
-            tone={profit >= 0 ? 'text-success' : 'text-error'}
-          />
+          {isBonus ? (
+            <>
+              <Row
+                label={
+                  order.bonusCreditsTo === 'LOCKED_WINNINGS'
+                    ? 'Win (locked winnings)'
+                    : 'Win (to bonus balance)'
+                }
+                value={formatCurrency(payout)}
+                tone='text-success'
+              />
+              <Row label='Paid with' value='Bonus credit' />
+            </>
+          ) : (
+            <>
+              <Row
+                label={pool ? 'Est. payout if it wins' : 'Payout if it wins'}
+                value={formatCurrency(payout)}
+              />
+              <Row
+                label='Profit'
+                value={`${profit >= 0 ? '+' : '-'}${formatCurrency(Math.abs(profit))}`}
+                tone={profit >= 0 ? 'text-success' : 'text-error'}
+              />
+            </>
+          )}
         </section>
 
         <section className='flex flex-col gap-2 rounded-2xl border border-border p-4'>
@@ -174,7 +203,12 @@ const PredictionSuccessModal = ({
         </section>
 
         <div className='flex flex-col gap-2'>
-          {pool ? (
+          {isBonus ? (
+            <p className='text-center text-xs text-neutral-10'>
+              Bonus bets can’t be cashed out — this one settles when the market
+              resolves.
+            </p>
+          ) : pool ? (
             <p className='text-center text-xs text-neutral-10'>
               Pool bets can’t be cashed out. Winners are paid from the pool
               when the market closes.

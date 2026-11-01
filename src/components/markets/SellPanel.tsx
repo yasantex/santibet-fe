@@ -1,8 +1,10 @@
 import CashOutButton from './CashOutButton'
+import BonusBetBadge from '../bonus/BonusBetBadge'
 import { useMarketPositions } from '../../data_layer/bets'
 import {
   formatCurrency,
   formatSharePrice,
+  isBonusPosition,
   isPoolPosition,
   openPositionMark,
 } from '../../utils/functions'
@@ -37,10 +39,13 @@ export const MarketPositionRow = ({
   return (
     <div className='flex flex-col gap-3 rounded-lg border border-border p-3'>
       <div className='flex items-center justify-between gap-2'>
-        <span
-          className={`truncate text-xs font-bold uppercase ${TONE_STYLES[tone].percent}`}
-        >
-          {label}
+        <span className='flex min-w-0 items-center gap-2'>
+          <span
+            className={`truncate text-xs font-bold uppercase ${TONE_STYLES[tone].percent}`}
+          >
+            {label}
+          </span>
+          {isBonusPosition(position) && <BonusBetBadge />}
         </span>
         {!isPoolPosition(position) && (
           <span className='shrink-0 text-xs text-neutral-10'>
@@ -80,11 +85,17 @@ export const MarketPositionRow = ({
             </span>
           </div>
         )}
-        <CashOutButton
-          position={position}
-          title={market.title}
-          outcomeLabel={label}
-        />
+        {isBonusPosition(position) ? (
+          <span className='max-w-36 text-right text-xs text-neutral-10'>
+            Bonus bets can’t be cashed out
+          </span>
+        ) : (
+          <CashOutButton
+            position={position}
+            title={market.title}
+            outcomeLabel={label}
+          />
+        )}
       </div>
     </div>
   )

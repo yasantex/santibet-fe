@@ -93,13 +93,12 @@ const OrderRow = ({
             {filledPct != null && ` · ${filledPct}% filled`}
           </span>
         </div>
-        {/* A result means the market has settled — no link to a dead page. */}
+        {/* A settled or voided market is gone — no link to a dead page. */}
         <MarketTitleLink
           marketId={bet.marketId}
+          marketStatus={bet.market?.status}
           settled={bet.result != null}
-          className={`mt-1 block max-w-md truncate text-left text-xs text-neutral-10 ${
-            bet.result == null ? 'hover:text-black' : ''
-          }`}
+          className='mt-1 block max-w-md truncate text-left text-xs text-neutral-10'
         >
           {bet.market?.title ?? bet.marketId}
         </MarketTitleLink>

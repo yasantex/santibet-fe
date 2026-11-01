@@ -7,7 +7,7 @@ import {
   useSantiBetMutation,
   useSantiBetQuery,
 } from './utils'
-import { BET_PORTFOLIO_KEY } from './queryKeys'
+import { BET_PORTFOLIO_KEY, BONUS_KEY } from './queryKeys'
 import type {
   Bet,
   BetListResponse,
@@ -36,6 +36,8 @@ const invalidateAfterTrade = (qc: ReturnType<typeof useQueryClient>) => {
   qc.invalidateQueries({ queryKey: BET_PORTFOLIO_KEY })
   qc.invalidateQueries({ queryKey: ['/wallet', {}] })
   qc.invalidateQueries({ queryKey: ['wallet-transactions'] })
+  // Bonus bets move the bonus balance, progress and eligibility.
+  qc.invalidateQueries({ queryKey: BONUS_KEY })
 }
 
 export const usePlaceBet = () => {
@@ -95,8 +97,10 @@ const useQuoteQuery = <TData, TBody>(
 }
 
 /**
- * Server pricing for a stake: the fill price, decimal odds, fee, net payout and
- * profit. Pass null until there's something to price.
+ * Server pricing for a stake (`POST /bets/quote`): the fill price, decimal
+ * odds, fee, net payout and profit — plus, with `useBonus: true`, the `bonus`
+ * block (eligibility and what a win credits). The one quote hook for the
+ * order form and the bonus slip. Pass null until there's something to price.
  */
 export const useBetQuote = (body: Omit<PlaceBetPayload, 'clientOrderId'> | null) =>
   useQuoteQuery<BetQuote, typeof body>('/bets/quote', body, 'bet-quote')
@@ -155,25 +159,41 @@ export const useMarketPositions = (marketId?: string) => {
  * the user sees "Cash out ₦X" before committing; re-quoted every few seconds
  * since it moves with the market. No retries: an error usually means the
  * position can't be cashed out, and the dialog should say so straight away.
+ *
+ * `quantity` (shares, as a string) prices a part sale; leave it out for the
+ * whole position. Either way the quote carries the allowed range for a part
+ * sale. The last quote stays on screen while a new quantity is priced.
  */
-export const useCashOutQuote = (positionId?: string, enabled = true) =>
+export const useCashOutQuote = (
+  positionId?: string,
+  enabled = true,
+  quantity?: string,
+) =>
   useSantiBetQuery<CashOutQuote>({
     path: `/bets/positions/${positionId}/cash-out-quote`,
-    queryKey: ['cash-out-quote', positionId],
+    queryKey: ['cash-out-quote', positionId, quantity ?? 'all'],
+    params: { quantity },
     enabled: enabled && !!positionId,
     queryOptions: {
       staleTime: 0,
       gcTime: 0,
       retry: false,
       refetchInterval: 5000,
+      placeholderData: keepPreviousData,
     },
   })
 
-/** Cash out a whole position. `minValueMinor` (kobo) = the quoted amount the
- *  player agreed to; below it the API answers 409 `CASH_OUT_VALUE_MOVED`. */
+/**
+ * Cash out a position: all of it, or `quantity` shares of it.
+ * `minValueMinor` (kobo) = the quoted amount the player agreed to; below it
+ * the API answers 409 `CASH_OUT_VALUE_MOVED`.
+ */
 export const useCashOut = (positionId: string) => {
   const qc = useQueryClient()
-  return useSantiBetMutation<BetPosition, { minValueMinor?: string }>({
+  return useSantiBetMutation<
+    BetPosition,
+    { minValueMinor?: string; quantity?: string }
+  >({
     path: `/bets/positions/${positionId}/cash-out`,
     mutationOptions: {
       onSuccess: () => invalidateAfterTrade(qc),

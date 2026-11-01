@@ -10,6 +10,7 @@ import { Link } from 'react-router'
 import { useContentPages, useFaqs } from '../data_layer/pages'
 import {
   KNOWN_CONTENT_PAGES,
+  findKnownContentPage,
   contentPageRoute,
 } from '../utils/contentPages'
 
@@ -56,8 +57,12 @@ const useContentPageLinks = () => {
   const { data: faqs = [] } = useFaqs()
   const published = new Set(data.map((p) => p.slug))
   return [
-    ...data.map((p) => ({ label: p.title, href: contentPageRoute(p.slug) })),
-    ...KNOWN_CONTENT_PAGES.filter((p) => !published.has(p.slug)).map((p) => ({
+    ...data
+      .filter((p) => !findKnownContentPage(p.slug)?.hideFromFooter)
+      .map((p) => ({ label: p.title, href: contentPageRoute(p.slug) })),
+    ...KNOWN_CONTENT_PAGES.filter(
+      (p) => !published.has(p.slug) && !p.hideFromFooter,
+    ).map((p) => ({
       label: p.label,
       href: p.route,
     })),

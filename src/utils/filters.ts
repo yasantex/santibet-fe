@@ -52,6 +52,7 @@ export const notificationFilterCategories: FilterCategory[] = [
       { label: 'Market resolved', value: 'MARKET_RESOLVED' },
       { label: 'Winnings credited', value: 'WINNINGS_CREDITED' },
       { label: 'Security alert', value: 'SECURITY_ALERT' },
+      { label: 'Bonus', value: 'BONUS_UPDATE' },
     ],
   },
   {
