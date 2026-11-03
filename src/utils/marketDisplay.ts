@@ -1,3 +1,6 @@
+import { formatSharePrice } from './functions'
+import type { UiMarket } from '../types/market.types'
+
 /**
  * Outcome colour. Binary markets use yes/no (green/red). In 3+ outcome markets
  * the first is green, the last red, and each outcome in between gets its own
@@ -104,6 +107,21 @@ export const outcomeTone = (
   return MID_TONES[(index - 1) % MID_TONES.length]
 }
 
+export const NO_LABELS = ['no', 'down', 'under', 'lose', 'false']
+export const YES_LABELS = ['yes', 'up', 'over', 'win', 'true']
+
+/**
+ * Text colour for an outcome label shown without its market (portfolio,
+ * orders): green for yes-like, red for no-like, neutral for everything else —
+ * so "Draw" or a team name doesn't read as a loser.
+ */
+export const outcomeLabelClass = (label?: string | null): string => {
+  const l = (label ?? '').trim().toLowerCase()
+  if (YES_LABELS.includes(l)) return 'text-success'
+  if (NO_LABELS.includes(l)) return 'text-error'
+  return 'text-black'
+}
+
 export const categoryIcons: Record<string, string> = {
   Politics: '🏛️',
   Sports: '🏴',
@@ -153,6 +171,48 @@ export const marketHref = (
   if (market.eventId) params.set('event', market.eventId)
   const qs = params.toString()
   return `/markets/${market.id}${qs ? `?${qs}` : ''}`
+}
+
+/** A pool (parimutuel) market: odds float until close and there's no share
+ *  price. Only known on the lobby feed. */
+export const isPoolMarket = (market: { executionModel?: string | null }) =>
+  market.executionModel === 'PARIMUTUEL'
+
+/**
+ * What an outcome button shows: the share price ("₦63"), or on a pool market —
+ * which has no share price — its chance ("54%") or, if the user switched the
+ * odds format, its current odds ("×1.68"). Never both. A share price
+ * already reads as a percentage (₦63 = 63%), so it's left as is.
+ */
+/** How a pool market's outcomes are priced: payout odds or implied chance. */
+export type OddsFormat = 'odds' | 'percent'
+
+export const outcomePriceLabel = (
+  market: { executionModel?: string | null },
+  outcome: {
+    cents: number
+    price: number
+    percent: number
+    decimalOdds?: number | null
+  },
+  { format = 'percent' }: { format?: OddsFormat } = {},
+): string => {
+  if (!isPoolMarket(market)) return formatSharePrice(outcome.cents)
+  if (format === 'percent') return `${outcome.percent}%`
+  const odds =
+    outcome.decimalOdds ?? (outcome.price > 0 ? 1 / outcome.price : 0)
+  return odds > 0 ? `×${odds.toFixed(2)}` : '—'
+}
+
+/** Badge text for a market's status ("settled" reads as "Resolved"). */
+export const MARKET_STATUS_LABELS: Record<string, string> = {
+  open: 'Open',
+  closed: 'Closed',
+  paused: 'Paused',
+  settled: 'Resolved',
+  voided: 'Voided',
+  disputed: 'Disputed',
+  unknown: 'Unavailable',
 }
 
 /**
@@ -309,4 +369,53 @@ export const marketSport = (market: { seriesKey?: string | null }): string | nul
     SPORT_LABELS[raw] ??
     raw.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   )
+}
+
+const MORE_MARKETS_SUFFIX = ' - More Markets'
+
+/** Slug of an event's "<title> - More Markets" sibling (spreads, totals…),
+ *  which the feed imports as a separate event. */
+export const moreMarketsSlug = (slug?: string) =>
+  slug ? `${slug}-more-markets` : undefined
+
+/**
+ * Drop "<match> - More Markets" events whose main match is in the same list,
+ * so one game shows as one card; its markets are on the match page.
+ */
+export const withoutMoreMarketsDuplicates = <T extends { title: string }>(
+  events: T[],
+): T[] => {
+  const titles = new Set(events.map((e) => e.title))
+  return events.filter(
+    (e) =>
+      !e.title.endsWith(MORE_MARKETS_SUFFIX) ||
+      !titles.has(e.title.slice(0, -MORE_MARKETS_SUFFIX.length)),
+  )
+}
+
+const isYesNoMarket = (m: { outcomes: { label: string }[] }) =>
+  m.outcomes.length === 2 &&
+  m.outcomes.some((o) => YES_LABELS.includes(o.label.trim().toLowerCase()))
+
+/** Short name for one market in a group: "Will Arsenal win on …?" → "Arsenal",
+ *  "…end in a draw?" → "Draw"; otherwise the market title as is. */
+const groupItemLabel = (title: string) => {
+  if (/\bend in a draw\b/i.test(title)) return 'Draw'
+  const win = title.match(/^will (.+?) win\b/i)
+  return win ? win[1] : title
+}
+
+/**
+ * Polymarket-style grouping: an event made of 2–4 Yes/No markets ("Will A
+ * win?", "Draw?", "Will B win?") reads as one row of choices — each choice
+ * is that market's Yes. Null when the event isn't shaped like that.
+ */
+export const groupedChoices = <M extends UiMarket>(markets: M[]) => {
+  if (markets.length < 2 || markets.length > 4) return null
+  if (!markets.every(isYesNoMarket)) return null
+  return markets.map((market) => ({
+    market,
+    outcome: market.yes ?? market.outcomes[0],
+    label: groupItemLabel(market.title),
+  }))
 }

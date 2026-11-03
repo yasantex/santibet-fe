@@ -1,8 +1,13 @@
+import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useEvent } from '../../data_layer/markets'
 import { useFavorites } from '../../hooks/useFavorites'
 import MarketCard from '../../components/markets/MarketCard'
-import { categoryIcon, marketHref } from '../../utils/marketDisplay'
+import {
+  categoryIcon,
+  marketHref,
+  moreMarketsSlug,
+} from '../../utils/marketDisplay'
 import { MarketCardSkeleton } from '../../components/globals/ReusedText'
 import { formatCloseTimer } from '../../utils/functions'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
@@ -11,6 +16,21 @@ const EventDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: event, isLoading, isError } = useEvent(id)
+  // The feed imports a match's spreads/totals as a separate
+  // "<match> - More Markets" event; list them here too.
+  const { data: moreEvent } = useEvent(moreMarketsSlug(event?.slug), {
+    optional: true,
+  })
+  // On the match's own page its name is the heading, so each card shows just
+  // the market ("Spread: Newcastle (-1.5)", not "Newcastle vs …: Spread…").
+  const markets = useMemo(
+    () =>
+      [...(event?.markets ?? []), ...(moreEvent?.markets ?? [])].map((m) => ({
+        ...m,
+        eventTitle: undefined,
+      })),
+    [event, moreEvent],
+  )
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
@@ -53,13 +73,13 @@ const EventDetail = () => {
                 {event.closeTime && (
                   <span>{formatCloseTimer(event.closeTime)}</span>
                 )}
-                <span>{event.markets.length} markets</span>
+                <span>{markets.length} markets</span>
               </div>
             </div>
           </div>
 
           <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-            {event.markets.map((market) => (
+            {markets.map((market) => (
               <MarketCard
                 key={market.id}
                 market={market}
@@ -69,7 +89,7 @@ const EventDetail = () => {
                 isSaved={isFavorite(market.id)}
               />
             ))}
-            {!event.markets.length && (
+            {!markets.length && (
               <p className='col-span-full py-16 text-center text-sm text-neutral-10'>
                 No markets in this event.
               </p>
