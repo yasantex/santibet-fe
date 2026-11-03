@@ -11,8 +11,10 @@ import {
   TicketStarIcon,
 } from '@hugeicons/core-free-icons'
 import { Button } from '../globals/Button'
-import { useComboSlip } from '../../hooks/useComboSlip'
+import { MIN_COMBO_LEGS, useComboSlip } from '../../hooks/useComboSlip'
 import { useComboBet, useComboQuote } from '../../data_layer/bets'
+import { useMarket } from '../../data_layer/markets'
+import OrderForm from '../markets/OrderForm'
 import useAuthNavigate from '../../hooks/useAuthNavigate'
 import { useSantiBetQuery } from '../../data_layer/utils'
 import { showSuccessToast } from '../../utils/toastUtils'
@@ -93,6 +95,74 @@ const LegRow = ({
   </div>
 )
 
+/**
+ * One pick is a plain single bet: the market's own order form (quote, price
+ * protection, bonus), so a player never has to build a combo to bet.
+ */
+const SingleBet = ({
+  leg,
+  onPlaced,
+  onRemove,
+}: {
+  leg: ComboLeg
+  onPlaced: () => void
+  onRemove: () => void
+}) => {
+  const { toggle } = useComboSlip()
+  const { data: market, isLoading, isError } = useMarket(leg.marketId, leg.eventId)
+  const outcome = market?.outcomes.find((o) => o.id === leg.outcomeId)
+
+  return (
+    <div className='flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4'>
+      <div className='flex items-start gap-3'>
+        <div className='min-w-0 flex-1'>
+          <p className='truncate text-xs text-neutral-10'>
+            {leg.eventTitle}
+            {leg.league ? ` · ${leg.league}` : ''}
+          </p>
+          <p className='truncate text-sm font-semibold text-black'>
+            {leg.marketTitle}
+          </p>
+        </div>
+        <button
+          type='button'
+          aria-label='Remove selection'
+          onClick={onRemove}
+          className='shrink-0 rounded-md p-1 text-neutral-10 hover:bg-hover hover:text-error'
+        >
+          <HugeiconsIcon icon={MultiplicationSignIcon} size={16} />
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className='h-64 animate-pulse rounded-xl bg-card' />
+      ) : isError || !market ? (
+        <p className='text-sm text-neutral-10'>
+          We couldn’t load this market. Remove it and try again.
+        </p>
+      ) : (
+        <OrderForm
+          market={market}
+          outcome={outcome}
+          // Switching the pick keeps the slip in step with the cards.
+          onSelectOutcome={(o) => toggle(market, o)}
+          submitText='Place bet'
+          onPlaced={(order) => {
+            showSuccessToast(
+              `Bet placed on ${order.outcomeLabel} · pays ${formatCurrency(order.payout)} if it wins`,
+            )
+            onPlaced()
+          }}
+        />
+      )}
+
+      <p className='rounded-lg bg-hover/50 px-3 py-2 text-xs text-neutral-10'>
+        Add a pick from another game to turn this into a combo.
+      </p>
+    </div>
+  )
+}
+
 const ComboSlip = ({
   open,
   onClose,
@@ -139,7 +209,7 @@ const ComboSlip = ({
   const [quotedStake] = useDebounce(stakeNum, 300)
   const quoteBody = useMemo(
     () =>
-      legs.length
+      legs.length >= MIN_COMBO_LEGS
         ? {
             stake: String(toMinorUnits(quotedStake)),
             legs: legs.map((l) => ({
@@ -334,8 +404,8 @@ const ComboSlip = ({
               Your slip is empty
             </p>
             <p className='text-xs text-neutral-10'>
-              Tap sports outcomes to build a combo. Every pick has to win for the
-              combo to pay out.
+              Tap a sports outcome to bet on it. Add picks from more games to
+              make a combo — every pick has to win for a combo to pay out.
             </p>
             <div className='flex gap-2'>
               <Button
@@ -359,6 +429,15 @@ const ComboSlip = ({
               />
             </div>
           </div>
+        ) : legCount === 1 ? (
+          <SingleBet
+            leg={legs[0]}
+            onRemove={() => remove(legs[0].outcomeId)}
+            onPlaced={() => {
+              clear()
+              onClose()
+            }}
+          />
         ) : (
           <>
             {/* Legs */}

@@ -24,6 +24,7 @@ import {
   Home01Icon,
   Menu01FreeIcons,
   Notification03Icon,
+  User02FreeIcons,
 } from '@hugeicons/core-free-icons'
 import SearchResultsList from '../data_layer/SearchResultsList'
 import MobileSearchOverlay from '../mobile/MobileSearchOverlay'
@@ -335,7 +336,7 @@ const Header = () => {
         <div className='flex items-center justify-end gap-5 w-full'>
           <main className='lg:flex items-center  gap-2.5 hidden'>
             <Dropdown
-              className='flex-1 w-55! md:w-75!'
+              className='flex-1 w-55! md:w-70!'
               menuClassName='w-[350px] max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
               menu={({ close }) => (
                 <SearchResultsList
@@ -357,7 +358,7 @@ const Header = () => {
             </Dropdown>
           </main>
           {user ? (
-            <div className='flex items-center gap-2.5'>
+            <div className='flex items-center gap-1.5'>
               <Link
                 to='/account-portfolio'
                 className='shrink-0 hidden md:flex flex-col items-center gap-px rounded-md px-3 text-xs font-semibold text-black py-1 hover:bg-hover/70'
@@ -407,7 +408,7 @@ const Header = () => {
               </span>
               <Link
                 to='/notifications'
-                className='relative p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'
+                className='relative xl:flex hidden p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'
               >
                 <HugeiconsIcon
                   icon={Notification03Icon}
@@ -417,6 +418,17 @@ const Header = () => {
                 {unreadNotifications > 0 && (
                   <span className='absolute top-1 right-1 h-2 w-2 rounded-full bg-brand-green' />
                 )}
+              </Link>
+              <Link
+                to='/account-profile'
+                aria-label='Account profile'
+                className=' p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'
+              >
+                <HugeiconsIcon
+                  icon={User02FreeIcons}
+                  size={22}
+                  className='shrink-0 text-black'
+                />
               </Link>
               <Dropdown
                 align='end'

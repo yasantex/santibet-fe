@@ -1,58 +1,68 @@
 import { useMemo, useState } from 'react'
-import PositionCard from '../../components/markets/PositionCard'
-import BetHistoryCard from '../../components/markets/BetHistoryCard'
-import ComboCard from '../../components/markets/ComboCard'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  FilterHorizontalIcon,
+  SortingDownIcon,
+} from '@hugeicons/core-free-icons'
 import TradingNotice from '../../components/markets/TradingNotice'
 import { Button } from '../../components/globals/Button'
+import SearchInput from '../../components/globals/SearchInput'
+import Deposit from '../../components/appModals/Deposit'
+import Withdraw from '../../components/appModals/Withdraw'
+import PortfolioSummaryCards from '../../components/portfolio/PortfolioSummaryCards'
+import PositionsTable from '../../components/portfolio/PositionsTable'
+import {
+  POSITION_SORTS,
+  sortPositionRows,
+  type PositionSort,
+} from '../../components/portfolio/positionRows'
+import OpenOrdersTable from '../../components/portfolio/OpenOrdersTable'
+import HistoryTable from '../../components/portfolio/HistoryTable'
+import {
+  ACTIVITY_FILTERS,
+  buildActivity,
+  filterActivity,
+  HISTORY_SORTS,
+  type ActivityFilter,
+  type HistorySort,
+} from '../../components/portfolio/activity'
+import {
+  TableState,
+  ToolbarMenu,
+} from '../../components/portfolio/PortfolioBits'
 import {
   useBetPositions,
   useBets,
   usePortfolioSummary,
 } from '../../data_layer/bets'
 import { useSantiBetQuery } from '../../data_layer/utils'
-import {
-  formatCurrency,
-  spendableBalance,
-  toMajorUnits,
-} from '../../utils/functions'
-import type { Bet, BetPosition, ComboTicket } from '../../types/bet.types'
+import { useModalControl } from '../../hooks/useModalControl'
+import { spendableBalance } from '../../utils/functions'
+import type { Bet, BetPosition } from '../../types/bet.types'
 import type { WalletBalance } from '../../types/wallet.types'
 
-type PortfolioTab = 'OPEN' | 'POSITIONS' | 'HISTORY'
+type PortfolioTab = 'POSITIONS' | 'OPEN' | 'HISTORY'
 const TABS: { key: PortfolioTab; label: string }[] = [
-  { key: 'OPEN', label: 'Open' },
   { key: 'POSITIONS', label: 'Positions' },
+  { key: 'OPEN', label: 'Open' },
   { key: 'HISTORY', label: 'History' },
 ]
 
-type HistoryItem =
-  | { kind: 'bet'; at: number; bet: Bet }
-  | { kind: 'combo'; at: number; combo: ComboTicket }
+const flatten = <T,>(pages?: ({ data?: T[] } | undefined)[]) =>
+  (pages ?? []).flatMap((p) => p?.data ?? [])
 
-const signed = (n: number) => `${n >= 0 ? '+' : '-'}${formatCurrency(Math.abs(n))}`
-const pnlClass = (n: number) => (n >= 0 ? 'text-success' : 'text-error')
-
-const StatCard = ({
-  label,
-  value,
-  valueClass = 'text-black',
-  hint,
-}: {
-  label: string
-  value: string
-  valueClass?: string
-  hint?: string
-}) => (
-  <div className='flex min-w-0 flex-col gap-1 rounded-lg bg-card p-4'>
-    <span className='text-sm text-placeholder'>{label}</span>
-    <span className={`text-lg font-bold ${valueClass}`}>{value}</span>
-    {hint && <span className='text-xs text-placeholder'>{hint}</span>}
-  </div>
-)
+/** Oldest time on the loaded pages, or -∞ once a list is fully loaded. */
+const cutoffOf = (times: number[], hasNextPage?: boolean) =>
+  hasNextPage && times.length ? Math.min(...times) : -Infinity
 
 const AccountPortfolio = () => {
-  const [activeTab, setActiveTab] = useState<PortfolioTab>('OPEN')
-  const isHistory = activeTab === 'HISTORY'
+  const [activeTab, setActiveTab] = useState<PortfolioTab>('POSITIONS')
+  const [search, setSearch] = useState('')
+  const [positionSort, setPositionSort] = useState<PositionSort>('value')
+  const [historySort, setHistorySort] = useState<HistorySort>('newest')
+  const [historyFilter, setHistoryFilter] = useState<ActivityFilter>('all')
+  const { modal, modalOpen, handleModalOpen, handleModalClose } =
+    useModalControl()
 
   // Headline numbers come from the server over every position, so they're
   // right however many pages the lists below have loaded.
@@ -64,17 +74,15 @@ const AccountPortfolio = () => {
   })
 
   const positionsQuery = useBetPositions('open')
-  // Every position, open and finished (won, lost, cashed out, void).
-  const allPositionsQuery = useBetPositions('all')
+  const ordersQuery = useBets('OPEN', 50)
   const betsQuery = useBets('all', 20)
+  // Every position, not just `settled`: a cashed-out one is CLOSED, and the
+  // open ones are skipped when building the feed.
+  const settledQuery = useBetPositions('all')
 
-  const positions = useMemo<BetPosition[]>(
-    () => (positionsQuery.data?.pages ?? []).flatMap((p) => p?.data ?? []),
+  const positions = useMemo(
+    () => flatten<BetPosition>(positionsQuery.data?.pages),
     [positionsQuery.data],
-  )
-  const allPositions = useMemo<BetPosition[]>(
-    () => (allPositionsQuery.data?.pages ?? []).flatMap((p) => p?.data ?? []),
-    [allPositionsQuery.data],
   )
   // Combo tickets ride on the first page of each list.
   const openCombos = useMemo(
@@ -84,173 +92,201 @@ const AccountPortfolio = () => {
       ),
     [positionsQuery.data],
   )
+  const positionRows = useMemo(
+    () => sortPositionRows(positions, openCombos, search, positionSort),
+    [positions, openCombos, search, positionSort],
+  )
 
-  // History: single bets merged with combos, newest first. Combos all arrive
-  // up front, so only show those inside the time range the loaded bet pages
-  // cover — older ones slot in as more pages load, keeping the order right.
-  const history = useMemo<HistoryItem[]>(() => {
-    const pages = betsQuery.data?.pages ?? []
-    const bets = pages.flatMap((p) => p?.data ?? [])
-    const time = (iso: string) => new Date(iso).getTime() || 0
-    const oldestLoaded = betsQuery.hasNextPage
-      ? Math.min(...bets.map((b) => time(b.createdAt)))
-      : -Infinity
-    const items: HistoryItem[] = [
-      ...bets.map((bet) => ({ kind: 'bet' as const, at: time(bet.createdAt), bet })),
-      ...(pages[0]?.combos ?? [])
-        .map((combo) => ({ kind: 'combo' as const, at: time(combo.createdAt), combo }))
-        .filter((c) => c.at >= oldestLoaded),
-    ]
-    return items.sort((a, b) => b.at - a.at)
-  }, [betsQuery.data, betsQuery.hasNextPage])
+  const orders = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return flatten<Bet>(ordersQuery.data?.pages).filter(
+      (b) =>
+        !q ||
+        `${b.market?.title ?? ''} ${b.outcomeLabel ?? ''}`
+          .toLowerCase()
+          .includes(q),
+    )
+  }, [ordersQuery.data, search])
 
-  // The active tab's list query drives loading / error / pagination.
-  const listQuery = isHistory
-    ? betsQuery
-    : activeTab === 'POSITIONS'
-      ? allPositionsQuery
-      : positionsQuery
-  const isEmpty = isHistory
-    ? history.length === 0
-    : activeTab === 'POSITIONS'
-      ? allPositions.length === 0
-      : positions.length === 0 && openCombos.length === 0
+  // History: buys from the bets list, results from finished positions, and
+  // combos — merged into one newest-first feed.
+  const activity = useMemo(() => {
+    const bets = flatten<Bet>(betsQuery.data?.pages)
+    const settledPositions = flatten<BetPosition>(settledQuery.data?.pages)
+    const t = (iso?: string | null) => new Date(iso ?? '').getTime() || 0
+    return buildActivity({
+      bets,
+      settledPositions,
+      combos: betsQuery.data?.pages[0]?.combos ?? [],
+      betsCutoff: cutoffOf(
+        bets.map((b) => t(b.createdAt)),
+        betsQuery.hasNextPage,
+      ),
+      positionsCutoff: cutoffOf(
+        settledPositions.map((p) => t(p.settledAt ?? p.openedAt)),
+        settledQuery.hasNextPage,
+      ),
+    })
+  }, [
+    betsQuery.data,
+    betsQuery.hasNextPage,
+    settledQuery.data,
+    settledQuery.hasNextPage,
+  ])
+  const historyItems = useMemo(
+    () => filterActivity(activity, historyFilter, search, historySort),
+    [activity, historyFilter, search, historySort],
+  )
 
-  const unrealized = summary ? toMajorUnits(summary.unrealizedPnl.amount) : 0
-  const realized = summary ? toMajorUnits(summary.realizedPnl.amount) : 0
+  // The active tab's queries drive loading / error / pagination.
+  const tabQueries =
+    activeTab === 'HISTORY'
+      ? [betsQuery, settledQuery]
+      : activeTab === 'OPEN'
+        ? [ordersQuery]
+        : [positionsQuery]
+  const isLoading = tabQueries.some((q) => q.isLoading)
+  const isError = tabQueries.some((q) => q.isError)
+  const hasNextPage = tabQueries.some((q) => q.hasNextPage)
+  const isFetchingNextPage = tabQueries.some((q) => q.isFetchingNextPage)
+  const loadMore = () =>
+    tabQueries.forEach((q) => q.hasNextPage && q.fetchNextPage())
+
+  const searching = search.trim().length > 0
+  const rowCount =
+    activeTab === 'HISTORY'
+      ? historyItems.length
+      : activeTab === 'OPEN'
+        ? orders.length
+        : positionRows.length
+  // Search and filters only cover loaded pages, so an empty result may just
+  // mean the match is further back.
+  const narrowed =
+    searching || (activeTab === 'HISTORY' && historyFilter !== 'all')
+  const emptyText = narrowed && hasNextPage
+    ? 'Nothing in your recent activity. Load more to look further back.'
+    : searching
+    ? `Nothing matches “${search.trim()}”.`
+    : activeTab === 'HISTORY'
+      ? historyFilter === 'all'
+        ? 'No activity yet.'
+        : 'No activity of this type yet.'
+      : activeTab === 'OPEN'
+        ? 'No open orders.'
+        : 'No open positions yet.'
 
   return (
     <main className='mx-auto flex w-full flex-col gap-6'>
-      <h1 className='text-[18px] font-bold text-black md:text-[28px]'>
-        Portfolio
-      </h1>
+      <PortfolioSummaryCards
+        summary={summary}
+        cash={spendableBalance(wallet)}
+        loading={summaryLoading}
+        onDeposit={() => handleModalOpen('deposit')}
+        onWithdraw={() => handleModalOpen('withdraw')}
+      />
 
-      {summaryLoading ? (
-        <div className='grid grid-cols-2 gap-4 xl:grid-cols-4'>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className='h-20 animate-pulse rounded-lg bg-card' />
+      <div className='flex flex-wrap items-start gap-2'>
+        <div className='flex h-11 w-fit shrink-0 items-center gap-1 rounded-[10px] border border-border p-1'>
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type='button'
+              onClick={() => setActiveTab(tab.key)}
+              className={`h-full rounded-md px-4 text-sm font-semibold transition-colors ${
+                activeTab === tab.key
+                  ? 'bg-hover text-black'
+                  : 'text-neutral-10 hover:text-black'
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
+        <div className='flex min-w-0 flex-1 flex-wrap items-centergap-2'>
+          {/* Never squeezed: the menus wrap to the next line instead. */}
+          <div className='min-w-54 flex-1'>
+            <SearchInput
+              searchTerm={search}
+              handleChange={(e) => setSearch(e.target.value)}
+              placeholder='Search'
+            />
+          </div>
+          {activeTab === 'POSITIONS' && (
+            <ToolbarMenu
+              icon={<HugeiconsIcon icon={SortingDownIcon} size={16} />}
+              value={positionSort}
+              options={POSITION_SORTS}
+              onChange={setPositionSort}
+            />
+          )}
+          {activeTab === 'HISTORY' && (
+            <>
+              <ToolbarMenu
+                icon={<HugeiconsIcon icon={FilterHorizontalIcon} size={16} />}
+                value={historyFilter}
+                options={ACTIVITY_FILTERS}
+                onChange={setHistoryFilter}
+              />
+              <ToolbarMenu
+                icon={<HugeiconsIcon icon={SortingDownIcon} size={16} />}
+                value={historySort}
+                options={HISTORY_SORTS}
+                onChange={setHistorySort}
+              />
+            </>
+          )}
+        </div>
+      </div>
+
+      {isError || isLoading || rowCount === 0 ? (
+        <TableState
+          loading={isLoading}
+          error={
+            isError
+              ? `We couldn’t load your ${activeTab === 'HISTORY' ? 'history' : activeTab === 'OPEN' ? 'orders' : 'positions'} right now.`
+              : null
+          }
+          empty={emptyText}
+        />
+      ) : activeTab === 'HISTORY' ? (
+        <HistoryTable items={historyItems} />
+      ) : activeTab === 'OPEN' ? (
+        <OpenOrdersTable orders={orders} />
       ) : (
-        <div className='grid grid-cols-2 gap-4 xl:grid-cols-4'>
-          <StatCard
-            label='Positions value'
-            value={formatCurrency(
-              summary ? toMajorUnits(summary.currentValue.amount) : 0,
-            )}
-            hint={
-              summary
-                ? `${summary.openPositions} open · ${formatCurrency(toMajorUnits(summary.invested.amount))} invested`
-                : undefined
-            }
-          />
-          <StatCard
-            label='Cash available'
-            value={formatCurrency(spendableBalance(wallet))}
-          />
-          <StatCard
-            label='Unrealized P&L'
-            value={signed(unrealized)}
-            valueClass={pnlClass(unrealized)}
-            hint='On open positions, at current prices'
-          />
-          <StatCard
-            label='Realized P&L'
-            value={signed(realized)}
-            valueClass={pnlClass(realized)}
-            hint={
-              summary
-                ? `${summary.wonCount} won · ${summary.lostCount} lost`
-                : undefined
-            }
+        <PositionsTable rows={positionRows} />
+      )}
+
+      {/* Open positions can be cashed out from here, so the licence notice
+          applies. */}
+      {activeTab === 'POSITIONS' && rowCount > 0 && !isLoading && (
+        <TradingNotice />
+      )}
+
+      {/* Search, sort and filters only cover what's loaded so far. */}
+      {hasNextPage && !isLoading && !isError && (
+        <div className='flex justify-center'>
+          <Button
+            type='button'
+            text={isFetchingNextPage ? 'Loading…' : 'Load more'}
+            variation='plain'
+            size='medium'
+            className='w-fit!'
+            loading={isFetchingNextPage}
+            onClick={loadMore}
           />
         </div>
       )}
 
-      <div className='hide-scroll-bar inline-flex w-fit max-w-full items-center gap-1 overflow-x-auto rounded-full bg-hover p-1'>
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type='button'
-            onClick={() => setActiveTab(tab.key)}
-            className={`shrink-0 rounded-full px-5 py-1.5 text-sm font-semibold transition-colors ${
-              activeTab === tab.key
-                ? 'bg-text-black text-white dark:text-neutral-10'
-                : 'text-placeholder'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {listQuery.isError ? (
-        <p className='py-8 text-center text-sm text-placeholder'>
-          We couldn’t load your {isHistory ? 'history' : 'positions'} right now.
-        </p>
-      ) : (
-        <>
-          <div className='grid grid-cols-1 gap-4'>
-            {listQuery.isLoading ? (
-              Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className='h-52 animate-pulse rounded-lg bg-card' />
-              ))
-            ) : isEmpty ? (
-              <p className='col-span-full py-8 text-center text-sm text-placeholder'>
-                {isHistory
-                  ? 'No bet history yet.'
-                  : activeTab === 'POSITIONS'
-                    ? 'No positions yet.'
-                    : 'No open positions yet.'}
-              </p>
-            ) : isHistory ? (
-              history.map((item) =>
-                item.kind === 'combo' ? (
-                  <ComboCard key={`combo-${item.combo.id}`} combo={item.combo} />
-                ) : (
-                  <BetHistoryCard key={item.bet.id} bet={item.bet} />
-                ),
-              )
-            ) : activeTab === 'POSITIONS' ? (
-              allPositions.map((position) => (
-                <PositionCard
-                  key={position.id}
-                  position={position}
-                  shareable={position.status === 'OPEN'}
-                />
-              ))
-            ) : (
-              <>
-                {openCombos.map((combo) => (
-                  <ComboCard key={`combo-${combo.id}`} combo={combo} />
-                ))}
-                {positions.map((position) => (
-                  <PositionCard key={position.id} position={position} shareable />
-                ))}
-              </>
-            )}
-          </div>
-
-          {/* Open positions can be cashed out from here, so the licence
-              notice applies. */}
-          {activeTab === 'OPEN' && !isEmpty && !listQuery.isLoading && (
-            <TradingNotice />
-          )}
-
-          {listQuery.hasNextPage && (
-            <div className='flex justify-center'>
-              <Button
-                type='button'
-                text={listQuery.isFetchingNextPage ? 'Loading…' : 'Load more'}
-                variation='plain'
-                size='medium'
-                className='w-fit!'
-                loading={listQuery.isFetchingNextPage}
-                onClick={() => listQuery.fetchNextPage()}
-              />
-            </div>
-          )}
-        </>
+      <Deposit
+        open={modalOpen && modal === 'deposit'}
+        handleClose={handleModalClose}
+      />
+      {wallet && (
+        <Withdraw
+          open={modalOpen && modal === 'withdraw'}
+          handleClose={handleModalClose}
+          wallet={wallet}
+        />
       )}
     </main>
   )

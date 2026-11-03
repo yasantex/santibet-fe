@@ -28,7 +28,7 @@ const TradeModal = ({
   onClose,
   market,
   initialOutcome,
-  initialSide = 'sell',
+  initialSide = 'buy',
 }: TradeModalProps) => {
   const [side, setSide] = useState<TradeSide>(initialSide)
   const [outcomeId, setOutcomeId] = useState(initialOutcome?.id)

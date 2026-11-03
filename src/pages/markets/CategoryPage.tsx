@@ -24,10 +24,21 @@ import {
 } from '../../data_layer/markets'
 import { useFavorites } from '../../hooks/useFavorites'
 import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
-import { marketHref, marketSport } from '../../utils/marketDisplay'
+import {
+  marketHref,
+  marketSport,
+  withoutMoreMarketsDuplicates,
+} from '../../utils/marketDisplay'
 import { formatCompact } from '../../utils/functions'
 import { categoryTopics, type CategoryTopic } from '../../utils/constants'
-import type { UiMarket, UiOutcome } from '../../types/market.types'
+import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
+import OddsFormatMenu from '../../components/markets/OddsFormatMenu'
+import SportsMatchList from '../../components/markets/SportsMatchList'
+import {
+  timeBucketOf,
+  timeBucketOptions,
+  type TimeBucket,
+} from '../../utils/timeBuckets'
 
 type SortOption = NonNullable<EventQueryParams['sort']>
 
@@ -121,6 +132,8 @@ const CategoryPage = () => {
   const [activeLeague, setActiveLeague] = useState<string | null>(null)
   // Crypto: round-length filter for the live section (seconds; null = all).
   const [liveInterval, setLiveInterval] = useState<number | null>(null)
+  // When markets kick off / end (Today, This week…); null = any time.
+  const [activeTime, setActiveTime] = useState<TimeBucket | null>(null)
 
   // Sub-filters are scoped to whichever category is active — reset them
   // whenever the category itself changes (render-time reset, per
@@ -132,6 +145,7 @@ const CategoryPage = () => {
     setActiveSport(null)
     setActiveLeague(null)
     setLiveInterval(null)
+    setActiveTime(null)
   }
 
   // Searched server-side via /lobby/events?q=, within the active category.
@@ -300,7 +314,52 @@ const CategoryPage = () => {
   }, [isSports, byCategory, activeSport, activeLeague, activePattern])
 
   // The search itself runs server-side (see `q` above).
-  const filtered = byTopic
+  // Time filters come from the loaded markets, so each category only offers
+  // the ones it has (sports by kickoff, the rest by when they end).
+  const timeOptions = useMemo(
+    () => timeBucketOptions(byTopic, isSports),
+    [byTopic, isSports],
+  )
+  const filtered = useMemo(
+    () =>
+      activeTime
+        ? byTopic.filter((m) => timeBucketOf(m, isSports) === activeTime)
+        : byTopic,
+    [byTopic, activeTime, isSports],
+  )
+
+  // One card per game: markets sharing an event (Match Winner, Over/Under,
+  // BTTS…) collapse into a match card that opens the match page. Cards keep
+  // the volume order of each event's top market.
+  const gridItems = useMemo(() => {
+    const groups = new Map<string, UiMarket[]>()
+    for (const m of filtered) {
+      const key = m.eventId || m.id
+      groups.set(key, [...(groups.get(key) ?? []), m])
+    }
+    const items = [...groups.entries()].map(([eventId, markets]) =>
+      markets.length > 1 && markets[0].eventTitle
+        ? {
+            kind: 'event' as const,
+            title: markets[0].eventTitle,
+            event: {
+              id: eventId,
+              provider: markets[0].provider,
+              title: markets[0].eventTitle,
+              category: markets[0].category,
+              closeTime: markets[0].closeTime,
+              imageUrl: markets[0].imageUrl,
+              markets,
+            } satisfies UiEvent,
+          }
+        : markets.map((market) => ({
+            kind: 'market' as const,
+            title: market.eventTitle ?? market.title,
+            market,
+          })),
+    )
+    return withoutMoreMarketsDuplicates(items.flat())
+  }, [filtered])
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
@@ -486,8 +545,29 @@ const CategoryPage = () => {
                 <HugeiconsIcon icon={FilterIcon} size={18} />
               </div>
             </Dropdown>
+            <OddsFormatMenu />
           </div>
         </div>
+
+        {timeOptions.length > 1 && (
+          <div className='hide-scroll-bar -mt-2 flex gap-2 overflow-x-auto'>
+            {[null, ...timeOptions].map((opt) => (
+              <button
+                key={opt?.value ?? 'any'}
+                type='button'
+                onClick={() => setActiveTime(opt?.value ?? null)}
+                className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium ${
+                  activeTime === (opt?.value ?? null)
+                    ? 'border-black bg-black text-white'
+                    : 'border-border text-neutral-10 hover:text-black'
+                }`}
+              >
+                {opt ? opt.label : 'Any time'}
+                {opt && <span className='text-xs opacity-70'>{opt.count}</span>}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Admin-created subcategories — on every screen size, since the
             set changes at runtime and isn't part of the curated sidebar. */}
@@ -624,25 +704,39 @@ const CategoryPage = () => {
           </p>
         ) : (
           <>
+            {isSports && !isLoading ? (
+              <SportsMatchList markets={filtered} onPick={handleOutcome} />
+            ) : (
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
               {isLoading
                 ? Array.from({ length: 9 }).map((_, i) => (
                     <MarketCardSkeleton key={i} />
                   ))
-                : filtered.map((market) => (
+                : gridItems.map((item) =>
+                    item.kind === 'event' ? (
+                      <LiveEventCard
+                        key={item.event.id}
+                        event={item.event}
+                        live={false}
+                        onSelectMarket={goToMarket}
+                        onSelectOutcome={handleOutcome}
+                      />
+                    ) : (
                     <MarketCard
-                      key={market.id}
-                      market={market}
+                      key={item.market.id}
+                      market={item.market}
                       onSelect={goToMarket}
                       onSelectOutcome={handleOutcome}
                       onSave={toggleFavorite}
-                      isSaved={isFavorite(market.id)}
+                      isSaved={isFavorite(item.market.id)}
                       activeOutcomeId={combo.selectedOutcomeIdForMarket(
-                        market.id,
+                        item.market.id,
                       )}
                     />
-                  ))}
+                    ),
+                  )}
             </div>
+            )}
 
             {!isLoading &&
               !filtered.length &&

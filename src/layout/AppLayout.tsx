@@ -15,11 +15,13 @@ import SupportLauncher from '../components/support/SupportLauncher'
 import BadgeCelebration from '../components/points/BadgeCelebration'
 import BonusGrantedModal from '../components/bonus/BonusGrantedModal'
 import useReferralCapture from '../hooks/useReferralCapture'
+import { useTrackOriginPage } from '../hooks/useOriginPage'
 
 const AppLayout = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
   useReferralCapture()
+  useTrackOriginPage()
 
   useEffect(() => {
     const hasConsent = localStorage.getItem(COOKIE_CONSENT_KEY)

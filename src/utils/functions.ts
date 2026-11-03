@@ -235,5 +235,19 @@ export const formatCloseTimer = (iso?: string | null): string => {
   return `Closes · ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+/** Compact time since an ISO date: "57s ago", "6d ago", "1mo ago". */
+export const timeAgo = (iso?: string | null): string => {
+  if (!iso) return ''
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ''
+  const s = Math.max(0, Math.floor((Date.now() - then) / 1000))
+  if (s < 60) return `${s}s ago`
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  if (s < 86400 * 30) return `${Math.floor(s / 86400)}d ago`
+  if (s < 86400 * 365) return `${Math.floor(s / (86400 * 30))}mo ago`
+  return `${Math.floor(s / (86400 * 365))}y ago`
+}
+
 export const scrollToTop = () =>
   window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })

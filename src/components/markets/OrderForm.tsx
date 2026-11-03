@@ -23,7 +23,6 @@ import type { Bet, PlaceBetPayload } from '../../types/bet.types'
 import {
   isMarketOpen,
   isPoolMarket,
-  outcomePriceLabel,
   outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
@@ -36,6 +35,7 @@ import BonusSlipToggle from '../bonus/BonusSlipToggle'
 import { BONUS_KYC_CODE } from '../../utils/bonus'
 import { KYC_PATH } from '../../utils/authRedirect'
 import type { FundedBy } from '../../types/bonus.types'
+import { useOddsFormat } from '../../hooks/useOddsFormat'
 
 const QUICK_ADDS = [100, 200, 500, 1000]
 
@@ -81,6 +81,7 @@ const OrderForm = ({
   submitText = 'Place prediction',
   onPlaced,
 }: OrderFormProps) => {
+  const { priceLabel } = useOddsFormat()
   const authNavigate = useAuthNavigate()
   const navigate = useNavigate()
   const location = useLocation()
@@ -438,7 +439,7 @@ const OrderForm = ({
               <span className='w-full min-w-0 truncate text-center uppercase'>
                 {o.label}
               </span>
-              <span>{outcomePriceLabel(market, o, { withPercent: true })}</span>
+              <span>{priceLabel(market, o)}</span>
               {noBonus && (
                 <span className='text-[10px] font-semibold normal-case text-neutral-10'>
                   No bonus

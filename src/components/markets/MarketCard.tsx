@@ -4,7 +4,6 @@ import type { UiMarket, UiOutcome } from '../../types/market.types'
 import {
   categoryIcon,
   marketDisplayTitle,
-  outcomePriceLabel,
   outcomeTone,
   TONE_STYLES,
   type OutcomeTone,
@@ -13,6 +12,7 @@ import { MarketCountdown } from '../globals/ReusedText'
 import ShareMarketButton from './ShareMarketButton'
 import MarketMetaLine from './MarketMetaLine'
 import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
+import { useOddsFormat } from '../../hooks/useOddsFormat'
 
 /** Binary (Yes/No) markets: one full stat row per side, price button inline. */
 const OutcomeRow = ({
@@ -98,26 +98,29 @@ const OutcomeButtonRow = ({
   outcomes: { outcome: UiOutcome; tone: OutcomeTone }[]
   activeOutcomeId?: string | null
   onClick?: (outcome: UiOutcome) => void
-}) => (
-  <div className='flex items-stretch gap-1.5'>
-    {outcomes.map(({ outcome, tone }) => (
-      <button
-        key={outcome.id}
-        type='button'
-        onClick={(e) => {
-          e.stopPropagation()
-          onClick?.(outcome)
-        }}
-        className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-1 cursor-pointer py-2 text-xs font-bold ${TONE_STYLES[tone].button} ${
-          outcome.id === activeOutcomeId ? 'ring-2 ring-black ring-offset-1' : ''
-        }`}
-      >
-        <span className='min-w-0 truncate uppercase'>{outcome.label}</span>
-        <span className='shrink-0'>{outcomePriceLabel(market, outcome)}</span>
-      </button>
-    ))}
-  </div>
-)
+}) => {
+  const { priceLabel } = useOddsFormat()
+  return (
+    <div className='flex items-stretch gap-1.5'>
+      {outcomes.map(({ outcome, tone }) => (
+        <button
+          key={outcome.id}
+          type='button'
+          onClick={(e) => {
+            e.stopPropagation()
+            onClick?.(outcome)
+          }}
+          className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-1 cursor-pointer py-2 text-xs font-bold ${TONE_STYLES[tone].button} ${
+            outcome.id === activeOutcomeId ? 'ring-2 ring-black ring-offset-1' : ''
+          }`}
+        >
+          <span className='min-w-0 truncate uppercase'>{outcome.label}</span>
+          <span className='shrink-0'>{priceLabel(market, outcome)}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
 
 interface MarketCardProps {
   market: UiMarket
@@ -170,6 +173,7 @@ const MarketCard = ({
   // and the selected outcome stays highlighted. Non-sports keep the caller's
   // behaviour (open the market to trade singly).
   const combo = useComboSlip()
+  const { priceLabel } = useOddsFormat()
   const comboEnabled = isSportsMarket(market)
   const effectiveActiveOutcomeId = comboEnabled
     ? combo.selectedOutcomeIdForMarket(market.id)
@@ -238,7 +242,7 @@ const MarketCard = ({
               <OutcomeRow
                 key={outcome.id}
                 outcome={outcome}
-                priceLabel={outcome ? outcomePriceLabel(market, outcome) : ''}
+                priceLabel={outcome ? priceLabel(market, outcome) : ''}
                 tone={tone}
                 active={outcome.id === effectiveActiveOutcomeId}
                 onClick={() => handleOutcomeClick(outcome)}

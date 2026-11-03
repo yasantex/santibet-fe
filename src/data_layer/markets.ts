@@ -11,7 +11,10 @@ import { isAxiosError } from 'axios'
 import { useDebounce } from 'use-debounce'
 import { apiClient, type QueryParams } from './utils'
 import { toCents, toMajorUnits, toPercent } from '../utils/functions'
-import { categoryIcon } from '../utils/marketDisplay'
+import {
+  categoryIcon,
+  withoutMoreMarketsDuplicates,
+} from '../utils/marketDisplay'
 import type { SearchResult, SearchSection } from '../utils/constants'
 import type {
   ApiEvent,
@@ -535,7 +538,9 @@ export const useLiveBets = (
         if (rolling && !merged.has(e.id)) merged.set(e.id, { ...e, live: true })
       }
     }
-    const all = [...merged.values()]
+    // One card per game: a "<match> - More Markets" event folds into its
+    // match, whose page lists those markets too.
+    const all = withoutMoreMarketsDuplicates([...merged.values()])
     return category
       ? all.filter((e) => e.category.toLowerCase() === category.toLowerCase())
       : all
@@ -726,10 +731,13 @@ export const useLobbyHome = (limit = 12) =>
     },
   })
 
-export const useEvent = (id?: string) =>
+/** `id` may also be a lobby slug. `optional`: a 404 is expected (e.g. a
+ *  match with no "More Markets" sibling), so don't retry it. */
+export const useEvent = (id?: string, { optional = false } = {}) =>
   useQuery({
     queryKey: ['event', id],
     enabled: !!id,
+    retry: optional ? false : undefined,
     queryFn: async () => {
       const feed = await resolveFeed()
       if (feed === 'lobby') {

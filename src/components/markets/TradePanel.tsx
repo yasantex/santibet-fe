@@ -36,7 +36,7 @@ const TradePanel = ({
       (o) => o.id === placed?.bet.outcomeId,
     )
     setPlaced(null)
-    setTrade({ side: 'sell', outcome: tradedOutcome })
+    setTrade({ side: 'buy', outcome: tradedOutcome })
   }
 
   return (

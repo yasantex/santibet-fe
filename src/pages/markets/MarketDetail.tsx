@@ -16,7 +16,7 @@ import {
   Flag01Icon,
 } from '@hugeicons/core-free-icons'
 import { useFavorites } from '../../hooks/useFavorites'
-import { isSportsMarket, useComboSlip } from '../../hooks/useComboSlip'
+import { isSportsMarket } from '../../hooks/useComboSlip'
 import TradePanel from '../../components/markets/TradePanel'
 import ComboMarketPanel from '../../components/combo/ComboMarketPanel'
 import { LiveBadge, ScoreBoard } from '../../components/markets/LiveBits'
@@ -27,7 +27,6 @@ import { useCountdown } from '../../hooks/useCountdown'
 import {
   categoryIcon,
   MARKET_STATUS_LABELS,
-  outcomePriceLabel,
   outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
@@ -46,6 +45,8 @@ import {
 import ShareMarketButton from '../../components/markets/ShareMarketButton'
 import { useSupport } from '../../support/supportContext'
 import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
+import { getOriginPage } from '../../hooks/useOriginPage'
+import { useOddsFormat } from '../../hooks/useOddsFormat'
 
 // How often the Live view extends its tail / pulls a fresh quote.
 const LIVE_TICK_MS = 3000
@@ -77,7 +78,7 @@ const MarketDetail = () => {
   const [rulesExpanded, setRulesExpanded] = useState(false)
   // Sports markets take a single bet or a combo leg; null = not picked yet.
   const [sportsMode, setSportsMode] = useState<'single' | 'combo' | null>(null)
-  const combo = useComboSlip()
+  const { priceLabel } = useOddsFormat()
 
   const eventId = searchParams.get('event') ?? undefined
   // Markets the stream can't push live prices for; poll those instead.
@@ -88,9 +89,12 @@ const MarketDetail = () => {
     pollingOnly.length > 0 ? MARKET_POLL_MS : false,
   )
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
-  // Live score/period/clock (team crests aren't in the feed, only names) — only
-  // fetched for live markets, where the event's liveState actually has data.
-  const { data: event } = useEvent(market?.live ? eventId : undefined)
+  // The event carries the real category (the single-market endpoint has none,
+  // so the market falls back to "General") and, when live, the
+  // score/period/clock (team crests aren't in the feed, only names).
+  const { data: event } = useEvent(eventId)
+  const origin = getOriginPage()
+  const category = event?.category ?? market?.category ?? ''
 
   const selectedOutcome: UiOutcome | undefined = useMemo(() => {
     if (!market) return undefined
@@ -195,8 +199,8 @@ const MarketDetail = () => {
     setChartMode(mode)
   }
 
-  // Until the player picks, open on the combo tab when a slip is in progress.
-  const activeSportsMode = sportsMode ?? (combo.legCount > 0 ? 'combo' : 'single')
+  // A single bet unless the player chooses to add this pick to a combo.
+  const activeSportsMode = sportsMode ?? 'single'
 
   // Partner markets carry their rules; pool rounds and some admin markets
   // don't, so the tab only shows when there's something to read.
@@ -249,11 +253,16 @@ const MarketDetail = () => {
           >
             <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
           </button>
-          <Link to='/' className='hover:text-black'>
-            Markets
+          <Link to={origin.href} className='hover:text-black'>
+            {origin.label}
           </Link>
-          <span>/</span>
-          <span className='font-medium text-black'>{market.category}</span>
+          {/* Opened from that category's page: don't repeat its name. */}
+          {category.toLowerCase() !== origin.label.toLowerCase() && (
+            <>
+              <span>/</span>
+              <span className='font-medium text-black'>{category}</span>
+            </>
+          )}
         </div>
         <div className='flex items-center gap-2'>
           <ShareMarketButton
@@ -299,7 +308,7 @@ const MarketDetail = () => {
           <div className='flex flex-col gap-3 rounded-2xl border border-border bg-card p-5'>
             <div className='flex items-start gap-3'>
               <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-border/30 text-xl'>
-                {categoryIcon(market.category)}
+                {categoryIcon(category)}
               </div>
               <div className='flex flex-col gap-1'>
                 <h1 className='text-lg font-bold text-black md:text-2xl'>
@@ -466,7 +475,7 @@ const MarketDetail = () => {
                   >
                     <span className='min-w-0 truncate uppercase'>{o.label}</span>
                     <span className='shrink-0'>
-                      {winner ? (active ? 'Won' : 'Lost') : outcomePriceLabel(market, o, { withPercent: true })}
+                      {winner ? (active ? 'Won' : 'Lost') : priceLabel(market, o)}
                     </span>
                   </button>
                 )

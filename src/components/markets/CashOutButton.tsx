@@ -47,6 +47,8 @@ interface CashOutButtonProps {
   variation?: 'primary' | 'plain'
   size?: 'small' | 'medium' | 'large'
   className?: string
+  /** Trigger text; "Sell" in the portfolio table. */
+  label?: string
 }
 
 /**
@@ -66,6 +68,7 @@ const CashOutButton = ({
   variation = 'primary',
   size = 'medium',
   className = 'w-fit!',
+  label = 'Cash out',
 }: CashOutButtonProps) => {
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -189,7 +192,7 @@ const CashOutButton = ({
       <span title={suspended ? SUSPENDED_CTA_HINT : undefined}>
         <Button
           type='button'
-          text='Cash out'
+          text={label}
           variation={variation}
           size={size}
           className={className}
