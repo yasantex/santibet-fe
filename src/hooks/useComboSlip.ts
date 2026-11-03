@@ -4,6 +4,7 @@ import {
   addOrReplaceMarketLeg,
   clearSlip,
   removeLeg,
+  updateLegPrices,
   MAX_COMBO_LEGS,
 } from '../redux/comboSlipSlice'
 import { isMarketOpen, marketSport } from '../utils/marketDisplay'
@@ -113,6 +114,9 @@ export const useComboSlip = () => {
 
   const remove = (outcomeId: string) => dispatch(removeLeg(outcomeId))
   const clear = () => dispatch(clearSlip())
+  /** Lock in re-quoted leg prices (outcomeId → price) the player accepted. */
+  const acceptPrices = (prices: Record<string, number>) =>
+    dispatch(updateLegPrices(prices))
 
   /** Potential payout for a naira stake at the current combined odds. */
   const payout = (stakeNaira: number) =>
@@ -131,6 +135,7 @@ export const useComboSlip = () => {
     toggle,
     remove,
     clear,
+    acceptPrices,
     payout,
   }
 }

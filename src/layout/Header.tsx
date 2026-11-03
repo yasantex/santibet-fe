@@ -24,6 +24,7 @@ import {
   Home01Icon,
   Menu01FreeIcons,
   Notification03Icon,
+  User02FreeIcons,
 } from '@hugeicons/core-free-icons'
 import SearchResultsList from '../data_layer/SearchResultsList'
 import MobileSearchOverlay from '../mobile/MobileSearchOverlay'
@@ -35,8 +36,13 @@ import useLogout from '../hooks/useLogout'
 import useAccountSuspended from '../hooks/useAccountSuspended'
 import { SUSPENDED_CTA_HINT } from '../utils/constants'
 import ProfileDropdownMenu from '../components/globals/ProfileDropdownMenu'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSantiBetQuery } from '../data_layer/utils'
-import { useBetPositions } from '../data_layer/bets'
+import {
+  WALLET_BALANCE_KEY,
+  WALLET_TRANSACTIONS_KEY,
+} from '../data_layer/queryKeys'
+import { usePortfolioSummary } from '../data_layer/bets'
 import { useUnreadNotificationCount } from '../data_layer/notifications'
 import { formatCurrency, scrollToTop, toMajorUnits } from '../utils/functions'
 import type { WalletBalance } from '../types/wallet.types'
@@ -253,19 +259,27 @@ const Header = () => {
   const { events: liveBets } = useLiveBets({ limit: 100 })
   const liveCount = liveBets.length
 
-  const { data: openPositions } = useBetPositions('OPEN', 100)
-  // Portfolio = unspent cash + the live market value of open positions;
-  // cash alone (shown separately below) is just the available balance.
-  const openPositionsValue = useMemo(
-    () =>
-      (openPositions?.pages ?? [])
-        .flatMap((page) => page?.data ?? [])
-        .reduce(
-          (sum, p) => sum + toMajorUnits(p?.currentValue?.amount ?? 0),
-          0,
-        ),
-    [openPositions],
-  )
+  // Portfolio = cash + the live value of open positions, from the server
+  // summary so it covers every position, not just one page of them.
+  const { data: portfolio } = usePortfolioSummary()
+  const openPositionsValue = toMajorUnits(portfolio?.currentValue.amount ?? 0)
+
+  // Backstop for the notification stream: a bet settling or being voided moves
+  // a position from open to settled (and pays out or refunds), so when the
+  // settled count goes up, re-read the balance. Catches settlements that
+  // arrive with no notification, or while the stream was down.
+  const queryClient = useQueryClient()
+  const settledCount = portfolio?.settledPositions
+  const lastSettledCount = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    if (settledCount == null) return
+    const previous = lastSettledCount.current
+    lastSettledCount.current = settledCount
+    if (previous != null && settledCount > previous) {
+      queryClient.invalidateQueries({ queryKey: WALLET_BALANCE_KEY })
+      queryClient.invalidateQueries({ queryKey: WALLET_TRANSACTIONS_KEY })
+    }
+  }, [settledCount, queryClient])
   const portfolioValue = toMajorUnits(wallet?.total ?? 0) + openPositionsValue
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -322,7 +336,7 @@ const Header = () => {
         <div className='flex items-center justify-end gap-5 w-full'>
           <main className='lg:flex items-center  gap-2.5 hidden'>
             <Dropdown
-              className='flex-1 w-55! md:w-75!'
+              className='flex-1 w-55! md:w-70!'
               menuClassName='w-[350px] max-h-[70vh] overflow-y-auto rounded-lg shadow-lg'
               menu={({ close }) => (
                 <SearchResultsList
@@ -344,7 +358,7 @@ const Header = () => {
             </Dropdown>
           </main>
           {user ? (
-            <div className='flex items-center gap-2.5'>
+            <div className='flex items-center gap-1.5'>
               <Link
                 to='/account-portfolio'
                 className='shrink-0 hidden md:flex flex-col items-center gap-px rounded-md px-3 text-xs font-semibold text-black py-1 hover:bg-hover/70'
@@ -394,7 +408,7 @@ const Header = () => {
               </span>
               <Link
                 to='/notifications'
-                className='relative p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'
+                className='relative xl:flex hidden p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'
               >
                 <HugeiconsIcon
                   icon={Notification03Icon}
@@ -404,6 +418,17 @@ const Header = () => {
                 {unreadNotifications > 0 && (
                   <span className='absolute top-1 right-1 h-2 w-2 rounded-full bg-brand-green' />
                 )}
+              </Link>
+              <Link
+                to='/account-profile'
+                aria-label='Account profile'
+                className=' p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'
+              >
+                <HugeiconsIcon
+                  icon={User02FreeIcons}
+                  size={22}
+                  className='shrink-0 text-black'
+                />
               </Link>
               <Dropdown
                 align='end'

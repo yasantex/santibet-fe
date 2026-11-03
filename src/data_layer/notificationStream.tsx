@@ -12,6 +12,7 @@ import { apiClient } from './utils'
 import {
   BONUS_KEY,
   BETS_KEY,
+  BET_PORTFOLIO_KEY,
   BET_POSITIONS_KEY,
   DEPOSITS_KEY,
   NOTIFICATIONS_KEY,
@@ -56,6 +57,9 @@ const WALLET_MOVING_TYPES: NotificationType[] = [
   'WITHDRAWAL_COMPLETED',
   'CASH_OUT_COMPLETED',
   'WINNINGS_CREDITED',
+  // A settled market can move money with no winnings notification: a voided
+  // bet's stake is refunded, and a combo can settle with it.
+  'MARKET_RESOLVED',
   'BONUS_UPDATE',
 ]
 
@@ -133,6 +137,7 @@ const invalidateForNotification = (
   if (BET_MOVING_TYPES.includes(notificationType)) {
     qc.invalidateQueries({ queryKey: BETS_KEY })
     qc.invalidateQueries({ queryKey: BET_POSITIONS_KEY })
+    qc.invalidateQueries({ queryKey: BET_PORTFOLIO_KEY })
   }
   if (BONUS_MOVING_TYPES.includes(notificationType)) {
     qc.invalidateQueries({ queryKey: BONUS_KEY })

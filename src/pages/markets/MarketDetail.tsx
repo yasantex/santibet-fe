@@ -24,7 +24,12 @@ import ChartTooltip from '../../components/markets/ChartTooltip'
 import ChartRangeTabs from '../../components/markets/ChartRangeTabs'
 import { chartDomain, formatChartTick } from '../../utils/chartFormat'
 import { useCountdown } from '../../hooks/useCountdown'
-import { categoryIcon, outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
+import {
+  categoryIcon,
+  MARKET_STATUS_LABELS,
+  outcomeTone,
+  TONE_STYLES,
+} from '../../utils/marketDisplay'
 import {
   chartTimeLabel,
   useMarket,
@@ -34,16 +39,30 @@ import {
 } from '../../data_layer/markets'
 import {
   formatCloseTimer,
-  formatCompact,
   formatNairaCompact,
   formatSharePrice,
 } from '../../utils/functions'
 import ShareMarketButton from '../../components/markets/ShareMarketButton'
 import { useSupport } from '../../support/supportContext'
 import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
+import { getOriginPage } from '../../hooks/useOriginPage'
+import { useOddsFormat } from '../../hooks/useOddsFormat'
 
 // How often the Live view extends its tail / pulls a fresh quote.
 const LIVE_TICK_MS = 3000
+// Price refresh for a market the live stream reports as polling-only.
+const MARKET_POLL_MS = 10_000
+// Partner rules can run to several paragraphs; longer ones start collapsed.
+const RULES_PREVIEW_CHARS = 360
+
+/** "14:05" today, "Oct 24, 14:05" before. */
+const tradeTimeLabel = (iso: string) => {
+  const d = new Date(iso)
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return d.toDateString() === new Date().toDateString()
+    ? time
+    : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`
+}
 
 const MarketDetail = () => {
   const { openReport } = useSupport()
@@ -56,13 +75,26 @@ const MarketDetail = () => {
   const [chartMode, setChartMode] = useState<ChartMode>('live')
   const [userPickedMode, setUserPickedMode] = useState(false)
   const [infoTab, setInfoTab] = useState<'rules' | 'trades'>('rules')
+  const [rulesExpanded, setRulesExpanded] = useState(false)
+  // Sports markets take a single bet or a combo leg; null = not picked yet.
+  const [sportsMode, setSportsMode] = useState<'single' | 'combo' | null>(null)
+  const { priceLabel } = useOddsFormat()
 
   const eventId = searchParams.get('event') ?? undefined
-  const { data: market, isLoading, isError } = useMarket(id, eventId)
+  // Markets the stream can't push live prices for; poll those instead.
+  const [pollingOnly, setPollingOnly] = useState<string[]>([])
+  const { data: market, isLoading, isError } = useMarket(
+    id,
+    eventId,
+    pollingOnly.length > 0 ? MARKET_POLL_MS : false,
+  )
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
-  // Live score/period/clock (team crests aren't in the feed, only names) — only
-  // fetched for live markets, where the event's liveState actually has data.
-  const { data: event } = useEvent(market?.live ? eventId : undefined)
+  // The event carries the real category (the single-market endpoint has none,
+  // so the market falls back to "General") and, when live, the
+  // score/period/clock (team crests aren't in the feed, only names).
+  const { data: event } = useEvent(eventId)
+  const origin = getOriginPage()
+  const category = event?.category ?? market?.category ?? ''
 
   const selectedOutcome: UiOutcome | undefined = useMemo(() => {
     if (!market) return undefined
@@ -142,6 +174,7 @@ const MarketDetail = () => {
   useLobbyStream({
     marketIds: marketId ? [marketId] : [],
     enabled: !!marketId,
+    onSubscribed: (sub) => setPollingOnly(sub.pollingOnly),
   })
   const countdown = useCountdown(market?.openTime, market?.closeTime)
 
@@ -165,6 +198,21 @@ const MarketDetail = () => {
     setUserPickedMode(true)
     setChartMode(mode)
   }
+
+  // A single bet unless the player chooses to add this pick to a combo.
+  const activeSportsMode = sportsMode ?? 'single'
+
+  // Partner markets carry their rules; pool rounds and some admin markets
+  // don't, so the tab only shows when there's something to read.
+  const rules = market?.rules?.trim() || null
+  const activeInfoTab = rules ? infoTab : 'trades'
+  const rulesLong = !!rules && rules.length > RULES_PREVIEW_CHARS
+  // The history endpoint lists trades oldest first; show the newest.
+  const recentTrades = [...(trades ?? [])].reverse().slice(0, 15)
+
+  const winner = market?.resolvedOutcomeId
+    ? market.outcomes.find((o) => o.id === market.resolvedOutcomeId)
+    : undefined
 
   if (isLoading) {
     return (
@@ -205,11 +253,16 @@ const MarketDetail = () => {
           >
             <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
           </button>
-          <Link to='/' className='hover:text-black'>
-            Markets
+          <Link to={origin.href} className='hover:text-black'>
+            {origin.label}
           </Link>
-          <span>/</span>
-          <span className='font-medium text-black'>{market.category}</span>
+          {/* Opened from that category's page: don't repeat its name. */}
+          {category.toLowerCase() !== origin.label.toLowerCase() && (
+            <>
+              <span>/</span>
+              <span className='font-medium text-black'>{category}</span>
+            </>
+          )}
         </div>
         <div className='flex items-center gap-2'>
           <ShareMarketButton
@@ -255,7 +308,7 @@ const MarketDetail = () => {
           <div className='flex flex-col gap-3 rounded-2xl border border-border bg-card p-5'>
             <div className='flex items-start gap-3'>
               <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-border/30 text-xl'>
-                {categoryIcon(market.category)}
+                {categoryIcon(category)}
               </div>
               <div className='flex flex-col gap-1'>
                 <h1 className='text-lg font-bold text-black md:text-2xl'>
@@ -267,6 +320,19 @@ const MarketDetail = () => {
               </div>
             </div>
             {event?.liveState && <ScoreBoard state={event.liveState} />}
+            {winner ? (
+              <p className='rounded-lg bg-success-bg px-3 py-2 text-sm font-semibold text-success'>
+                Resolved · {winner.label} won
+              </p>
+            ) : market.status === 'voided' ? (
+              <p className='rounded-lg bg-hover/60 px-3 py-2 text-sm font-semibold text-black'>
+                This market was voided.
+              </p>
+            ) : market.status === 'disputed' ? (
+              <p className='rounded-lg bg-warning/10 px-3 py-2 text-sm font-semibold text-warning'>
+                This market’s result is under dispute.
+              </p>
+            ) : null}
             <div className='flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-10'>
               {market.live ? (
                 <LiveBadge />
@@ -278,7 +344,7 @@ const MarketDetail = () => {
                       : 'bg-hover/60 text-neutral-10'
                   }`}
                 >
-                  {market.status}
+                  {MARKET_STATUS_LABELS[market.status] ?? market.status}
                 </span>
               )}
               <span>Volume: {formatNairaCompact(market.volume)}</span>
@@ -390,8 +456,11 @@ const MarketDetail = () => {
             {/* Outcome quick buttons */}
             <div className='flex items-stretch gap-3'>
               {market.outcomes.map((o, i) => {
-                const active = o.id === selectedOutcome?.id
                 const tone = outcomeTone(market, o.id, i)
+                // Once resolved, the winner is the highlighted outcome.
+                const active = winner
+                  ? o.id === winner.id
+                  : o.id === selectedOutcome?.id
                 const colorClasses = active
                   ? TONE_STYLES[tone].solid
                   : TONE_STYLES[tone].button
@@ -400,10 +469,14 @@ const MarketDetail = () => {
                     key={o.id}
                     type='button'
                     onClick={() => setSelectedId(o.id)}
-                    className={`flex min-w-0 flex-1 items-center justify-between gap-1.5 cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses}`}
+                    className={`flex min-w-0 flex-1 items-center justify-between gap-1.5 cursor-pointer rounded-lg px-4 py-3 text-sm font-medium transition-all ${colorClasses} ${
+                      winner && !active ? 'opacity-50' : ''
+                    }`}
                   >
                     <span className='min-w-0 truncate uppercase'>{o.label}</span>
-                    <span className='shrink-0'>{formatSharePrice(o.cents)}</span>
+                    <span className='shrink-0'>
+                      {winner ? (active ? 'Won' : 'Lost') : priceLabel(market, o)}
+                    </span>
                   </button>
                 )
               })}
@@ -413,13 +486,13 @@ const MarketDetail = () => {
           {/* Rules / Recent trades */}
           <div className='flex flex-col gap-3 rounded-2xl border border-border bg-card p-5'>
             <div className='flex items-center gap-4 border-b border-border/60'>
-              {(['rules', 'trades'] as const).map((t) => (
+              {(rules ? (['rules', 'trades'] as const) : (['trades'] as const)).map((t) => (
                 <button
                   key={t}
                   type='button'
                   onClick={() => setInfoTab(t)}
                   className={`-mb-px border-b-2 pb-2 text-sm font-semibold capitalize transition-colors ${
-                    infoTab === t
+                    activeInfoTab === t
                       ? 'border-brand-green text-black'
                       : 'border-transparent text-neutral-10 hover:text-black'
                   }`}
@@ -429,22 +502,38 @@ const MarketDetail = () => {
               ))}
             </div>
 
-            {infoTab === 'rules' ? (
-              <p className='text-sm leading-relaxed whitespace-pre-line text-neutral-10'>
-                {market.rules ||
-                  'No resolution rules were provided for this market.'}
-              </p>
+            {activeInfoTab === 'rules' && rules ? (
+              <div className='flex flex-col items-start gap-2'>
+                {/* Plain text: paragraphs are blank-line separated, so keep the
+                    line breaks rather than parsing it as Markdown. */}
+                <p
+                  className={`text-sm leading-relaxed whitespace-pre-line text-neutral-10 ${
+                    rulesLong && !rulesExpanded ? 'line-clamp-6' : ''
+                  }`}
+                >
+                  {rules}
+                </p>
+                {rulesLong && (
+                  <button
+                    type='button'
+                    onClick={() => setRulesExpanded((v) => !v)}
+                    className='text-sm font-semibold text-black hover:underline'
+                  >
+                    {rulesExpanded ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
             ) : (
               <div className='flex flex-col'>
-                {trades?.length ? (
+                {recentTrades.length ? (
                   <>
                     <div className='grid grid-cols-4 gap-2 pb-2 text-xs font-semibold text-neutral-10'>
                       <span>Side</span>
                       <span className='text-right'>Price</span>
-                      <span className='text-right'>Size</span>
+                      <span className='text-right'>Amount</span>
                       <span className='text-right'>Time</span>
                     </div>
-                    {trades.slice(0, 15).map((t) => (
+                    {recentTrades.map((t) => (
                       <div
                         key={t.id}
                         className='grid grid-cols-4 gap-2 border-t border-border/40 py-2 text-xs'
@@ -457,16 +546,18 @@ const MarketDetail = () => {
                           {t.side}
                         </span>
                         <span className='text-right text-black'>
-                          {formatSharePrice(t.price)}
+                          {t.price != null ? formatSharePrice(t.price) : 'Pool'}
+                        </span>
+                        {/* A combo leg has no stake of its own. */}
+                        <span className='text-right text-neutral-10'>
+                          {t.combo
+                            ? 'Combo'
+                            : t.amount != null
+                              ? formatNairaCompact(t.amount)
+                              : '—'}
                         </span>
                         <span className='text-right text-neutral-10'>
-                          {formatCompact(t.size)}
-                        </span>
-                        <span className='text-right text-neutral-10'>
-                          {new Date(t.ts).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {tradeTimeLabel(t.ts)}
                         </span>
                       </div>
                     ))}
@@ -481,10 +572,28 @@ const MarketDetail = () => {
           </div>
         </div>
 
-        {/* Trade panel — sports default to the combo ticket, everything else
-            keeps the single-bet panel. */}
-        <div className='lg:sticky lg:top-24 lg:self-start'>
-          {isSportsMarket(market) ? (
+        {/* Trade panel — sports offer a single bet or a combo leg; everything
+            else gets the single-bet panel. */}
+        <div className='flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start'>
+          {isSportsMarket(market) && (
+            <div className='flex items-center gap-1 rounded-full bg-hover p-1'>
+              {(['single', 'combo'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type='button'
+                  onClick={() => setSportsMode(mode)}
+                  className={`flex-1 rounded-full py-1.5 text-sm font-semibold transition-colors ${
+                    activeSportsMode === mode
+                      ? 'bg-white text-black shadow-sm'
+                      : 'text-neutral-10 hover:text-black'
+                  }`}
+                >
+                  {mode === 'single' ? 'Single bet' : 'Add to combo'}
+                </button>
+              ))}
+            </div>
+          )}
+          {isSportsMarket(market) && activeSportsMode === 'combo' ? (
             <ComboMarketPanel market={market} />
           ) : (
             <TradePanel

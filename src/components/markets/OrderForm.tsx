@@ -1,22 +1,28 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { useCookies } from 'react-cookie'
 import { isAxiosError } from 'axios'
+import { useDebounce } from 'use-debounce'
 import { Button } from '../globals/Button'
 import { useSantiBetQuery } from '../../data_layer/utils'
-import { usePlaceBet } from '../../data_layer/bets'
+import { useBetQuote, usePlaceBet } from '../../data_layer/bets'
 import { showWarningToast } from '../../utils/toastUtils'
 import {
   NAIRA,
+  formatCurrency,
   formatSharePrice,
+  sanitizeAmount,
+  spendableBalance,
   toMajorUnits,
   toMinorUnits,
 } from '../../utils/functions'
+import { randomId } from '../../utils/deviceFingerprint'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 import type { WalletBalance } from '../../types/wallet.types'
-import type { Bet, BetType } from '../../types/bet.types'
+import type { Bet, PlaceBetPayload } from '../../types/bet.types'
 import {
   isMarketOpen,
+  isPoolMarket,
   outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
@@ -29,20 +35,30 @@ import BonusSlipToggle from '../bonus/BonusSlipToggle'
 import { BONUS_KYC_CODE } from '../../utils/bonus'
 import { KYC_PATH } from '../../utils/authRedirect'
 import type { FundedBy } from '../../types/bonus.types'
+import { useOddsFormat } from '../../hooks/useOddsFormat'
 
 const QUICK_ADDS = [100, 200, 500, 1000]
+
+// A re-quoted price at least this far (₦0.50 a share) from the one the player
+// last saw counts as a move they have to accept before placing.
+const PRICE_MOVE_THRESHOLD = 0.005
+// Slippage allowed between the price on screen and the fill (₦1 a share):
+// sent as `maxPrice`, above which the API refuses with 409 PRICE_MOVED.
+const MAX_PRICE_SLIPPAGE = 0.01
 
 /** What the player saw when they submitted, for the success screen. */
 export interface PlacedOrder {
   bet: Bet
   outcomeLabel: string
-  type: BetType
   /** Naira. */
   stake: number
   /** 0–1. */
   price: number
-  /** Naira. For a bonus bet, what a win credits (bonus balance or locked winnings). */
-  toWin: number
+  /** Naira — payout if it wins, after fees. For a bonus bet, what a win
+   *  credits (bonus balance or locked winnings). */
+  payout: number
+  /** Naira — fee from the quote the player accepted (0 if none). */
+  fee: number
   /** Cash or bonus credit. */
   fundedBy: FundedBy
   /** Bonus bets only: where a win is credited. */
@@ -53,8 +69,6 @@ interface OrderFormProps {
   market: UiMarket
   outcome?: UiOutcome
   onSelectOutcome: (outcome: UiOutcome) => void
-  /** Offer limit orders. Off on the prediction screen, on when trading. */
-  allowLimit?: boolean
   submitText?: string
   onPlaced: (order: PlacedOrder) => void
 }
@@ -64,10 +78,10 @@ const OrderForm = ({
   market,
   outcome,
   onSelectOutcome,
-  allowLimit = false,
   submitText = 'Place prediction',
   onPlaced,
 }: OrderFormProps) => {
+  const { priceLabel } = useOddsFormat()
   const authNavigate = useAuthNavigate()
   const navigate = useNavigate()
   const location = useLocation()
@@ -75,10 +89,10 @@ const OrderForm = ({
   const isSignedIn = !!cookies?.token
   const suspended = useAccountSuspended()
 
-  const [chosenType, setType] = useState<BetType>('market')
-  const type = allowLimit ? chosenType : 'market'
   const [amount, setAmount] = useState('')
-  const [limitCents, setLimitCents] = useState('')
+  // Idempotency key for the order being placed. Kept across a retry of the
+  // same order after a network failure so it can never fill twice.
+  const pendingOrderRef = useRef<{ key: string; id: string } | null>(null)
   // A server-side rejection to show inline under the amount (e.g. the venue
   // minimum-bet error). `minStake` is the structured minimum from the API's
   // error `details`, offered as a one-tap fill.
@@ -101,7 +115,7 @@ const OrderForm = ({
   const { mutateAsync: placeBet, isPending } = usePlaceBet()
 
   const symbol = NAIRA
-  const cash = toMajorUnits(wallet?.total ?? 0)
+  const cash = spendableBalance(wallet)
   // Every market now carries its minimum stake (kobo). Shown as a hint and
   // pre-checked before submit so the user gets instant feedback; the server
   // STAKE_BELOW_MINIMUM / HEDGE_BELOW_VENUE_MINIMUM checks remain the backstop.
@@ -110,25 +124,84 @@ const OrderForm = ({
 
   const isOpen = useMarketOpen(market)
 
-  const price = useMemo(() => {
-    if (type === 'limit') {
-      const c = Number(limitCents)
-      return c > 0 && c < 100 ? c / 100 : (outcome?.price ?? 0)
-    }
-    return outcome?.price ?? 0
-  }, [type, limitCents, outcome])
-
   const stakeNum = Number(amount) || 0
-  const shares = price > 0 ? stakeNum / price : 0
-  const potentialReturn = shares // each share settles at 1 unit if it wins
-  const toWin = Math.max(potentialReturn, 0)
+
+  // Server quote: the real fill price, fee and net payout. Debounced so typing
+  // doesn't fire a request per keystroke; refreshed while the form is open.
+  const [quotedStake] = useDebounce(stakeNum, 300)
+  const quoteBody = useMemo<Omit<PlaceBetPayload, 'clientOrderId'> | null>(
+    () =>
+      outcome && isOpen && quotedStake > 0
+        ? {
+            marketId: market.id,
+            outcomeId: outcome.id,
+            stake: String(toMinorUnits(quotedStake)),
+            type: 'market',
+          }
+        : null,
+    [market.id, outcome, isOpen, quotedStake],
+  )
+  const { data: quoteData, refetch: refetchQuote } = useBetQuote(
+    isSignedIn ? quoteBody : null,
+  )
+  // The previous quote stays cached while the next loads; only use it if it's
+  // for what's on screen now.
+  const quote =
+    quoteBody && quoteData?.outcomeId === outcome?.id ? quoteData : undefined
+  const quotedPrice = quote?.price != null ? Number(quote.price) : null
+
+  // Pool (parimutuel) markets have no share price: a win pays a slice of the
+  // pool, so odds float until close. The lobby says so via `executionModel`;
+  // on a feed without it, remember it once a quote reveals it.
+  const [poolMarketId, setPoolMarketId] = useState<string | null>(null)
+  if (quote?.executionModel === 'PARIMUTUEL' && poolMarketId !== market.id) {
+    setPoolMarketId(market.id)
+  }
+  const isPool = market.executionModel
+    ? isPoolMarket(market)
+    : poolMarketId === market.id
+
+  // Without a quote (guests, or before it lands) estimate locally — at the ask,
+  // since that's what a buy pays, not the mid.
+  const price = quotedPrice ?? outcome?.ask ?? outcome?.price ?? 0
+
+  // A quote for a slightly older stake (mid-debounce) still gives the right
+  // ratios; scale its money to the stake on screen.
+  const quoteStake = quote ? toMajorUnits(quote.stake.amount) : 0
+  const scale = quote && quoteStake > 0 ? stakeNum / quoteStake : 0
+  const fee = quote ? toMajorUnits(quote.fee.amount) * scale : 0
+  // Odds before a quote lands: at the ask if there is one, else the feed's
+  // server odds (net of fees, and the only right number on a pool market),
+  // else 1 / price.
+  const localOdds = outcome?.ask
+    ? price > 0
+      ? 1 / price
+      : 0
+    : (outcome?.decimalOdds ?? (price > 0 ? 1 / price : 0))
+  const payout = quote
+    ? toMajorUnits(quote.netReturn.amount) * scale
+    : stakeNum * localOdds
+  const profit = payout - stakeNum
+  // On a pool the effective odds are what this stake would actually be paid.
+  const decimalOdds = quote
+    ? isPool
+      ? stakeNum > 0
+        ? payout / stakeNum
+        : 0
+      : Number(quote.decimalOdds) || localOdds
+    : localOdds
+  const chance =
+    quote?.impliedPercent != null
+      ? Math.round(quote.impliedPercent)
+      : Math.round(price * 100)
+  const estimated = (quote?.estimated ?? false) || isPool
 
   // Bonus credit: while "Use bonus" is on, the stake comes out of the bonus
   // balance and bonus rules (price band, live, min/max stake…) apply.
   const bonusSlip = useBonusSlip({
     market,
     outcome,
-    type,
+    type: 'market',
     stake: stakeNum,
     price,
     isSignedIn,
@@ -136,6 +209,26 @@ const OrderForm = ({
   const usingBonus = bonusSlip.active
   const spendable = usingBonus ? bonusSlip.balance : cash
   const selectedBonusReason = bonusSlip.ineligibleReason(outcome?.id)
+
+  // Price-move guard: remember the price the player first saw for this
+  // outcome + stake; if a re-quote moves it, they accept before placing.
+  // Adjust-state-during-render, keyed so it resets on their own edits.
+  const anchorKey = `${outcome?.id}:${quote?.stake.amount}`
+  const [anchor, setAnchor] = useState<{ key: string; price: number } | null>(
+    null,
+  )
+  if (quotedPrice != null && anchor?.key !== anchorKey) {
+    setAnchor({ key: anchorKey, price: quotedPrice })
+  }
+  const movedFrom =
+    quotedPrice != null &&
+    anchor?.key === anchorKey &&
+    Math.abs(quotedPrice - anchor.price) >= PRICE_MOVE_THRESHOLD
+      ? anchor.price
+      : null
+  const acceptPrice = () => {
+    if (quotedPrice != null) setAnchor({ key: anchorKey, price: quotedPrice })
+  }
 
   // Send guests to sign in, then back to this market with their pick kept.
   const goToSignIn = () => {
@@ -148,6 +241,15 @@ const OrderForm = ({
   const addAmount = (delta: number) => {
     clearBetError()
     setAmount(String((Number(amount) || 0) + delta))
+  }
+
+  /** Same order as the last attempt → same id; anything else gets a new one. */
+  const clientOrderIdFor = (payload: Omit<PlaceBetPayload, 'clientOrderId'>) => {
+    const key = JSON.stringify(payload)
+    if (pendingOrderRef.current?.key !== key) {
+      pendingOrderRef.current = { key, id: randomId() }
+    }
+    return pendingOrderRef.current.id
   }
 
   const handleSubmit = async () => {
@@ -193,7 +295,7 @@ const OrderForm = ({
         return
       }
     } else if (isSignedIn && stakeNum > cash) {
-      showWarningToast('Amount exceeds your total balance')
+      showWarningToast('Amount exceeds your available balance')
       return
     }
     if (marketMinNaira != null && stakeNum < marketMinNaira) {
@@ -203,53 +305,93 @@ const OrderForm = ({
       )
       return
     }
-    if (type === 'limit') {
-      const c = Number(limitCents)
-      if (!(c > 0 && c < 100)) {
-        showWarningToast('Enter a limit price between ₦1 and ₦99')
-        return
-      }
+    // The price moved since they looked — this click accepts the new one.
+    if (movedFrom != null) {
+      acceptPrice()
+      return
     }
 
+    const payload: Omit<PlaceBetPayload, 'clientOrderId'> = {
+      marketId: market.id,
+      outcomeId: outcome.id,
+      stake: String(toMinorUnits(stakeNum)),
+      type: 'market',
+      // Don't fill above the price on screen (plus a little slippage). A pool
+      // has no fill price, so the API ignores it there.
+      ...(!isPool && price > 0
+        ? {
+            maxPrice: Number(
+              Math.min(price + MAX_PRICE_SLIPPAGE, 0.999).toFixed(4),
+            ),
+          }
+        : {}),
+      // Say it explicitly whenever a bonus is live: the new-member bonus
+      // otherwise defaults to bonus on the server.
+      ...(bonusSlip.offered ? { useBonus: usingBonus } : {}),
+    }
     try {
       const bet = await placeBet({
-        marketId: market.id,
-        outcomeId: outcome.id,
-        stake: String(toMinorUnits(stakeNum)),
-        type,
-        ...(type === 'limit' ? { limitPrice: Number(limitCents) / 100 } : {}),
-        // Say it explicitly whenever a bonus is live: the new-member bonus
-        // otherwise defaults to bonus on the server.
-        ...(bonusSlip.offered ? { useBonus: usingBonus } : {}),
+        ...payload,
+        clientOrderId: clientOrderIdFor(payload),
       })
+      pendingOrderRef.current = null
+      // A hedged bet the trading partner refuses still comes back 201, as
+      // REJECTED with the stake already returned — not a placed prediction.
+      if (bet.status === 'REJECTED') {
+        if (
+          bet.rejectCode === 'HEDGE_BELOW_VENUE_MINIMUM' &&
+          marketMinNaira != null
+        ) {
+          setMinStake(marketMinNaira)
+        }
+        setBetError(
+          bet.rejectReason ??
+            'Your prediction was rejected. Your stake is back in your wallet.',
+        )
+        return
+      }
       const fundedBy = bet.fundedBy ?? (usingBonus ? 'BONUS' : 'CASH')
       onPlaced({
         bet,
         outcomeLabel: outcome.label,
-        type,
         stake: stakeNum,
         price,
-        toWin: fundedBy === 'BONUS' ? bonusSlip.creditOnWin : toWin,
+        payout: fundedBy === 'BONUS' ? bonusSlip.creditOnWin : payout,
+        fee,
         fundedBy,
         ...(fundedBy === 'BONUS'
           ? { bonusCreditsTo: bonusSlip.creditsTo }
           : {}),
       })
       setAmount('')
-      setLimitCents('')
     } catch (error) {
+      // The server answered, so nothing is in flight: a fixed-up retry is a
+      // new order. With no response (timeout, network) the bet may have gone
+      // through, so a retry keeps the id and can't place it twice.
+      if (isAxiosError(error) && error.response) pendingOrderRef.current = null
       const fallback = 'Could not place your prediction'
       if (isAxiosError(error)) {
         const data = error.response?.data as
           | {
               message?: string
               code?: string
+              price?: string
               details?: {
                 minimumStakeNgn?: number
                 minimumStakeMinor?: number
               }
             }
           | undefined
+        if (data?.code === 'PRICE_MOVED') {
+          // Re-quote so the form shows the new price and asks to accept it.
+          void refetchQuote()
+          setBetError(
+            `The price moved${
+              data.price ? ` to ${formatSharePrice(Number(data.price))}` : ''
+            } before your prediction went through. Check the new payout and try again.`,
+          )
+          return
+        }
         const message = data?.message ?? fallback
         // Surface the minimum-bet rejection inline with a one-tap fill, reading
         // the structured minimum from the API error `details`. Two shapes:
@@ -271,26 +413,6 @@ const OrderForm = ({
 
   return (
     <>
-      {/* Order type */}
-      {allowLimit && (
-        <div className='flex items-center gap-1 rounded-full bg-hover p-1'>
-          {(['market', 'limit'] as const).map((t) => (
-            <button
-              key={t}
-              type='button'
-              onClick={() => setType(t)}
-              className={`flex-1 rounded-full py-1 text-xs font-semibold capitalize transition-colors ${
-                type === t
-                  ? 'bg-white text-black shadow-sm'
-                  : 'text-neutral-10 hover:text-black'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Outcome selector */}
       <div className='flex items-stretch gap-2'>
         {market.outcomes.map((o, i) => {
@@ -317,7 +439,7 @@ const OrderForm = ({
               <span className='w-full min-w-0 truncate text-center uppercase'>
                 {o.label}
               </span>
-              <span>{formatSharePrice(o.cents)}</span>
+              <span>{priceLabel(market, o)}</span>
               {noBonus && (
                 <span className='text-[10px] font-semibold normal-case text-neutral-10'>
                   No bonus
@@ -336,31 +458,15 @@ const OrderForm = ({
         </p>
       )}
 
-      {/* Limit price */}
-      {type === 'limit' && (
-        <label className='flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm'>
-          <span className='text-neutral-10'>Limit price (₦)</span>
-          <input
-            type='text'
-            inputMode='numeric'
-            value={limitCents}
-            onChange={(e) =>
-              setLimitCents(e.target.value.replace(/[^\d]/g, '').slice(0, 2))
-            }
-            placeholder={String(outcome?.cents ?? '')}
-            className='w-16 bg-transparent text-right font-bold text-black outline-none'
-          />
-        </label>
-      )}
-
       {/* Amount */}
       <div className='flex flex-col gap-2'>
         <div className='flex items-center justify-between text-xs'>
           <span className='text-neutral-10'>Amount</span>
           {isSignedIn && (
-            <span className={usingBonus ? 'font-semibold text-success' : 'text-neutral-10'}>
-              {usingBonus ? 'Bonus' : 'Cash'}: {symbol}
-              {spendable.toLocaleString()}
+            <span
+              className={usingBonus ? 'font-semibold text-success' : 'text-neutral-10'}
+            >
+              {usingBonus ? 'Bonus' : 'Available'}: {formatCurrency(spendable)}
             </span>
           )}
         </div>
@@ -372,7 +478,7 @@ const OrderForm = ({
             value={amount}
             onChange={(e) => {
               clearBetError()
-              setAmount(e.target.value.replace(/[^\d.]/g, ''))
+              setAmount(sanitizeAmount(e.target.value))
             }}
             placeholder='0.00'
             className='w-full bg-transparent px-1 text-sm font-bold text-black outline-none'
@@ -395,7 +501,7 @@ const OrderForm = ({
               type='button'
               onClick={() => {
                 clearBetError()
-                setAmount(String(spendable))
+                setAmount(String(Math.floor(spendable * 100) / 100))
               }}
               className='rounded-full bg-hover px-3 py-1 text-xs font-semibold text-neutral-10 hover:text-black'
             >
@@ -452,21 +558,55 @@ const OrderForm = ({
         )}
       </div>
 
+      {outcome?.stale && isOpen && (
+        <p className='rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-warning'>
+          This price may be out of date. It's re-checked when you place, so
+          your fill can differ.
+        </p>
+      )}
+
+      {movedFrom != null && quotedPrice != null && (
+        <p className='rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-warning'>
+          Price moved from {formatSharePrice(movedFrom)} to{' '}
+          {formatSharePrice(quotedPrice)}. Your payout below is updated.
+        </p>
+      )}
+
       {/* Summary */}
       <div className='flex flex-col gap-1.5 border-t border-border/60 pt-3 text-sm'>
+        {!isPool && (
+          <div className='flex justify-between'>
+            <span className='text-neutral-10'>Price per share</span>
+            <span className='font-semibold text-black'>
+              {formatSharePrice(price)}
+            </span>
+          </div>
+        )}
         <div className='flex justify-between'>
-          <span className='text-neutral-10'>Average price</span>
+          <span className='text-neutral-10'>
+            {isPool ? 'Est. odds' : 'Odds'}
+          </span>
           <span className='font-semibold text-black'>
-            {formatSharePrice(price)}
+            {decimalOdds > 0 ? decimalOdds.toFixed(2) : '—'}
+            {!isPool && (
+              <span className='font-normal text-neutral-10'>
+                {' '}
+                · {chance}% chance
+              </span>
+            )}
           </span>
         </div>
-        <div className='flex justify-between'>
-          <span className='text-neutral-10'>Odds</span>
-          <span className='font-semibold text-black'>
-            {Math.round(price * 100)}%
-          </span>
-        </div>
+        {fee > 0 && (
+          <div className='flex justify-between'>
+            <span className='text-neutral-10'>Fee</span>
+            <span className='font-semibold text-black'>
+              {formatCurrency(fee)}
+            </span>
+          </div>
+        )}
         {usingBonus ? (
+          // A bonus win credits the bonus balance (or, for the deposit bonus,
+          // only the profit as locked winnings) — not cash.
           <div className='flex justify-between gap-3'>
             <span className='text-neutral-10'>
               {bonusSlip.creditsTo === 'LOCKED_WINNINGS'
@@ -476,20 +616,36 @@ const OrderForm = ({
             <span
               className={`font-semibold text-success ${bonusSlip.quoteLoading ? 'opacity-60' : ''}`}
             >
-              {symbol}
-              {bonusSlip.creditOnWin.toLocaleString(undefined, {
-                maximumFractionDigits: 0,
-              })}
+              {formatCurrency(bonusSlip.creditOnWin)}
             </span>
           </div>
         ) : (
-          <div className='flex justify-between'>
-            <span className='text-neutral-10'>To win</span>
-            <span className='font-semibold text-success'>
-              {symbol}
-              {toWin.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </span>
-          </div>
+          <>
+            <div className='flex justify-between'>
+              <span className='text-neutral-10'>
+                {estimated ? 'Est. payout' : 'Payout'} if{' '}
+                {outcome?.label ?? 'it'} wins
+              </span>
+              <span className='font-semibold text-black'>
+                {formatCurrency(Math.max(payout, 0))}
+              </span>
+            </div>
+            <div className='flex justify-between'>
+              <span className='text-neutral-10'>Profit</span>
+              <span
+                className={`font-semibold ${profit >= 0 ? 'text-success' : 'text-error'}`}
+              >
+                {profit >= 0 ? '+' : '-'}
+                {formatCurrency(Math.abs(stakeNum > 0 ? profit : 0))}
+              </span>
+            </div>
+          </>
+        )}
+        {estimated && (
+          <p className='text-xs text-neutral-10'>
+            {quote?.note ??
+              'Pool market: the payout moves with the pool until it closes.'}
+          </p>
         )}
       </div>
 
@@ -500,9 +656,11 @@ const OrderForm = ({
             ? 'Market closed'
             : !isSignedIn
               ? 'Sign in to predict'
-              : usingBonus
-                ? `${submitText} with bonus`
-                : submitText
+              : movedFrom != null
+                ? 'Accept new price'
+                : usingBonus
+                  ? `${submitText} with bonus`
+                  : submitText
         }
         variation='primary'
         size='large'
