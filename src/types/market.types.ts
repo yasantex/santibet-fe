@@ -212,6 +212,15 @@ export interface UiOutcome {
   decimalOdds?: number | null
 }
 
+/** A team/competitor on a sports event (API-Sports fixtures). */
+export interface EventTeam {
+  name: string
+  shortName?: string | null
+  logoUrl?: string | null
+  record?: string | null
+  side?: 'home' | 'away' | null
+}
+
 export interface UiMarket {
   id: string
   eventId: string
@@ -221,6 +230,9 @@ export interface UiMarket {
    *  market was normalized from an event feed; used to give generic market
    *  titles ("Match Winner") their game/event context on cards. */
   eventTitle?: string
+  /** Parent event's teams (with logos), stamped from the event feed. Absent on
+   *  markets fetched on their own — the single-market endpoint omits them. */
+  teams?: EventTeam[] | null
   subtitle: string
   category: string
   /** Category slug (lower-case). Matches `/category/:slug` routes even when
@@ -262,6 +274,8 @@ export interface UiEvent {
   liveState?: LiveState | null
   /** Admin-featured (Events → Featured); always gets a hero chart slide. */
   featured?: boolean
+  /** Sports fixtures: the two teams, with logos. */
+  teams?: EventTeam[] | null
   markets: UiMarket[]
 }
 
@@ -349,6 +363,8 @@ export interface LobbyEvent {
   hot?: boolean // operator-curated hot pick (admin → Events → Hot pick)
   live?: boolean
   liveState?: LiveState | null
+  /** Sports fixtures: home/away teams with logos. */
+  teams?: EventTeam[] | null
   marketCount: number
   markets: LobbyMarket[]
 }

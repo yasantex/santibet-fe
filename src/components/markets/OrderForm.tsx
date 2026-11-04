@@ -21,11 +21,13 @@ import type { UiMarket, UiOutcome } from '../../types/market.types'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { Bet, PlaceBetPayload } from '../../types/bet.types'
 import {
+  findTeam,
   isMarketOpen,
   isPoolMarket,
   outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
+import TeamLogo from './TeamLogo'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
 import SuspendedHint from '../globals/SuspendedHint'
 import useAuthNavigate from '../../hooks/useAuthNavigate'
@@ -325,9 +327,10 @@ const OrderForm = ({
             ),
           }
         : {}),
-      // Say it explicitly whenever a bonus is live: the new-member bonus
-      // otherwise defaults to bonus on the server.
-      ...(bonusSlip.offered ? { useBonus: usingBonus } : {}),
+      // Always explicit: left out, the server falls back to the player's bonus
+      // default, while this form checked the stake against the balance it's
+      // actually spending (cash unless "Use bonus" is on).
+      useBonus: usingBonus,
     }
     try {
       const bet = await placeBet({
@@ -436,8 +439,11 @@ const OrderForm = ({
                   : 'border-border text-neutral-10 hover:text-black'
               } ${noBonus ? 'opacity-45' : ''}`}
             >
-              <span className='w-full min-w-0 truncate text-center uppercase'>
-                {o.label}
+              <span className='flex w-full min-w-0 items-center justify-center gap-1.5'>
+                <TeamLogo team={findTeam(market.teams, o.label)} size={16} />
+                <span className='min-w-0 truncate text-center uppercase'>
+                  {o.label}
+                </span>
               </span>
               <span>{priceLabel(market, o)}</span>
               {noBonus && (

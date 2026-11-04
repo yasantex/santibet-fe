@@ -43,6 +43,7 @@ const toLeg = (market: UiMarket, outcome: UiOutcome): ComboLeg => ({
   price: outcome.price,
   minStakeMinor: market.minStakeMinor ?? null,
   closeTime: market.closeTime || null,
+  teams: market.teams ?? null,
   addedAt: Date.now(),
 })
 

@@ -6,9 +6,11 @@ import {
 import { useComboSlip } from '../../hooks/useComboSlip'
 import useMarketOpen from '../../hooks/useMarketOpen'
 import {
+  findTeam,
   outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
+import TeamLogo from '../markets/TeamLogo'
 import type { UiMarket } from '../../types/market.types'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
 
@@ -62,6 +64,7 @@ const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
                     className='shrink-0'
                   />
                 )}
+                <TeamLogo team={findTeam(market.teams, o.label)} size={18} />
                 <span className='min-w-0 truncate uppercase'>{o.label}</span>
               </span>
               <span className='shrink-0'>{priceLabel(market, o)}</span>

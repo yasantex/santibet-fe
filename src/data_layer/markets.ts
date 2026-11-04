@@ -218,9 +218,13 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
     live: e.live ?? false,
     liveState: e.liveState ?? null,
     featured: e.featured ?? false,
+    teams: e.teams ?? null,
     markets: (e.markets ?? []).map((m) => ({
       ...normalizeLobbyMarket(m, category, e.id, e.imageUrl, e.title),
       categorySlug,
+      // Markets render on their own (cards, match rows), so they carry the
+      // event's teams for logos.
+      teams: e.teams ?? null,
     })),
   }
 }

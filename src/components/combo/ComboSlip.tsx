@@ -109,7 +109,16 @@ const SingleBet = ({
   onRemove: () => void
 }) => {
   const { toggle } = useComboSlip()
-  const { data: market, isLoading, isError } = useMarket(leg.marketId, leg.eventId)
+  const { data: fetched, isLoading, isError } = useMarket(leg.marketId, leg.eventId)
+  // The single-market endpoint omits teams; reuse the ones the leg captured so
+  // the order form can show crests.
+  const market = useMemo(
+    () =>
+      fetched && !fetched.teams && leg.teams
+        ? { ...fetched, teams: leg.teams }
+        : fetched,
+    [fetched, leg.teams],
+  )
   const outcome = market?.outcomes.find((o) => o.id === leg.outcomeId)
 
   return (

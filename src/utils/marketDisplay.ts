@@ -1,5 +1,35 @@
 import { formatSharePrice } from './functions'
-import type { UiMarket } from '../types/market.types'
+import type { EventTeam, UiMarket } from '../types/market.types'
+
+const foldName = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+/**
+ * The event team a label refers to — an outcome ("Vasco DA Gama"), a score
+ * line's competitor, or a name parsed from the title. Matches the full or
+ * short name, case- and accent-insensitive. Null for non-team labels
+ * ("Draw", "Over 2.5", "Yes").
+ */
+export const findTeam = (
+  teams: EventTeam[] | null | undefined,
+  label: string | null | undefined,
+): EventTeam | null => {
+  if (!teams?.length || !label) return null
+  const l = foldName(label)
+  if (!l) return null
+  return (
+    teams.find(
+      (t) =>
+        foldName(t.name) === l ||
+        (!!t.shortName && foldName(t.shortName) === l),
+    ) ?? null
+  )
+}
 
 /**
  * Outcome colour. Binary markets use yes/no (green/red). In 3+ outcome markets
