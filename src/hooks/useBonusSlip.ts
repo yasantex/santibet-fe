@@ -1,10 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
-import {
-  useBetQuote,
-  useBonusEligibility,
-  useCurrentBonus,
-} from '../data_layer/bonuses'
+import { useBetQuote } from '../data_layer/bets'
+import { useBonusEligibility, useCurrentBonus } from '../data_layer/bonuses'
 import { toMajorUnits, toMinorUnits } from '../utils/functions'
 import type { BetType } from '../types/bet.types'
 import type { BonusEligibilityOutcome } from '../types/bonus.types'
@@ -96,7 +93,13 @@ const useBonusSlip = ({
         }
       : null
   const { data: quote, isFetching: quoteLoading } = useBetQuote(quotePayload)
-  const quoteMatches = !!quote?.bonus && debouncedStake === stake
+  // The hook keeps the last quote on screen while the next loads, so only
+  // trust one priced for this outcome at the stake on screen.
+  const quoteMatches =
+    !!quote?.bonus &&
+    debouncedStake === stake &&
+    quote.outcomeId === outcome?.id &&
+    quote.stake.amount === String(toMinorUnits(stake))
 
   const creditsTo =
     quote?.bonus?.creditsTo ??

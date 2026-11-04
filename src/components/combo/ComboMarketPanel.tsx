@@ -5,9 +5,12 @@ import {
 } from '@hugeicons/core-free-icons'
 import { useComboSlip } from '../../hooks/useComboSlip'
 import useMarketOpen from '../../hooks/useMarketOpen'
-import { outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
-import { formatSharePrice } from '../../utils/functions'
+import {
+  outcomeTone,
+  TONE_STYLES,
+} from '../../utils/marketDisplay'
 import type { UiMarket } from '../../types/market.types'
+import { useOddsFormat } from '../../hooks/useOddsFormat'
 
 /**
  * Right-rail panel on a SPORTS market detail page. Instead of the TradePanel
@@ -17,6 +20,7 @@ import type { UiMarket } from '../../types/market.types'
  * enforces one market per event.
  */
 const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
+  const { priceLabel } = useOddsFormat()
   const combo = useComboSlip()
   const selectedOutcomeId = combo.selectedOutcomeIdForMarket(market.id)
   const isOpen = useMarketOpen(market)
@@ -60,7 +64,7 @@ const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
                 )}
                 <span className='min-w-0 truncate uppercase'>{o.label}</span>
               </span>
-              <span className='shrink-0'>{formatSharePrice(o.cents)}</span>
+              <span className='shrink-0'>{priceLabel(market, o)}</span>
             </button>
           )
         })}

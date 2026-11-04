@@ -38,10 +38,17 @@ const comboSlipSlice = createSlice({
     clearSlip: (state) => {
       state.legs = []
     },
+    /** Player accepted re-quoted odds: outcomeId → new price (0–1). */
+    updateLegPrices: (state, action: PayloadAction<Record<string, number>>) => {
+      state.legs.forEach((leg) => {
+        const price = action.payload[leg.outcomeId]
+        if (price != null) leg.price = price
+      })
+    },
   },
 })
 
-export const { addOrReplaceMarketLeg, removeLeg, clearSlip } =
+export const { addOrReplaceMarketLeg, removeLeg, clearSlip, updateLegPrices } =
   comboSlipSlice.actions
 
 export default comboSlipSlice.reducer

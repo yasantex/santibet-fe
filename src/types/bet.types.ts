@@ -1,5 +1,13 @@
 import type { ComboTicket } from './combo.types'
+import type { ExecutionModel } from './market.types'
 import type { BonusQuote, FundedBy } from './bonus.types'
+
+// The combo ticket shape is owned by combo.types; re-exported here so callers
+// can import it alongside the other bet/position types.
+export type {
+  ComboTicket,
+  ComboStatus as ComboTicketStatus,
+} from './combo.types'
 
 export type BetType = 'market' | 'limit'
 
@@ -14,7 +22,7 @@ export type BetStatus =
 
 export type PositionStatusApi = 'OPEN' | 'CLOSED' | 'SETTLED'
 
-export type PositionResult = 'WON' | 'LOST' | 'CASHED_OUT'
+export type PositionResult = 'WON' | 'LOST' | 'CASHED_OUT' | 'VOID'
 
 export interface Money {
   amount: string
@@ -29,6 +37,9 @@ export interface MarketSummary {
   imageUrl: string | null
   /** The event/fixture, e.g. "Arsenal vs Chelsea" — a sports market's title is only its type. */
   eventTitle?: string | null
+  /** The market's lobby status (OPEN, CLOSED, PAUSED, SETTLED, VOIDED,
+   *  DISPUTED, UNKNOWN). */
+  status?: string
 }
 
 export interface PlaceBetPayload {
@@ -37,9 +48,43 @@ export interface PlaceBetPayload {
   stake: string
   type: BetType
   limitPrice?: number
+  /** Most the player will pay per share (0–1); above it the API answers 409
+   *  `PRICE_MOVED`. Ignored on pool markets. */
+  maxPrice?: number
   clientOrderId?: string
   /** Stake bonus credit instead of cash. Market bets only. */
   useBonus?: boolean
+}
+
+/** POST /bets/quote — read-only pricing for a stake. Money is minor units. */
+export interface BetQuote {
+  marketId: string
+  outcomeId: string
+  executionModel: 'PARIMUTUEL' | 'EXECUTION_LINKED' | 'INTERNAL'
+  type: BetType
+  stake: Money
+  /** Fill price, 0–1. */
+  price: string | null
+  decimalOdds: string | null
+  impliedPercent: number | null
+  shares: string | null
+  /** Gross payout if the outcome wins. */
+  potentialReturn: Money
+  fee: Money
+  /** Payout after fees — what actually lands in the wallet on a win. */
+  netReturn: Money
+  /** netReturn − stake (can be negative). */
+  profit: Money
+  /** Pool (parimutuel) markets: the payout floats until close. */
+  estimated: boolean
+  pool: {
+    total: Money
+    onOutcome: Money
+    rakeBps: number
+  } | null
+  note: string | null
+  /** Present only when the quote was asked with `useBonus: true`. */
+  bonus?: BonusQuote | null
 }
 
 export interface Bet {
@@ -48,12 +93,26 @@ export interface Bet {
   outcomeId: string
   status: BetStatus
   type: BetType
-  price: string
-  odds: string
-  shares: string
+  executionModel?: ExecutionModel | null
+  /** Null on pool bets (no share price). */
+  price: string | null
+  /** Pool bets: the live effective odds (payout ÷ stake). */
+  odds: string | null
+  shares: string | null
   stake: Money
+  /** Gross payout on a win (pool bets: already net of the rake). */
   potentialReturn: Money
-  filledShares: string
+  fee?: Money
+  /** potentialReturn − fee: what lands in the wallet on a win. */
+  netReturn?: Money
+  /** Set only when status is REJECTED. Branch on the code; show the reason. */
+  rejectCode?: string | null
+  rejectReason?: string | null
+  filledShares: string | null
+  /** Set once the market settles. */
+  result?: 'WON' | 'LOST' | 'VOID' | null
+  /** Pool (parimutuel) bets: potentialReturn floats until close. */
+  estimated?: boolean
   market?: MarketSummary | null
   outcomeLabel?: string | null
   /** Whether the stake came from cash or bonus credit. */
@@ -64,8 +123,21 @@ export interface Bet {
 export interface BetListResponse {
   data: Bet[]
   nextCursor: string | null
-  /** The player's combo tickets — first page only; merge into the list by createdAt. */
+  /** Combo tickets — first page only, to be merged in by `createdAt`. */
   combos?: ComboTicket[]
+}
+
+/** GET /bets/portfolio — totals over every position, ignoring list filters. */
+export interface PortfolioSummary {
+  openPositions: number
+  settledPositions: number
+  wonCount: number
+  lostCount: number
+  invested: Money
+  currentValue: Money
+  unrealizedPnl: Money
+  realizedPnl: Money
+  netPnl: Money
 }
 
 export interface BetPosition {
@@ -75,20 +147,30 @@ export interface BetPosition {
   status: PositionStatusApi
   /** Only present once a position is SETTLED or CLOSED. */
   result?: PositionResult | null
-  /** ₦1-unit share count (API ledger unit). Use for money math only. */
-  shares: string
+  executionModel?: ExecutionModel | null
+  /** False on pool positions and closed/unpriced markets. */
+  cashOutAvailable?: boolean
+  /** ₦1-unit share count (API ledger unit). Use for money math only. Null on
+   *  pool positions. */
+  shares: string | null
   /** ₦100-settling contract count (= shares ÷ 100). Preferred for display. */
   contracts?: string | number | null
-  avgPrice: string
-  currentPrice?: string
+  avgPrice: string | null
+  currentPrice?: string | null
   stake?: Money
   potentialReturn?: Money
+  fee?: Money
+  /** potentialReturn − fee: what lands in the wallet on a win. */
+  netReturn?: Money
   /** Live mark-to-market value; null once the position is settled/closed. */
   currentValue: Money | null
   /** Live P&L while OPEN; null once settled/closed. */
   unrealizedPnl?: Money | null
   /** Final P&L once SETTLED or CLOSED; null while still OPEN. */
   realizedPnl?: Money | null
+  /** Pool (parimutuel) position: no live value until close; potentialReturn
+   *  is an estimate. */
+  estimated?: boolean
   market?: MarketSummary | null
   outcomeLabel?: string | null
   /** Bonus-funded positions cannot be cashed out. */
@@ -100,31 +182,27 @@ export interface BetPosition {
 export interface BetPositionListResponse {
   data: BetPosition[]
   nextCursor: string | null
-  /** The player's combo tickets — first page only; merge into the list by createdAt. */
+  /** Combo tickets — first page only, to be merged in by the client. */
   combos?: ComboTicket[]
 }
 
 /** Read-only estimate of what a position would return if cashed out now. */
 export interface CashOutQuote {
-  /** Contracts/quantity being sold. */
+  /** Shares this quote is for (same units as the position's `shares`): what
+   *  was asked, else the whole position. */
   quantity: string | number
   /** Price the position would sell at. */
   sellPrice: string | number
-  /** Estimated proceeds, in kobo (minor units). */
+  /** Estimated proceeds for `quantity`, in kobo (minor units). */
   valueMinor: string | number
   currency: string
+  /** Every share held: the most a sale can take. */
+  positionQuantity?: string
+  /** The fewest shares a part sale can sell. */
+  minQuantity?: string
+  /** The fewest shares a part sale must leave behind. */
+  minRemainingQuantity?: string
+  /** False when the position is too small to split: only selling it all works. */
+  partialAvailable?: boolean
 }
 
-export type BetQuotePayload = PlaceBetPayload
-
-/** `POST /bets/quote` — only the fields the UI reads. */
-export interface BetQuote {
-  marketId: string
-  outcomeId: string
-  price: string | null
-  shares: string | null
-  potentialReturn: Money
-  profit?: Money
-  /** Present only when the quote was asked with `useBonus: true`. */
-  bonus?: BonusQuote | null
-}

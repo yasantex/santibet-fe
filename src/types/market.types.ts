@@ -1,7 +1,18 @@
 // ── Raw API shapes (GET /api/market/*) ───────────────────────────────
 
-export type MarketStatus = 'open' | 'closed' | 'settled' | 'paused' | 'unknown'
+export type MarketStatus =
+  | 'open'
+  | 'closed'
+  | 'settled'
+  | 'paused'
+  | 'voided'
+  | 'disputed'
+  | 'unknown'
 export type MarketProvider = 'polymarket' | 'kalshi'
+
+/** How a market prices bets: a pool (no share price, odds float until
+ *  close, no cash-out), hedged with a trading partner, or SantiBet's own book. */
+export type ExecutionModel = 'PARIMUTUEL' | 'EXECUTION_LINKED' | 'INTERNAL'
 
 export interface ApiOutcome {
   id: string
@@ -114,9 +125,16 @@ export interface MarketTrade {
   id: string
   marketId: string
   outcomeId: string
-  price: number
-  size: number
+  /** 0–1; null on pool markets. */
+  price: number | null
+  /** Shares; null on pool bets and combo legs. */
+  size: number | null
+  /** `sell` = a cash-out. */
   side: 'buy' | 'sell'
+  /** Naira: the stake, or the cash-out paid. Null on combo legs. */
+  amount?: number | null
+  /** A leg of a combo (no amount of its own). */
+  combo?: boolean
   ts: string
 }
 
@@ -132,8 +150,12 @@ export interface MarketCandle {
 
 export interface MarketHistoryTick {
   outcomeId: string
-  price: number
-  size: number
+  side?: 'buy' | 'sell'
+  price: number | null
+  size: number | null
+  /** Kobo, as a string: the stake, or the cash-out paid. */
+  amount?: string | null
+  combo?: boolean
   at: string
 }
 
@@ -179,6 +201,15 @@ export interface UiOutcome {
   price: number
   cents: number
   percent: number
+  /** Best ask (0–1) — what a market buy pays. Lobby feed only. */
+  ask?: number | null
+  /** Best bid (0–1) — what a sell would get. Lobby feed only. */
+  bid?: number | null
+  /** The feed flagged this price as out of date. */
+  stale?: boolean
+  /** Server decimal odds (net of fees/rake). On pool markets this — not
+   *  1 / price — is what a win pays per ₦1. Lobby feed only. */
+  decimalOdds?: number | null
 }
 
 export interface UiMarket {
@@ -209,6 +240,10 @@ export interface UiMarket {
   rules?: string | null
   /** Minimum stake for this market, in kobo (minor units). */
   minStakeMinor?: number | null
+  /** Lobby feed only; absent on the raw catalogue. */
+  executionModel?: ExecutionModel | null
+  /** Filled single bets + combo legs. Lobby feed only. */
+  tradeCount?: number | null
   outcomes: UiOutcome[]
   /** Binary-market convenience accessors (derived from outcomes). */
   yes?: UiOutcome
@@ -294,6 +329,9 @@ export interface LobbyMarket {
   resolvedOutcomeId: string | null
   /** Minimum stake for this market, in kobo (minor units). */
   minStakeMinor?: number | string | null
+  executionModel?: ExecutionModel
+  /** Filled single bets + combo legs on this market. */
+  tradeCount?: number
   outcomes: LobbyOutcome[]
 }
 

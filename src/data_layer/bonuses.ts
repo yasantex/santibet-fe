@@ -1,7 +1,5 @@
-import { useQuery, type QueryClient } from '@tanstack/react-query'
-import { useCookies } from 'react-cookie'
+import { type QueryClient } from '@tanstack/react-query'
 import {
-  apiClient,
   useSantiBetInfiniteQuery,
   useSantiBetQuery,
 } from './utils'
@@ -19,7 +17,6 @@ import type {
   CurrentBonus,
   CurrentBonusResponse,
 } from '../types/bonus.types'
-import type { BetQuote, BetQuotePayload } from '../types/bet.types'
 import { isLiveBonus } from '../utils/bonus'
 
 /**
@@ -86,24 +83,3 @@ export const useBonusHistory = (userBonusId?: string, limit = 30) =>
     enabled: true,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   })
-
-/**
- * `POST /bets/quote`. It's a read, so it lives in a query keyed by the
- * payload; pass null to switch it off (no stake yet, signed out, …).
- */
-export const useBetQuote = (payload: BetQuotePayload | null) => {
-  const [cookies] = useCookies(['token'])
-  const token = cookies?.token as string | undefined
-  return useQuery<BetQuote>({
-    queryKey: ['bet-quote', payload],
-    queryFn: async () => {
-      const response = await apiClient.post<BetQuote>('/bets/quote', payload, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      return response.data
-    },
-    enabled: !!token && !!payload,
-    staleTime: 5 * 1000,
-    retry: false,
-  })
-}

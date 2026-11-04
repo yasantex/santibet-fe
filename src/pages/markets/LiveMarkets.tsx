@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import LiveEventCard from '../../components/markets/LiveEventCard'
+import OddsFormatMenu from '../../components/markets/OddsFormatMenu'
 import {
   LiveBadge,
   LiveIntervalFilter,
@@ -210,6 +211,9 @@ const LiveMarkets = () => {
             {activeSub?.value ?? activeGroup?.label ?? 'Live now'}
           </h1>
           <LiveBadge />
+          <div className='ml-auto'>
+            <OddsFormatMenu />
+          </div>
         </div>
         <p className='-mt-3 text-sm text-neutral-10'>
           In-play markets you can trade right now — short-duration crypto and

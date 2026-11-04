@@ -5,7 +5,7 @@ import OrderForm from './OrderForm'
 import SellPanel from './SellPanel'
 import TradingNotice from './TradingNotice'
 import { showSuccessToast } from '../../utils/toastUtils'
-import { formatCurrency, formatSharePrice } from '../../utils/functions'
+import { formatCurrency } from '../../utils/functions'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 
 export type TradeSide = 'buy' | 'sell'
@@ -28,7 +28,7 @@ const TradeModal = ({
   onClose,
   market,
   initialOutcome,
-  initialSide = 'sell',
+  initialSide = 'buy',
 }: TradeModalProps) => {
   const [side, setSide] = useState<TradeSide>(initialSide)
   const [outcomeId, setOutcomeId] = useState(initialOutcome?.id)
@@ -76,15 +76,12 @@ const TradeModal = ({
             market={market}
             outcome={outcome}
             onSelectOutcome={(o) => setOutcomeId(o.id)}
-            allowLimit
             submitText='Buy'
             onPlaced={(order) =>
               showSuccessToast(
-                order.type === 'limit'
-                  ? `Limit order placed at ${formatSharePrice(order.price)}`
-                  : order.fundedBy === 'BONUS'
-                    ? `Bonus bet on ${order.outcomeLabel} · ${formatCurrency(order.toWin)} if it wins`
-                    : `Bought ${order.outcomeLabel} · ${formatCurrency(order.toWin)} to win`,
+                order.fundedBy === 'BONUS'
+                  ? `Bonus bet on ${order.outcomeLabel} · ${formatCurrency(order.payout)} if it wins`
+                  : `Bought ${order.outcomeLabel} · pays ${formatCurrency(order.payout)} if it wins`,
               )
             }
           />
