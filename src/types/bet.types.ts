@@ -1,5 +1,13 @@
+import type { ComboTicket } from './combo.types'
 import type { ExecutionModel } from './market.types'
 import type { BonusQuote, FundedBy } from './bonus.types'
+
+// The combo ticket shape is owned by combo.types; re-exported here so callers
+// can import it alongside the other bet/position types.
+export type {
+  ComboTicket,
+  ComboStatus as ComboTicketStatus,
+} from './combo.types'
 
 export type BetType = 'market' | 'limit'
 
@@ -27,6 +35,8 @@ export interface MarketSummary {
   title: string
   slug: string
   imageUrl: string | null
+  /** The event/fixture, e.g. "Arsenal vs Chelsea" — a sports market's title is only its type. */
+  eventTitle?: string | null
   /** The market's lobby status (OPEN, CLOSED, PAUSED, SETTLED, VOIDED,
    *  DISPUTED, UNKNOWN). */
   status?: string
@@ -115,30 +125,6 @@ export interface BetListResponse {
   nextCursor: string | null
   /** Combo tickets — first page only, to be merged in by `createdAt`. */
   combos?: ComboTicket[]
-}
-
-export type ComboTicketStatus = 'OPEN' | 'WON' | 'LOST' | 'VOID'
-
-/** A placed combo (parlay) as listed by GET /bets and /bets/positions. */
-export interface ComboTicket {
-  id: string
-  type: 'COMBO'
-  status: ComboTicketStatus
-  stake: Money
-  combinedOdds: string
-  potentialReturn: Money
-  /** What was paid out once settled; null while open. */
-  payout: Money | null
-  legs: {
-    marketId: string
-    outcomeId: string
-    outcomeLabel: string | null
-    price: string
-    status: ComboTicketStatus
-    market: MarketSummary | null
-  }[]
-  createdAt: string
-  settledAt: string | null
 }
 
 /** GET /bets/portfolio — totals over every position, ignoring list filters. */

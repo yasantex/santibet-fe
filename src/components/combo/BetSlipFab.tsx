@@ -12,7 +12,7 @@ const isSportsSurface = (pathname: string) =>
  * Floating "Bet slip" button (bottom-right, above the mobile bottom nav and
  * the live-chat launcher).
  * - With selections: shows the leg count and live combined odds, on any page.
- * - Empty, but on a sports/live page: shows an inviting "Build a combo" prompt
+ * - Empty, but on a sports/live page: shows an inviting "Place a bet" prompt
  *   so the feature is discoverable before any outcome is tapped.
  * - Empty elsewhere: hidden.
  */
@@ -29,7 +29,7 @@ const BetSlipFab = ({ onClick }: { onClick: () => void }) => {
     <button
       type='button'
       onClick={onClick}
-      aria-label={empty ? 'Build a combo bet' : 'Open bet slip'}
+      aria-label={empty ? 'Start a bet slip' : 'Open bet slip'}
       className={`fixed right-4 z-40 flex items-center gap-3 rounded-full bg-black py-3 pr-5 pl-3 text-white shadow-xl transition-transform hover:scale-[1.03] ${
         chatAvailable ? FAB_STACK_CLASS.withChat : FAB_STACK_CLASS.withoutChat
       }`}
@@ -44,7 +44,7 @@ const BetSlipFab = ({ onClick }: { onClick: () => void }) => {
       </span>
       <span className='flex flex-col items-start leading-tight'>
         <span className='text-sm font-bold'>
-          {empty ? 'Build a combo' : 'Bet slip'}
+          {empty ? 'Place a bet' : 'Bet slip'}
         </span>
         <span className='text-xs font-semibold text-brand-green'>
           {empty

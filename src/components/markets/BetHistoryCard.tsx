@@ -38,6 +38,12 @@ const UNSHAREABLE = new Set<Bet['status']>(['CANCELED', 'REJECTED', 'EXPIRED'])
 
 const BetHistoryCard = ({ bet }: { bet: Bet }) => {
   const label = bet.outcomeLabel ?? 'Outcome'
+  // A sports market's title is only its type ("Match Winner"); lead with the fixture.
+  const title = bet.market
+    ? bet.market.eventTitle
+      ? `${bet.market.eventTitle} · ${bet.market.title}`
+      : bet.market.title
+    : bet.marketId
   const badge = bet.result
     ? RESULT_BADGE[bet.result]
     : {
@@ -74,7 +80,7 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
         settled={bet.result != null}
         className='line-clamp-2 text-left text-sm font-semibold text-black'
       >
-        {bet.market?.title ?? bet.marketId}
+        {title}
       </MarketTitleLink>
 
       {bet.status === 'REJECTED' && bet.rejectReason && (
@@ -114,7 +120,7 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
           <ShareBetButton
             marketId={bet.marketId}
             outcomeId={bet.outcomeId}
-            title={bet.market?.title ?? bet.marketId}
+            title={title}
             outcomeLabel={label}
             price={pool ? undefined : formatSharePrice(Number(bet.price))}
             stake={money(bet.stake)}

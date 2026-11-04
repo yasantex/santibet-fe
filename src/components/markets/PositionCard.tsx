@@ -34,7 +34,11 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
     position?.market ? undefined : position?.marketId,
   )
 
-  const title = position?.market?.title ?? market?.title ?? 'Loading market…'
+  // A sports market's title is only its type ("Match Winner"); lead with the fixture.
+  const marketTitle = position?.market?.title ?? market?.title ?? 'Loading market…'
+  const title = position?.market?.eventTitle
+    ? `${position.market.eventTitle} · ${marketTitle}`
+    : marketTitle
   const outcome = market?.outcomes.find((o) => o.id === position?.outcomeId)
   const outcomeLabel = position?.outcomeLabel ?? outcome?.label ?? ''
   const shares = Number(position.shares) || 0 // ₦1-unit count (money math)
