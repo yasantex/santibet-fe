@@ -101,7 +101,8 @@ const ProfileTab = ({ user, refetch }: ProfileTabProps) => {
         onSubmit={handleSubmit}
         className='w-full flex flex-col gap-2.5'
       >
-        <FormInput
+       <div className='grid grid-cols-2 gap-2.5'>
+         <FormInput
           type='text'
           name='firstName'
           hasTitle
@@ -124,6 +125,7 @@ const ProfileTab = ({ user, refetch }: ProfileTabProps) => {
           onBlur={handleBlur}
           errors={errors.lastName && touched.lastName ? errors.lastName : ''}
         />
+       </div>
 
         {/* <FormInput
           type='text'

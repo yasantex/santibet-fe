@@ -34,7 +34,7 @@ const VerificationTab = ({
               onClick={onVerifyPhone}
               type='button'
               size='small'
-              text='Verify phone'
+              text={`${profile?.phone ? 'Verify phone' : 'Add Phone'}`}
               variation='error'
               className='w-fit!'
             />

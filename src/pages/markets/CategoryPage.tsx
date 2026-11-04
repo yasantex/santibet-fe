@@ -43,6 +43,8 @@ import {
   timeBucketOptions,
   type TimeBucket,
 } from '../../utils/timeBuckets'
+import PageNav from '../../components/globals/PageNav'
+import { useCategoryCrumbs } from '../../hooks/useCategoryCrumbs'
 
 type SortOption = NonNullable<EventQueryParams['sort']>
 
@@ -78,6 +80,33 @@ const SPORT_LABELS: Record<string, string> = { football: 'Football' }
 const sportKey = (name: string) => {
   const key = name.trim().toLowerCase()
   return SPORT_ALIASES[key] ?? key
+}
+
+type SportGroup = {
+  sport: string
+  count: number
+  leagues: { name: string; count: number }[]
+}
+
+/** Markets → sport → league, with counts, busiest first. */
+const groupSports = (markets: UiMarket[]): SportGroup[] => {
+  const sports = new Map<string, Map<string, number>>()
+  for (const m of markets) {
+    const sport = marketSport(m) ?? OTHER
+    const league = marketLeague(m)
+    if (!sports.has(sport)) sports.set(sport, new Map())
+    const leagues = sports.get(sport)!
+    leagues.set(league, (leagues.get(league) ?? 0) + 1)
+  }
+  return [...sports.entries()]
+    .map(([sport, leagues]) => ({
+      sport,
+      count: [...leagues.values()].reduce((a, b) => a + b, 0),
+      leagues: [...leagues.entries()]
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count),
+    }))
+    .sort((a, b) => b.count - a.count)
 }
 
 type SportNavItem = {
@@ -150,6 +179,19 @@ const CategoryPage = () => {
       ? (SPORT_LABELS[sportKey(activeSub.name)] ?? activeSub.name)
       : activeSub.name
     : categoryName
+
+  // Home › Economy › Fed & Rates; the current level isn't a link.
+  const categoryCrumbs = useCategoryCrumbs(
+    activeSub?.slug ?? (active === 'All' ? undefined : activeSlug),
+    activeSub?.name ?? categoryName,
+  )
+  const pageCrumbs =
+    active === 'All'
+      ? [{ label: 'Browse markets' }]
+      : [
+          ...categoryCrumbs.slice(0, -1),
+          { label: activeLabel },
+        ]
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -305,32 +347,44 @@ const CategoryPage = () => {
   )
 
   // Sports: group loaded markets into sport → league with live counts.
-  const sportsGroups = useMemo(() => {
-    if (!isSports) return []
-    const sports = new Map<string, Map<string, number>>()
-    for (const m of byCategory) {
-      const sport = marketSport(m) ?? OTHER
-      const league = marketLeague(m)
-      if (!sports.has(sport)) sports.set(sport, new Map())
-      const leagues = sports.get(sport)!
-      leagues.set(league, (leagues.get(league) ?? 0) + 1)
-    }
-    return [...sports.entries()]
-      .map(([sport, leagues]) => ({
-        sport,
-        count: [...leagues.values()].reduce((a, b) => a + b, 0),
-        leagues: [...leagues.entries()]
-          .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => b.count - a.count),
-      }))
-      .sort((a, b) => b.count - a.count)
-  }, [isSports, byCategory])
+  const sportsGroups = useMemo(
+    () => (isSports ? groupSports(byCategory) : []),
+    [isSports, byCategory],
+  )
 
   // The parent Sports feed holds the API-Sports matches; each subcategory is
   // its own feed. Keep the parent's sport → league tree while a subcategory
   // is open so its leagues stay listed.
   const [feedSports, setFeedSports] = useState(sportsGroups)
   if (!activeSub && feedSports !== sportsGroups) setFeedSports(sportsGroups)
+
+  // Opened straight on a subcategory (reload, shared link, header link): the
+  // parent feed was never loaded, so there's no tree and the sport rows lose
+  // their league accordion. Load the parent feed for it — same query as the
+  // "All sports" view, so it shares that cache.
+  const needParentTree = isSports && !!activeSub && feedSports.length === 0
+  const parentFeed = useEventsInfinite(
+    { limit: 100, sort, category: activeSlug },
+    { enabled: needParentTree },
+  )
+  const parentTree = useMemo(() => {
+    if (!needParentTree) return []
+    const allowed = new Set([
+      activeSlug,
+      ...subcategories.map((c) => c.slug.toLowerCase()),
+    ])
+    const markets = (parentFeed.data?.pages ?? [])
+      .flatMap((p) => p.events)
+      .flatMap((e) => e.markets)
+      .filter(
+        (m) =>
+          m.status !== 'closed' &&
+          (allowed.has(m.categorySlug ?? '') ||
+            allowed.has(m.category.toLowerCase())),
+      )
+    return groupSports(markets)
+  }, [needParentTree, parentFeed.data, activeSlug, subcategories])
+  const treeSports = feedSports.length ? feedSports : parentTree
 
   // One list of sports for the sidebar: the admin subcategories plus any
   // sport only the parent feed has, merged by name (Football = Soccer).
@@ -347,7 +401,7 @@ const CategoryPage = () => {
         leagues: [],
       })
     }
-    for (const g of feedSports) {
+    for (const g of treeSports) {
       if (g.sport === OTHER) continue
       const leagues = g.leagues.filter((l) => l.name !== OTHER)
       const existing = items.get(sportKey(g.sport))
@@ -366,7 +420,7 @@ const CategoryPage = () => {
       }
     }
     return [...items.values()].sort((a, b) => b.count - a.count)
-  }, [isSports, subcategories, feedSports])
+  }, [isSports, subcategories, treeSports])
 
   // Which sports are expanded to show their leagues (collapsed by default so
   // one sport's long league list doesn't push the others off screen).
@@ -596,6 +650,7 @@ const CategoryPage = () => {
       <div
         className={`flex min-w-0 flex-1 flex-col gap-5 ${isSports ? 'max-w-5xl' : ''}`}
       >
+        <PageNav crumbs={pageCrumbs} />
         <div className='flex items-center justify-between gap-3'>
           <h1 className='text-lg font-bold text-black md:text-2xl'>
             {active === 'All'

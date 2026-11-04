@@ -267,11 +267,16 @@ export interface UiEvent {
   provider: MarketProvider
   title: string
   category: string
+  /** Category slug (lower-case), for `/category/:slug` links. */
+  categorySlug?: string
   closeTime: string
   slug?: string
   imageUrl?: string | null
   live?: boolean
   liveState?: LiveState | null
+  /** Markets in the event. List feeds embed only a few of them, so this can
+   *  exceed `markets.length`; the event endpoint returns them all. */
+  marketCount?: number
   /** Admin-featured (Events → Featured); always gets a hero chart slide. */
   featured?: boolean
   /** Sports fixtures: the two teams, with logos. */

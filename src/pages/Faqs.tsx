@@ -1,26 +1,20 @@
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowDown01Icon, ArrowLeft02Icon } from '@hugeicons/core-free-icons'
-import { useNavigate } from 'react-router'
+import { ArrowDown01Icon } from '@hugeicons/core-free-icons'
+import PageNav from '../components/globals/PageNav'
 import { TextLoader } from '../components/globals/ReusedText'
 import { Button } from '../components/globals/Button'
 import { useFaqs } from '../data_layer/pages'
 
 /** Question-and-answer pairs from `/faqs`, in the order admins set. */
 const Faqs = () => {
-  const navigate = useNavigate()
   const { data: faqs, isLoading, isError, refetch } = useFaqs()
 
   return (
     <main className='max-w-2xl mx-auto px-5 py-8'>
-      <div
-        className='flex items-center gap-3 my-5 cursor-pointer'
-        onClick={() => navigate(-1)}
-      >
-        <HugeiconsIcon icon={ArrowLeft02Icon} className='text-black' />
-        <h1 className='text-2xl font-bold text-black'>
-          Frequently Asked Questions
-        </h1>
-      </div>
+      <PageNav crumbs={[{ label: 'FAQs' }]} />
+      <h1 className='my-5 text-2xl font-bold text-black'>
+        Frequently Asked Questions
+      </h1>
       {isLoading ? (
         <TextLoader count={16} />
       ) : isError ? (

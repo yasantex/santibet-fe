@@ -4,11 +4,15 @@ import { Link } from 'react-router'
 import { LiveBadge, ScoreBoard } from './LiveBits'
 import {
   categoryIcon,
+  chanceLabel,
+  eventMarketLabels,
   findTeam,
   groupedChoices,
+  isMultiChoiceEvent,
   marketDisplayTitle,
   outcomeTone,
   TONE_STYLES,
+  CARD_HOVER,
 } from '../../utils/marketDisplay'
 import TeamLogo from './TeamLogo'
 import { useCountdown } from '../../hooks/useCountdown'
@@ -28,6 +32,92 @@ interface LiveEventCardProps {
   live?: boolean
 }
 
+/** Choices shown on a multi-choice event's card; the rest are on its page. */
+const CARD_CHOICES = 2
+
+/**
+ * Polymarket-style card for an event made of many Yes/No markets ("How many
+ * Fed rate cuts in 2026?"): the likeliest choices, each with its chance and
+ * Yes / No buttons.
+ */
+const MultiChoiceCard = ({
+  event,
+  marketCount,
+  onSelectOutcome,
+}: {
+  event: UiEvent
+  marketCount: number
+  onSelectOutcome: (market: UiMarket, outcome: UiOutcome) => void
+}) => {
+  const eventHref = `/events/${event.id}`
+  const labels = eventMarketLabels(event.markets)
+  const open = event.markets.filter((m) => m.status === 'open')
+  const choices = [...(open.length ? open : event.markets)]
+    .sort((a, b) => (b.yes?.price ?? 0) - (a.yes?.price ?? 0))
+    .slice(0, CARD_CHOICES)
+  const lead = event.markets[0]
+
+  return (
+    <div className={`flex flex-col gap-3 rounded-lg border border-border bg-card p-4 ${CARD_HOVER}`}>
+      <Link to={eventHref} className='group flex items-center gap-3'>
+        {event.imageUrl ? (
+          <img
+            src={event.imageUrl}
+            alt=''
+            className='h-10 w-10 shrink-0 rounded-lg object-cover'
+          />
+        ) : (
+          <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-border/30 text-lg'>
+            {categoryIcon(event.category)}
+          </span>
+        )}
+        <span className='line-clamp-2 text-base leading-snug font-bold text-black group-hover:underline'>
+          {event.title}
+        </span>
+      </Link>
+
+      <div className='flex flex-col gap-2'>
+        {choices.map((m) => (
+          <div key={m.id} className='flex items-center gap-2'>
+            <span className='min-w-0 flex-1 truncate text-sm text-black'>
+              {labels.get(m.id)}
+            </span>
+            <span className='shrink-0 text-sm font-bold text-black tabular-nums'>
+              {chanceLabel(m.yes)}
+            </span>
+            {[
+              { outcome: m.yes, tone: TONE_STYLES.yes },
+              { outcome: m.no, tone: TONE_STYLES.no },
+            ].map(({ outcome, tone }) =>
+              outcome ? (
+                <button
+                  key={outcome.id}
+                  type='button'
+                  onClick={() => onSelectOutcome(m, outcome)}
+                  className={`w-12 shrink-0 cursor-pointer rounded-md py-1.5 text-xs font-semibold ${tone.button}`}
+                >
+                  {outcome.label}
+                </button>
+              ) : null,
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className='mt-auto flex items-center justify-between gap-3 pt-0.5 text-xs text-placeholder'>
+        {lead && <MarketMetaLine market={lead} />}
+        <Link
+          to={eventHref}
+          className='flex shrink-0 items-center gap-0.5 font-semibold hover:text-black'
+        >
+          {marketCount} markets
+          <HugeiconsIcon icon={ArrowRight01Icon} size={12} />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 const LiveEventCard = ({
   event,
   onSelectMarket,
@@ -36,7 +126,9 @@ const LiveEventCard = ({
   live = true,
 }: LiveEventCardProps) => {
   const market = event.markets[0]
-  const multi = event.markets.length > 1
+  // List feeds embed only a few of an event's markets; count them all.
+  const marketCount = Math.max(event.marketCount ?? 0, event.markets.length)
+  const multi = marketCount > 1
   // "Will A win?" / "Draw?" / "Will B win?" read as one row: A | Draw | B.
   const grouped = groupedChoices(event.markets)
   const eventHref = `/events/${event.id}`
@@ -92,8 +184,18 @@ const LiveEventCard = ({
 
   if (!market) return null
 
+  if (isMultiChoiceEvent(event.markets)) {
+    return (
+      <MultiChoiceCard
+        event={event}
+        marketCount={marketCount}
+        onSelectOutcome={onSelectOutcome}
+      />
+    )
+  }
+
   return (
-    <div className='flex flex-col gap-3 rounded-lg border border-border bg-card p-4'>
+    <div className={`flex flex-col gap-3 rounded-lg border border-border bg-card p-4 ${CARD_HOVER}`}>
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2'>
           {event.imageUrl ? (
@@ -182,7 +284,7 @@ const LiveEventCard = ({
             to={eventHref}
             className='flex shrink-0 items-center gap-0.5 font-semibold hover:text-black'
           >
-            {event.markets.length} markets
+            {marketCount} markets
             <HugeiconsIcon icon={ArrowRight01Icon} size={12} />
           </Link>
         )}
