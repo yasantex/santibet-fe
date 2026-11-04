@@ -16,6 +16,7 @@ import type {
   LeaderboardResponse,
   LeaderboardRow,
 } from '../types/points.types'
+import PageNav from '../components/globals/PageNav'
 
 const PAGE_SIZE = 25
 
@@ -238,6 +239,7 @@ const Leaderboard = () => {
 
   return (
     <main className='mx-auto flex w-full max-w-4xl flex-col gap-6 px-3 pt-4 pb-20 md:px-8'>
+      <PageNav crumbs={[{ label: 'Leaderboard' }]} />
       <Header />
       {signedIn ? <Board /> : <SignedOut />}
     </main>

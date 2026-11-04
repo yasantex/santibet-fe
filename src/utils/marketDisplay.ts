@@ -453,3 +453,49 @@ export const groupedChoices = <M extends UiMarket>(markets: M[]) => {
     label: groupItemLabel(market),
   }))
 }
+
+/** Shared hover treatment for market/event cards: brand-tinted border, a
+ *  soft lift and shadow. Pair with a `border` on the card. */
+export const CARD_HOVER =
+  'transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-green/60 hover:shadow-[0_6px_20px_-8px_rgba(0,0,0,0.18)] motion-reduce:transform-none'
+
+/** Softer hover for cards that aren't one big link (positions, combos,
+ *  match rows): border and shadow only, no lift. Adds its own border. */
+export const CARD_HOVER_SOFT =
+  'border border-transparent transition-[border-color,box-shadow] duration-200 hover:border-border hover:shadow-[0_4px_16px_-8px_rgba(0,0,0,0.16)]'
+
+/** "<1%" rather than a misleading "0%" for long shots (percent is rounded). */
+export const chanceLabel = (outcome?: { price: number } | null) => {
+  const pct = (outcome?.price ?? 0) * 100
+  return pct > 0 && pct < 1 ? '<1%' : `${Math.round(pct)}%`
+}
+
+/**
+ * Polymarket-style "one question, many Yes/No markets" event ("How many Fed
+ * rate cuts in 2026?" → "0 (0 bps)", "1 (25 bps)", …). These read as a list
+ * of choices, each with its chance and Yes/No buttons. Sports fixtures are
+ * excluded: they trade as combos with their own layout.
+ */
+export const isMultiChoiceEvent = (
+  markets: (UiMarket & { categorySlug?: string })[],
+) =>
+  markets.length >= 2 &&
+  markets.every(isYesNoMarket) &&
+  !markets.some(
+    (m) =>
+      m.categorySlug === 'sports' ||
+      m.category.toLowerCase() === 'sports' ||
+      marketSport(m) !== null,
+  )
+
+/** Short name for each market in a multi-choice event: the subtitle the
+ *  import carries ("1 (25 bps)"), else the words its title doesn't share
+ *  with its siblings ("Will 1 Fed rate cut happen…" → "1"). */
+export const eventMarketLabels = (
+  markets: { id: string; title: string; subtitle?: string | null }[],
+): Map<string, string> => {
+  const short = siblingShortLabels(markets.map((m) => m.title))
+  return new Map(
+    markets.map((m, i) => [m.id, (m.subtitle ?? '').trim() || short[i]]),
+  )
+}

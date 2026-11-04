@@ -7,6 +7,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { Link } from 'react-router'
 import SupportActions from '../components/support/SupportActions'
+import PageNav from '../components/globals/PageNav'
 
 const faqs = [
   {
@@ -40,6 +41,7 @@ const HelpCenter = () => {
 
   return (
     <main className='mx-auto flex w-full max-w-3xl flex-col gap-6 px-3 pt-4 pb-20 md:px-8'>
+      <PageNav crumbs={[{ label: 'Help Center' }]} />
       <div className='flex flex-col gap-2'>
         <h1 className='text-[18px] font-bold text-black md:text-[28px]'>
           Help Center

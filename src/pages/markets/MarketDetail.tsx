@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   AreaChart,
   Area,
@@ -10,14 +10,13 @@ import {
   Tooltip,
 } from 'recharts'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  ArrowLeft01Icon,
-  Bookmark02Icon,
-  Flag01Icon,
-} from '@hugeicons/core-free-icons'
+import { Bookmark02Icon, Flag01Icon } from '@hugeicons/core-free-icons'
 import { useFavorites } from '../../hooks/useFavorites'
 import { isSportsMarket } from '../../hooks/useComboSlip'
 import TradePanel from '../../components/markets/TradePanel'
+import EventMarketsList from '../../components/markets/EventMarketsList'
+import MarketInfoTabs from '../../components/markets/MarketInfoTabs'
+import MultiChoiceEventView from '../../components/markets/MultiChoiceEventView'
 import ComboMarketPanel from '../../components/combo/ComboMarketPanel'
 import { LiveBadge, ScoreBoard } from '../../components/markets/LiveBits'
 import ChartTooltip from '../../components/markets/ChartTooltip'
@@ -27,6 +26,7 @@ import { useCountdown } from '../../hooks/useCountdown'
 import {
   categoryIcon,
   findTeam,
+  isMultiChoiceEvent,
   MARKET_STATUS_LABELS,
   outcomeTone,
   TONE_STYLES,
@@ -42,29 +42,20 @@ import {
 import {
   formatCloseTimer,
   formatNairaCompact,
-  formatSharePrice,
 } from '../../utils/functions'
 import ShareMarketButton from '../../components/markets/ShareMarketButton'
 import { useSupport } from '../../support/supportContext'
 import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
-import { getOriginPage } from '../../hooks/useOriginPage'
+import { useCategoryCrumbs } from '../../hooks/useCategoryCrumbs'
+import PageNav from '../../components/globals/PageNav'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
 
+// A multi-choice event's prices, shown in its view, refresh on this timer.
+const EVENT_POLL_MS = 30_000
 // How often the Live view extends its tail / pulls a fresh quote.
 const LIVE_TICK_MS = 3000
 // Price refresh for a market the live stream reports as polling-only.
 const MARKET_POLL_MS = 10_000
-// Partner rules can run to several paragraphs; longer ones start collapsed.
-const RULES_PREVIEW_CHARS = 360
-
-/** "14:05" today, "Oct 24, 14:05" before. */
-const tradeTimeLabel = (iso: string) => {
-  const d = new Date(iso)
-  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  return d.toDateString() === new Date().toDateString()
-    ? time
-    : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`
-}
 
 const MarketDetail = () => {
   const { openReport } = useSupport()
@@ -76,8 +67,6 @@ const MarketDetail = () => {
   )
   const [chartMode, setChartMode] = useState<ChartMode>('live')
   const [userPickedMode, setUserPickedMode] = useState(false)
-  const [infoTab, setInfoTab] = useState<'rules' | 'trades'>('rules')
-  const [rulesExpanded, setRulesExpanded] = useState(false)
   // Sports markets take a single bet or a combo leg; null = not picked yet.
   const [sportsMode, setSportsMode] = useState<'single' | 'combo' | null>(null)
   const { priceLabel } = useOddsFormat()
@@ -94,7 +83,9 @@ const MarketDetail = () => {
   // The event carries the real category (the single-market endpoint has none,
   // so the market falls back to "General"), the teams with their crests, and,
   // when live, the score/period/clock.
-  const { data: event } = useEvent(eventId)
+  const { data: event, isLoading: eventLoading } = useEvent(eventId, {
+    refetchMs: EVENT_POLL_MS,
+  })
   const teams = event?.teams ?? market?.teams ?? null
   // The single-market endpoint omits teams; borrow the event's so the panels
   // can show crests beside team-named outcomes.
@@ -102,8 +93,13 @@ const MarketDetail = () => {
     () => (market && teams && !market.teams ? { ...market, teams } : market),
     [market, teams],
   )
-  const origin = getOriginPage()
   const category = event?.category ?? market?.category ?? ''
+  const inMultiEvent =
+    !!event && Math.max(event.marketCount ?? 0, event.markets.length) > 1
+  const categoryCrumbs = useCategoryCrumbs(
+    event?.categorySlug ?? market?.categorySlug,
+    category,
+  )
 
   const selectedOutcome: UiOutcome | undefined = useMemo(() => {
     if (!market) return undefined
@@ -211,19 +207,13 @@ const MarketDetail = () => {
   // A single bet unless the player chooses to add this pick to a combo.
   const activeSportsMode = sportsMode ?? 'single'
 
-  // Partner markets carry their rules; pool rounds and some admin markets
-  // don't, so the tab only shows when there's something to read.
-  const rules = market?.rules?.trim() || null
-  const activeInfoTab = rules ? infoTab : 'trades'
-  const rulesLong = !!rules && rules.length > RULES_PREVIEW_CHARS
-  // The history endpoint lists trades oldest first; show the newest.
-  const recentTrades = [...(trades ?? [])].reverse().slice(0, 15)
-
   const winner = market?.resolvedOutcomeId
     ? market.outcomes.find((o) => o.id === market.resolvedOutcomeId)
     : undefined
 
-  if (isLoading) {
+  // Wait for the event too: a multi-choice event's market opens in the
+  // event's own view, so rendering the single-market layout first would flash.
+  if (isLoading || (!!eventId && eventLoading)) {
     return (
       <main className='mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 pt-4 pb-20 md:px-8'>
         <div className='h-6 w-40 animate-pulse rounded bg-card' />
@@ -250,30 +240,46 @@ const MarketDetail = () => {
     )
   }
 
+  // One choice of a multi-choice event ("1 (25 bps)" of "How many Fed rate
+  // cuts…"): show it the Polymarket way — the whole event, this choice picked.
+  if (event && isMultiChoiceEvent(event.markets)) {
+    return (
+      <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-4 pb-20 md:px-8'>
+        <PageNav
+          crumbs={[
+            ...categoryCrumbs,
+            { label: event.title, href: `/events/${event.id}` },
+            { label: market.subtitle?.trim() || market.title },
+          ]}
+        />
+        <MultiChoiceEventView
+          event={event}
+          initialMarketId={
+            event.markets.some((m) => m.id === market.id) ? market.id : undefined
+          }
+          initialOutcomeId={selectedId}
+        />
+      </main>
+    )
+  }
+
   return (
     <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-4 pb-20 md:px-8'>
-      {/* Breadcrumb + actions */}
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-2 text-sm text-neutral-10'>
-          <button
-            type='button'
-            onClick={() => navigate(-1)}
-            className='flex items-center gap-1 hover:text-black'
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
-          </button>
-          <Link to={origin.href} className='hover:text-black'>
-            {origin.label}
-          </Link>
-          {/* Opened from that category's page: don't repeat its name. */}
-          {category.toLowerCase() !== origin.label.toLowerCase() && (
-            <>
-              <span>/</span>
-              <span className='font-medium text-black'>{category}</span>
-            </>
-          )}
-        </div>
-        <div className='flex items-center gap-2'>
+      <PageNav
+        crumbs={[
+          ...categoryCrumbs,
+          // A market of a multi-market event sits under that event's page.
+          ...(inMultiEvent && event
+            ? [{ label: event.title, href: `/events/${event.id}` }]
+            : []),
+          // Under its event, the short choice name ("1 (25 bps)") is enough.
+          {
+            label:
+              (inMultiEvent && market.subtitle?.trim()) || market.title,
+          },
+        ]}
+        actions={
+          <>
           <ShareMarketButton
             market={market}
             className='rounded-full bg-card p-2 text-neutral-10 hover:text-black'
@@ -307,8 +313,9 @@ const MarketDetail = () => {
           >
             <HugeiconsIcon icon={Flag01Icon} size={18} />
           </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className='grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]'>
         {/* Main column */}
@@ -498,97 +505,18 @@ const MarketDetail = () => {
           </div>
 
           {/* Rules / Recent trades */}
-          <div className='flex flex-col gap-3 rounded-2xl border border-border bg-card p-5'>
-            <div className='flex items-center gap-4 border-b border-border/60'>
-              {(rules ? (['rules', 'trades'] as const) : (['trades'] as const)).map((t) => (
-                <button
-                  key={t}
-                  type='button'
-                  onClick={() => setInfoTab(t)}
-                  className={`-mb-px border-b-2 pb-2 text-sm font-semibold capitalize transition-colors ${
-                    activeInfoTab === t
-                      ? 'border-brand-green text-black'
-                      : 'border-transparent text-neutral-10 hover:text-black'
-                  }`}
-                >
-                  {t === 'trades' ? 'Recent Trades' : 'Rules'}
-                </button>
-              ))}
-            </div>
-
-            {activeInfoTab === 'rules' && rules ? (
-              <div className='flex flex-col items-start gap-2'>
-                {/* Plain text: paragraphs are blank-line separated, so keep the
-                    line breaks rather than parsing it as Markdown. */}
-                <p
-                  className={`text-sm leading-relaxed whitespace-pre-line text-neutral-10 ${
-                    rulesLong && !rulesExpanded ? 'line-clamp-6' : ''
-                  }`}
-                >
-                  {rules}
-                </p>
-                {rulesLong && (
-                  <button
-                    type='button'
-                    onClick={() => setRulesExpanded((v) => !v)}
-                    className='text-sm font-semibold text-black hover:underline'
-                  >
-                    {rulesExpanded ? 'Show less' : 'Show more'}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className='flex flex-col'>
-                {recentTrades.length ? (
-                  <>
-                    <div className='grid grid-cols-4 gap-2 pb-2 text-xs font-semibold text-neutral-10'>
-                      <span>Side</span>
-                      <span className='text-right'>Price</span>
-                      <span className='text-right'>Amount</span>
-                      <span className='text-right'>Time</span>
-                    </div>
-                    {recentTrades.map((t) => (
-                      <div
-                        key={t.id}
-                        className='grid grid-cols-4 gap-2 border-t border-border/40 py-2 text-xs'
-                      >
-                        <span
-                          className={`font-semibold capitalize ${
-                            t.side === 'buy' ? 'text-success' : 'text-error'
-                          }`}
-                        >
-                          {t.side}
-                        </span>
-                        <span className='text-right text-black'>
-                          {t.price != null ? formatSharePrice(t.price) : 'Pool'}
-                        </span>
-                        {/* A combo leg has no stake of its own. */}
-                        <span className='text-right text-neutral-10'>
-                          {t.combo
-                            ? 'Combo'
-                            : t.amount != null
-                              ? formatNairaCompact(t.amount)
-                              : '—'}
-                        </span>
-                        <span className='text-right text-neutral-10'>
-                          {tradeTimeLabel(t.ts)}
-                        </span>
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <p className='py-4 text-sm text-neutral-10'>
-                    No recent trades.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+          <MarketInfoTabs rules={market.rules} trades={trades} />
         </div>
 
         {/* Trade panel — sports offer a single bet or a combo leg; everything
             else gets the single-bet panel. */}
-        <div className='flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start'>
+        {/* Sticky only when it fits: with the event's other markets below,
+            the column can be taller than the screen. */}
+        <div
+          className={`flex flex-col gap-3 lg:self-start ${
+            inMultiEvent ? '' : 'lg:sticky lg:top-24'
+          }`}
+        >
           {isSportsMarket(market) && (
             <div className='flex items-center gap-1 rounded-full bg-hover p-1'>
               {(['single', 'combo'] as const).map((mode) => (
@@ -616,10 +544,24 @@ const MarketDetail = () => {
               onSelectOutcome={(o) => setSelectedId(o.id)}
             />
           )}
+          {inMultiEvent && event && (
+            <EventMarketsList event={event} currentMarketId={market.id} />
+          )}
         </div>
       </div>
     </main>
   )
 }
 
-export default MarketDetail
+/**
+ * Moving between markets (e.g. from "More in this event") reuses this route,
+ * so remount per market + picked outcome: otherwise the previous market's
+ * selection, chart range and live tail would carry over.
+ */
+const MarketDetailRoute = () => {
+  const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
+  return <MarketDetail key={`${id}:${searchParams.get('outcome') ?? ''}`} />
+}
+
+export default MarketDetailRoute

@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowLeft02Icon } from '@hugeicons/core-free-icons'
-import { useNavigate } from 'react-router'
+import PageNav from './PageNav'
 import RenderMarkdown from './RenderMarkdown'
 import { TextLoader } from './ReusedText'
 import { Button } from './Button'
@@ -22,7 +20,6 @@ interface ContentPageViewProps {
  * isn't available yet.
  */
 const ContentPageView = ({ slug, children }: ContentPageViewProps) => {
-  const navigate = useNavigate()
   const known = findKnownContentPage(slug)
   const page = useContentPage(slug)
 
@@ -47,13 +44,8 @@ const ContentPageView = ({ slug, children }: ContentPageViewProps) => {
 
   return (
     <main className='max-w-2xl mx-auto px-5 py-8'>
-      <div
-        className='flex items-center gap-3 my-5 cursor-pointer'
-        onClick={() => navigate(-1)}
-      >
-        <HugeiconsIcon icon={ArrowLeft02Icon} className='text-black' />
-        <h1 className='text-2xl font-bold text-black'>{title}</h1>
-      </div>
+      <PageNav crumbs={title ? [{ label: title }] : []} />
+      <h1 className='my-5 text-2xl font-bold text-black'>{title}</h1>
       {page.data?.updatedAt && formatShortDate(page.data.updatedAt) && (
         <p className='-mt-3 mb-5 text-xs text-neutral-10'>
           Last updated {formatShortDate(page.data.updatedAt)}
