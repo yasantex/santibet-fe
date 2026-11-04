@@ -1,13 +1,15 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Bookmark02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
-import type { UiMarket, UiOutcome } from '../../types/market.types'
+import type { EventTeam, UiMarket, UiOutcome } from '../../types/market.types'
 import {
   categoryIcon,
+  findTeam,
   marketDisplayTitle,
   outcomeTone,
   TONE_STYLES,
   type OutcomeTone,
 } from '../../utils/marketDisplay'
+import TeamLogo from './TeamLogo'
 import { MarketCountdown } from '../globals/ReusedText'
 import ShareMarketButton from './ShareMarketButton'
 import MarketMetaLine from './MarketMetaLine'
@@ -20,6 +22,7 @@ const OutcomeRow = ({
   priceLabel,
   tone,
   active = false,
+  team,
   onClick,
 }: {
   outcome?: UiOutcome
@@ -27,6 +30,8 @@ const OutcomeRow = ({
   priceLabel: string
   tone: OutcomeTone
   active?: boolean
+  /** The team this outcome names (sports), for its crest. */
+  team?: EventTeam | null
   onClick?: () => void
 }) => {
   if (!outcome) return null
@@ -34,9 +39,12 @@ const OutcomeRow = ({
   return (
     <div className='flex items-center gap-3'>
       <div className='min-w-0 flex-1'>
-        <div className='mb-1.5 flex items-baseline justify-between gap-2 text-sm'>
-          <span className='truncate font-bold text-black uppercase'>
-            {outcome.label}
+        <div className='mb-1.5 flex items-center justify-between gap-2 text-sm'>
+          <span className='flex min-w-0 items-center gap-1.5'>
+            <TeamLogo team={team} size={16} />
+            <span className='truncate font-bold text-black uppercase'>
+              {outcome.label}
+            </span>
           </span>
           <span className={`shrink-0 font-bold ${style.percent}`}>
             {outcome.percent}%
@@ -69,15 +77,21 @@ const OutcomeRow = ({
 const OutcomeStatRow = ({
   outcome,
   tone,
+  team,
 }: {
   outcome: UiOutcome
   tone: OutcomeTone
+  /** The team this outcome names (sports), for its crest. */
+  team?: EventTeam | null
 }) => {
   const style = TONE_STYLES[tone]
   return (
-    <div className='flex items-baseline justify-between gap-2 text-sm'>
-      <span className='truncate font-bold text-black uppercase'>
-        {outcome.label}
+    <div className='flex items-center justify-between gap-2 text-sm'>
+      <span className='flex min-w-0 items-center gap-1.5'>
+        <TeamLogo team={team} size={16} />
+        <span className='truncate font-bold text-black uppercase'>
+          {outcome.label}
+        </span>
       </span>
       <span className={`shrink-0 font-bold ${style.percent}`}>
         {outcome.percent}%
@@ -245,6 +259,7 @@ const MarketCard = ({
                 priceLabel={outcome ? priceLabel(market, outcome) : ''}
                 tone={tone}
                 active={outcome.id === effectiveActiveOutcomeId}
+                team={findTeam(market.teams, outcome.label)}
                 onClick={() => handleOutcomeClick(outcome)}
               />
             ))}
@@ -252,7 +267,12 @@ const MarketCard = ({
         ) : (
           <div className='flex flex-col gap-2'>
             {shownOutcomes.map(({ outcome, tone }) => (
-              <OutcomeStatRow key={outcome.id} outcome={outcome} tone={tone} />
+              <OutcomeStatRow
+                key={outcome.id}
+                outcome={outcome}
+                tone={tone}
+                team={findTeam(market.teams, outcome.label)}
+              />
             ))}
             <OutcomeButtonRow
               market={market}

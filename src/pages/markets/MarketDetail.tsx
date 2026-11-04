@@ -26,10 +26,12 @@ import { chartDomain, formatChartTick } from '../../utils/chartFormat'
 import { useCountdown } from '../../hooks/useCountdown'
 import {
   categoryIcon,
+  findTeam,
   MARKET_STATUS_LABELS,
   outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
+import TeamLogo from '../../components/markets/TeamLogo'
 import {
   chartTimeLabel,
   useMarket,
@@ -90,9 +92,16 @@ const MarketDetail = () => {
   )
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
   // The event carries the real category (the single-market endpoint has none,
-  // so the market falls back to "General") and, when live, the
-  // score/period/clock (team crests aren't in the feed, only names).
+  // so the market falls back to "General"), the teams with their crests, and,
+  // when live, the score/period/clock.
   const { data: event } = useEvent(eventId)
+  const teams = event?.teams ?? market?.teams ?? null
+  // The single-market endpoint omits teams; borrow the event's so the panels
+  // can show crests beside team-named outcomes.
+  const marketWithTeams = useMemo(
+    () => (market && teams && !market.teams ? { ...market, teams } : market),
+    [market, teams],
+  )
   const origin = getOriginPage()
   const category = event?.category ?? market?.category ?? ''
 
@@ -319,7 +328,9 @@ const MarketDetail = () => {
                 )}
               </div>
             </div>
-            {event?.liveState && <ScoreBoard state={event.liveState} />}
+            {event?.liveState && (
+              <ScoreBoard state={event.liveState} teams={teams} />
+            )}
             {winner ? (
               <p className='rounded-lg bg-success-bg px-3 py-2 text-sm font-semibold text-success'>
                 Resolved · {winner.label} won
@@ -473,7 +484,10 @@ const MarketDetail = () => {
                       winner && !active ? 'opacity-50' : ''
                     }`}
                   >
-                    <span className='min-w-0 truncate uppercase'>{o.label}</span>
+                    <span className='flex min-w-0 items-center gap-2'>
+                      <TeamLogo team={findTeam(teams, o.label)} size={18} />
+                      <span className='min-w-0 truncate uppercase'>{o.label}</span>
+                    </span>
                     <span className='shrink-0'>
                       {winner ? (active ? 'Won' : 'Lost') : priceLabel(market, o)}
                     </span>
@@ -594,10 +608,10 @@ const MarketDetail = () => {
             </div>
           )}
           {isSportsMarket(market) && activeSportsMode === 'combo' ? (
-            <ComboMarketPanel market={market} />
+            <ComboMarketPanel market={marketWithTeams ?? market} />
           ) : (
             <TradePanel
-              market={market}
+              market={marketWithTeams ?? market}
               selectedOutcome={selectedOutcome}
               onSelectOutcome={(o) => setSelectedId(o.id)}
             />

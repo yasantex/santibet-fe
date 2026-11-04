@@ -1,4 +1,5 @@
 import type { MarketSummary, Money } from './bet.types'
+import type { EventTeam } from './market.types'
 
 /**
  * One selection in a combo (parlay) bet slip. Self-contained so the slip can
@@ -27,6 +28,8 @@ export interface ComboLeg {
   minStakeMinor?: number | null
   /** Market close time; a leg past it can no longer be placed. */
   closeTime?: string | null
+  /** The event's teams (crests), captured when added from a card. */
+  teams?: EventTeam[] | null
   addedAt: number
 }
 
