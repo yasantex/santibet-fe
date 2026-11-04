@@ -1,11 +1,21 @@
 import { useMemo, useState } from 'react'
 import PositionCard from '../../components/markets/PositionCard'
 import BetHistoryCard from '../../components/markets/BetHistoryCard'
+import ComboCard from '../../components/combo/ComboCard'
 import TradingNotice from '../../components/markets/TradingNotice'
 import { Button } from '../../components/globals/Button'
 import { useBetPositions, useBets } from '../../data_layer/bets'
 import { formatCurrency, toMajorUnits } from '../../utils/functions'
 import type { Bet, BetPosition } from '../../types/bet.types'
+import type { ComboTicket } from '../../types/combo.types'
+
+/** One row in a tab: a single bet/position, or a combo ticket, merged by date. */
+type Row =
+  | { kind: 'position'; at: string; position: BetPosition }
+  | { kind: 'bet'; at: string; bet: Bet }
+  | { kind: 'combo'; at: string; combo: ComboTicket }
+
+const newestFirst = (a: Row, b: Row) => Date.parse(b.at) - Date.parse(a.at)
 
 type PortfolioTab = 'OPEN' | 'SETTLED' | 'POSITION' | 'HISTORY'
 const TABS: PortfolioTab[] = ['OPEN', 'SETTLED', 'POSITION', 'HISTORY']
@@ -25,6 +35,15 @@ const AccountPortfolio = () => {
   )
   const bets = useMemo<Bet[]>(
     () => (betsQuery.data?.pages ?? []).flatMap((p) => p?.data ?? []),
+    [betsQuery.data],
+  )
+  // Combo tickets ride on the first page of each list (they aren't paginated).
+  const positionCombos = useMemo<ComboTicket[]>(
+    () => positionsQuery.data?.pages?.[0]?.combos ?? [],
+    [positionsQuery.data],
+  )
+  const historyCombos = useMemo<ComboTicket[]>(
+    () => betsQuery.data?.pages?.[0]?.combos ?? [],
     [betsQuery.data],
   )
 
@@ -51,19 +70,43 @@ const AccountPortfolio = () => {
         pnl += p.realizedPnl ? toMajorUnits(p.realizedPnl.amount) : 0
       }
     })
+    // A combo has no live mark, so an open one is held at its stake; a settled
+    // one adds what it returned minus what it cost.
+    positionCombos.forEach((c) => {
+      if (c.status === 'OPEN') {
+        open += 1
+        value += toMajorUnits(c.stake.amount)
+      } else {
+        pnl += toMajorUnits(c.payout?.amount ?? 0) - toMajorUnits(c.stake.amount)
+      }
+    })
     return { value, pnl, open }
-  }, [positions])
+  }, [positions, positionCombos])
 
-  const filteredPositions = useMemo(() => {
-    if (activeTab === 'OPEN') return positions.filter((p) => p.status === 'OPEN')
-    if (activeTab === 'SETTLED')
-      return positions.filter((p) => p.status !== 'OPEN')
-    return positions // POSITION → all
-  }, [positions, activeTab])
+  const rows = useMemo<Row[]>(() => {
+    if (isHistory) {
+      return [
+        ...bets.map((bet): Row => ({ kind: 'bet', at: bet.createdAt, bet })),
+        ...historyCombos.map((combo): Row => ({ kind: 'combo', at: combo.createdAt, combo })),
+      ].sort(newestFirst)
+    }
+    const keepPosition = (p: BetPosition) =>
+      activeTab === 'OPEN' ? p.status === 'OPEN' : activeTab === 'SETTLED' ? p.status !== 'OPEN' : true
+    const keepCombo = (c: ComboTicket) =>
+      activeTab === 'OPEN' ? c.status === 'OPEN' : activeTab === 'SETTLED' ? c.status !== 'OPEN' : true
+    return [
+      ...positions
+        .filter(keepPosition)
+        .map((position): Row => ({ kind: 'position', at: position.openedAt, position })),
+      ...positionCombos
+        .filter(keepCombo)
+        .map((combo): Row => ({ kind: 'combo', at: combo.createdAt, combo })),
+    ].sort(newestFirst)
+  }, [isHistory, bets, historyCombos, positions, positionCombos, activeTab])
 
   // The active tab's list query drives loading / error / pagination.
   const listQuery = isHistory ? betsQuery : positionsQuery
-  const isEmpty = isHistory ? bets.length === 0 : filteredPositions.length === 0
+  const isEmpty = rows.length === 0
   const emptyLabel = isHistory
     ? 'No bet history yet.'
     : `No ${activeTab.toLowerCase()} positions yet.`
@@ -141,16 +184,20 @@ const AccountPortfolio = () => {
               <p className='col-span-full py-8 text-center text-sm text-placeholder'>
                 {emptyLabel}
               </p>
-            ) : isHistory ? (
-              bets.map((bet) => <BetHistoryCard key={bet.id} bet={bet} />)
             ) : (
-              filteredPositions.map((position) => (
-                <PositionCard
-                  key={position.id}
-                  position={position}
-                  shareable={activeTab === 'OPEN'}
-                />
-              ))
+              rows.map((row) =>
+                row.kind === 'combo' ? (
+                  <ComboCard key={`combo:${row.combo.id}`} combo={row.combo} />
+                ) : row.kind === 'bet' ? (
+                  <BetHistoryCard key={row.bet.id} bet={row.bet} />
+                ) : (
+                  <PositionCard
+                    key={row.position.id}
+                    position={row.position}
+                    shareable={activeTab === 'OPEN'}
+                  />
+                ),
+              )
             )}
           </div>
 

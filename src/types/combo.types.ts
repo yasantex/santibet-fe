@@ -1,4 +1,4 @@
-import type { Money } from './bet.types'
+import type { MarketSummary, Money } from './bet.types'
 
 /**
  * One selection in a combo (parlay) bet slip. Self-contained so the slip can
@@ -50,4 +50,33 @@ export interface ComboBetResponse {
     price: string | number
   }[]
   createdAt: string
+}
+
+export type ComboStatus = 'OPEN' | 'WON' | 'LOST' | 'VOID'
+
+/**
+ * A placed combo as it appears in Portfolio / bet history (`combos` on
+ * `GET /bets` and `GET /bets/positions`). Every leg must win for it to pay.
+ */
+export interface ComboTicket {
+  id: string
+  type: 'COMBO'
+  status: ComboStatus
+  stake: Money
+  /** Combined decimal odds the combo was accepted at. */
+  combinedOdds: string
+  potentialReturn: Money
+  /** Settled payout once resolved; null while open (and "0" on a loss). */
+  payout: Money | null
+  legs: {
+    marketId: string
+    outcomeId: string
+    outcomeLabel: string | null
+    /** The leg's captured probability price (0–1). */
+    price: string
+    status: ComboStatus
+    market: MarketSummary | null
+  }[]
+  createdAt: string
+  settledAt: string | null
 }

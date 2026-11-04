@@ -40,7 +40,11 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
     confirmOpen,
   )
 
-  const title = position?.market?.title ?? market?.title ?? 'Loading market…'
+  // A sports market's title is only its type ("Match Winner"); lead with the fixture.
+  const marketTitle = position?.market?.title ?? market?.title ?? 'Loading market…'
+  const title = position?.market?.eventTitle
+    ? `${position.market.eventTitle} · ${marketTitle}`
+    : marketTitle
   const outcome = market?.outcomes.find((o) => o.id === position?.outcomeId)
   const outcomeLabel = position?.outcomeLabel ?? outcome?.label ?? ''
   const isYes = outcomeLabel

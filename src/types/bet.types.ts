@@ -1,3 +1,4 @@
+import type { ComboTicket } from './combo.types'
 import type { BonusQuote, FundedBy } from './bonus.types'
 
 export type BetType = 'market' | 'limit'
@@ -26,6 +27,8 @@ export interface MarketSummary {
   title: string
   slug: string
   imageUrl: string | null
+  /** The event/fixture, e.g. "Arsenal vs Chelsea" — a sports market's title is only its type. */
+  eventTitle?: string | null
 }
 
 export interface PlaceBetPayload {
@@ -61,6 +64,8 @@ export interface Bet {
 export interface BetListResponse {
   data: Bet[]
   nextCursor: string | null
+  /** The player's combo tickets — first page only; merge into the list by createdAt. */
+  combos?: ComboTicket[]
 }
 
 export interface BetPosition {
@@ -95,6 +100,8 @@ export interface BetPosition {
 export interface BetPositionListResponse {
   data: BetPosition[]
   nextCursor: string | null
+  /** The player's combo tickets — first page only; merge into the list by createdAt. */
+  combos?: ComboTicket[]
 }
 
 /** Read-only estimate of what a position would return if cashed out now. */

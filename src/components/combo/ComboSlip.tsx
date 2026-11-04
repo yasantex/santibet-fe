@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDebounce } from 'use-debounce'
 import { useNavigate } from 'react-router'
 import { useCookies } from 'react-cookie'
 import { isAxiosError } from 'axios'
@@ -11,7 +12,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { Button } from '../globals/Button'
 import { useComboSlip } from '../../hooks/useComboSlip'
-import { useComboBet } from '../../data_layer/bets'
+import { useComboBet, usePlaceBet } from '../../data_layer/bets'
 import { useSantiBetQuery } from '../../data_layer/utils'
 import { showSuccessToast } from '../../utils/toastUtils'
 import {
@@ -22,7 +23,7 @@ import {
 } from '../../utils/functions'
 import type { WalletBalance } from '../../types/wallet.types'
 import type { ComboLeg } from '../../types/combo.types'
-import { useCurrentBonus } from '../../data_layer/bonuses'
+import { useBetQuote, useCurrentBonus } from '../../data_layer/bonuses'
 
 const QUICK_ADDS = [100, 500, 1000, 2000]
 
@@ -79,7 +80,7 @@ const ComboSlip = ({
   const {
     legs,
     legCount,
-    minLegs,
+    isSingle,
     combinedOdds,
     hasInvalidLeg,
     minStakeNaira,
@@ -98,11 +99,41 @@ const ComboSlip = ({
   })
   const cash = toMajorUnits(wallet?.total ?? 0)
 
-  const { mutateAsync: placeCombo, isPending } = useComboBet()
+  const { mutateAsync: placeCombo, isPending: comboPending } = useComboBet()
+  const { mutateAsync: placeSingle, isPending: singlePending } = usePlaceBet()
+  const isPending = comboPending || singlePending
 
   const stakeNum = Number(stake) || 0
-  const toWin = payout(stakeNum)
-  const enoughLegs = legCount >= minLegs
+  const single = isSingle ? legs[0] : null
+
+  // A single is a pool bet: what it returns depends on the pool and the rake, so
+  // ask the server for its estimate rather than assume fixed odds. Debounced so
+  // typing a stake doesn't fire a quote per keystroke.
+  const [debouncedStake] = useDebounce(stakeNum, 400)
+  const { data: singleQuote } = useBetQuote(
+    single && debouncedStake > 0 && isSignedIn
+      ? {
+          marketId: single.marketId,
+          outcomeId: single.outcomeId,
+          stake: String(toMinorUnits(debouncedStake)),
+          type: 'market',
+          useBonus: false,
+        }
+      : null,
+  )
+  const quoteMatches =
+    !!single &&
+    !!singleQuote &&
+    singleQuote.outcomeId === single.outcomeId &&
+    debouncedStake === stakeNum
+  // Server estimate when it matches the stake on screen; else the leg's own odds.
+  const toWin = single
+    ? quoteMatches
+      ? toMajorUnits(singleQuote!.potentialReturn.amount)
+      : payout(stakeNum)
+    : payout(stakeNum)
+  const shownOdds =
+    single && quoteMatches && stakeNum > 0 ? toWin / stakeNum : combinedOdds
 
   const handleStake = (value: string) => {
     setError(null)
@@ -117,10 +148,6 @@ const ComboSlip = ({
     if (!isSignedIn) {
       onClose()
       navigate('/signin')
-      return
-    }
-    if (!enoughLegs) {
-      setError(`Add at least ${minLegs} selections to place a combo.`)
       return
     }
     const closedLeg = legs.find(
@@ -143,7 +170,35 @@ const ComboSlip = ({
       return
     }
     if (minStakeNaira != null && stakeNum < minStakeNaira) {
-      setError(`Minimum combo stake is ${NAIRA}${minStakeNaira.toLocaleString()}.`)
+      setError(
+        `Minimum ${single ? 'stake' : 'combo stake'} is ${NAIRA}${minStakeNaira.toLocaleString()}.`,
+      )
+      return
+    }
+
+    if (single) {
+      try {
+        // Cash only, like a combo — the slip checks the stake against cash, and
+        // leaving useBonus unset would fall back to the player's bonus default.
+        await placeSingle({
+          marketId: single.marketId,
+          outcomeId: single.outcomeId,
+          stake: String(toMinorUnits(stakeNum)),
+          type: 'market',
+          useBonus: false,
+        })
+        showSuccessToast(`Bet placed · ${formatCurrency(Math.round(toWin))} est. to win`)
+        clear()
+        setStake('')
+        onClose()
+        navigate('/account-portfolio')
+      } catch (err) {
+        setError(
+          isAxiosError(err)
+            ? (err.response?.data?.message ?? 'Could not place your bet. Try again.')
+            : 'Could not place your bet.',
+        )
+      }
       return
     }
 
@@ -234,8 +289,8 @@ const ComboSlip = ({
               Your slip is empty
             </p>
             <p className='text-xs text-neutral-10'>
-              Tap sports outcomes to build a combo. Every pick has to win for the
-              combo to pay out.
+              Tap a sports outcome to bet on it, or pick outcomes from several
+              games to build a combo — every pick has to win for a combo to pay.
             </p>
             <div className='flex gap-2'>
               <Button
@@ -282,10 +337,10 @@ const ComboSlip = ({
                   onRemove={() => remove(leg.outcomeId)}
                 />
               ))}
-              {!enoughLegs && (
+              {isSingle && (
                 <p className='rounded-lg bg-hover/50 px-3 py-2 text-xs text-neutral-10'>
-                  Add at least {minLegs} selections from different games to place
-                  a combo.
+                  Placing as a single bet. Add a pick from another game to make
+                  it a combo.
                 </p>
               )}
             </div>
@@ -294,10 +349,10 @@ const ComboSlip = ({
             <div className='flex flex-col gap-3 border-t border-border px-5 py-4'>
               <div className='flex items-center justify-between rounded-lg bg-brand-green/10 px-3 py-2.5'>
                 <span className='text-sm font-semibold text-black'>
-                  Total odds
+                  {isSingle ? 'Odds (est.)' : 'Total odds'}
                 </span>
                 <span className='text-lg font-bold text-black'>
-                  ×{combinedOdds.toFixed(2)}
+                  ×{shownOdds.toFixed(2)}
                 </span>
               </div>
 
@@ -312,7 +367,7 @@ const ComboSlip = ({
               </div>
               {bonus && (
                 <p className='-mt-1 text-xs text-neutral-10'>
-                  Combo bets use cash only — bonus credit can’t be used here.
+                  The bet slip uses cash only — bonus credit can’t be used here.
                 </p>
               )}
               <div className='flex items-center rounded-lg border-2 border-black px-3 py-2.5'>
@@ -352,7 +407,9 @@ const ComboSlip = ({
               </div>
 
               <div className='flex items-center justify-between border-t border-border/60 pt-3'>
-                <span className='text-sm text-neutral-10'>To win</span>
+                <span className='text-sm text-neutral-10'>
+                  {isSingle ? 'To win (est.)' : 'To win'}
+                </span>
                 <span className='text-lg font-bold text-success'>
                   {NAIRA}
                   {toWin.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -369,14 +426,14 @@ const ComboSlip = ({
                 type='button'
                 text={
                   !isSignedIn
-                    ? 'Sign in to place combo'
-                    : `Place combo · ${NAIRA}${(stakeNum || 0).toLocaleString()}`
+                    ? `Sign in to place ${isSingle ? 'bet' : 'combo'}`
+                    : `Place ${isSingle ? 'bet' : 'combo'} · ${NAIRA}${(stakeNum || 0).toLocaleString()}`
                 }
                 variation='primary'
                 size='large'
                 className='w-full'
                 loading={isPending}
-                disabled={isSignedIn && (!enoughLegs || hasInvalidLeg)}
+                disabled={isSignedIn && hasInvalidLeg}
                 onClick={handlePlace}
               />
               <Button
@@ -388,7 +445,9 @@ const ComboSlip = ({
                 onClick={onClose}
               />
               <p className='text-center text-[11px] text-neutral-10'>
-                Odds are locked in when you place. Every leg must win.
+                {isSingle
+                  ? 'Pool bet: your return depends on the final pool, so the figure above is an estimate.'
+                  : 'Odds are locked in when you place. Every leg must win.'}
               </p>
             </div>
           </>

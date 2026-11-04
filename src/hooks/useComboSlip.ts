@@ -27,6 +27,7 @@ export const isSportsMarket = (market: {
   (market.category ?? '').toLowerCase() === 'sports' ||
   marketSport(market) !== null
 
+/** A combo needs two or more picks; a slip with just one places a single bet. */
 export const MIN_COMBO_LEGS = 2
 
 const toLeg = (market: UiMarket, outcome: UiOutcome): ComboLeg => ({
@@ -45,7 +46,8 @@ const toLeg = (market: UiMarket, outcome: UiOutcome): ComboLeg => ({
 })
 
 /**
- * Combo (parlay) bet slip: a set of sports selections that all have to win.
+ * Sports bet slip. One selection places a single bet; two or more make a combo
+ * (parlay) — a set of sports selections that all have to win.
  * Combined decimal odds are the product of each leg's (1 / implied-probability),
  * so the payout is `stake × combinedOdds`. Backed by a persisted Redux slice,
  * so the slip survives navigation and refresh.
@@ -123,6 +125,8 @@ export const useComboSlip = () => {
     legCount: legs.length,
     maxLegs: MAX_COMBO_LEGS,
     minLegs: MIN_COMBO_LEGS,
+    /** One pick: the slip places it as a single (pool) bet, not a combo. */
+    isSingle: legs.length === 1,
     combinedOdds: derived.combinedOdds,
     hasInvalidLeg: derived.hasInvalidLeg,
     minStakeNaira: derived.minStakeNaira,

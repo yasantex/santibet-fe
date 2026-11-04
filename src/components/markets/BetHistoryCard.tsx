@@ -25,6 +25,12 @@ const YES_LABELS = ['yes', 'up', 'over', 'win', 'true']
 const BetHistoryCard = ({ bet }: { bet: Bet }) => {
   const navigate = useNavigate()
   const label = bet.outcomeLabel ?? 'Outcome'
+  // A sports market's title is only its type ("Match Winner"); lead with the fixture.
+  const title = bet.market
+    ? bet.market.eventTitle
+      ? `${bet.market.eventTitle} · ${bet.market.title}`
+      : bet.market.title
+    : bet.marketId
   const isYes = YES_LABELS.includes(label.toLowerCase())
 
   return (
@@ -52,7 +58,7 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
         onClick={() => navigate(`/markets/${bet.marketId}`)}
         className='line-clamp-2 text-left text-sm font-semibold text-black hover:underline'
       >
-        {bet.market?.title ?? bet.marketId}
+        {title}
       </button>
 
       <div className='grid grid-cols-3 gap-2 text-sm'>
@@ -81,7 +87,7 @@ const BetHistoryCard = ({ bet }: { bet: Bet }) => {
         <ShareBetButton
           marketId={bet.marketId}
           outcomeId={bet.outcomeId}
-          title={bet.market?.title ?? bet.marketId}
+          title={title}
           outcomeLabel={label}
           price={formatSharePrice(Number(bet.price))}
           stake={money(bet.stake)}

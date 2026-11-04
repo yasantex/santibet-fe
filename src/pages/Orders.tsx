@@ -11,6 +11,21 @@ import { useBets, useCancelBet } from '../data_layer/bets'
 import { formatCurrency, formatDate, formatSharePrice, toMajorUnits } from '../utils/functions'
 import { showSuccessToast, showWarningToast } from '../utils/toastUtils'
 import type { Bet } from '../types/bet.types'
+import type { ComboStatus, ComboTicket } from '../types/combo.types'
+
+/** A single bet, or a combo ticket, merged into one newest-first list. */
+type OrderRow = { kind: 'bet'; at: string; bet: Bet } | { kind: 'combo'; at: string; combo: ComboTicket }
+
+const comboBadge = (status: ComboStatus) => {
+  if (status === 'WON') return 'bg-success-bg text-success'
+  if (status === 'LOST') return 'bg-error-bg text-error'
+  if (status === 'VOID') return 'bg-hover/60 text-neutral-10'
+  return 'bg-warning/20 text-warning'
+}
+
+/** "Arsenal vs Chelsea · Match Winner" for a sports market, else its own title. */
+const marketLabel = (market: Bet['market'], fallback: string) =>
+  market ? (market.eventTitle ? `${market.eventTitle} · ${market.title}` : market.title) : fallback
 
 type OrderFilters = Record<'status', string[]>
 
@@ -57,6 +72,18 @@ const Orders = () => {
   const bets = useMemo<Bet[]>(
     () => (data?.pages ?? []).flatMap((page) => page.data),
     [data],
+  )
+  // Combos come on the first page only (unpaginated) — merged in by date. An
+  // exact order-status filter has no combo equivalent, so the API omits them then.
+  const rows = useMemo<OrderRow[]>(
+    () =>
+      [
+        ...bets.map((bet): OrderRow => ({ kind: 'bet', at: bet.createdAt, bet })),
+        ...(data?.pages?.[0]?.combos ?? []).map(
+          (combo): OrderRow => ({ kind: 'combo', at: combo.createdAt, combo }),
+        ),
+      ].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
+    [bets, data],
   )
 
   useEffect(() => {
@@ -108,13 +135,58 @@ const Orders = () => {
               <div key={index} className='h-16 animate-pulse rounded-lg bg-hover' />
             ))}
           </div>
-        ) : bets.length === 0 ? (
+        ) : rows.length === 0 ? (
           <p className='py-12 text-center text-sm text-neutral-10'>
             No orders found.
           </p>
         ) : (
           <div className='divide-y divide-border/40  max-h-150 overflow-y-auto'>
-            {bets.map((bet) => (
+            {rows.map((row) => {
+              if (row.kind === 'combo') {
+                const { combo } = row
+                const settled = combo.status !== 'OPEN'
+                return (
+                  <article
+                    key={`combo:${combo.id}`}
+                    className='flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between'
+                  >
+                    <div className='min-w-0'>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-sm font-semibold text-black'>
+                          Combo · {combo.legs.length} picks
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${comboBadge(combo.status)}`}
+                        >
+                          {combo.status.toLowerCase()}
+                        </span>
+                      </div>
+                      <p className='mt-1 max-w-md truncate text-xs text-neutral-10'>
+                        {combo.legs
+                          .map((leg) => leg.market?.eventTitle ?? leg.market?.title ?? leg.marketId)
+                          .join(' · ')}
+                      </p>
+                      <p className='mt-1 text-xs text-placeholder'>{formatDate(combo.createdAt)}</p>
+                    </div>
+                    <div className='sm:text-right text-sm'>
+                      <p className='font-semibold text-black'>
+                        {formatCurrency(toMajorUnits(combo.stake.amount), combo.stake.currency)}
+                      </p>
+                      <p className='text-xs text-neutral-10'>
+                        ×{Number(combo.combinedOdds).toFixed(2)} ·{' '}
+                        {settled
+                          ? `${formatCurrency(toMajorUnits(combo.payout?.amount ?? 0), combo.stake.currency)} returned`
+                          : `${formatCurrency(
+                              toMajorUnits(combo.potentialReturn.amount),
+                              combo.potentialReturn.currency,
+                            )} to win`}
+                      </p>
+                    </div>
+                  </article>
+                )
+              }
+              const { bet } = row
+              return (
               <article
                 key={bet.id}
                 className='flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between'
@@ -135,7 +207,7 @@ const Orders = () => {
                     onClick={() => navigate(`/markets/${bet.marketId}`)}
                     className='mt-1 block max-w-md truncate text-left text-xs text-neutral-10 hover:text-black hover:underline'
                   >
-                    {bet.market?.title ?? bet.marketId}
+                    {marketLabel(bet.market, bet.marketId)}
                   </button>
                   <p className='mt-1 text-xs text-placeholder'>
                     {formatDate(bet.createdAt)}
@@ -168,7 +240,8 @@ const Orders = () => {
                   )}
                 </div>
               </article>
-            ))}
+              )
+            })}
             {hasNextPage && (
               <div ref={sentinelRef} className='flex justify-center py-3'>
                 {isFetchingNextPage && (

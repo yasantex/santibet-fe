@@ -10,10 +10,10 @@ import { formatSharePrice } from '../../utils/functions'
 import type { UiMarket } from '../../types/market.types'
 
 /**
- * Right-rail panel on a SPORTS market detail page. Combos are the default
- * sports flow, so instead of the single-bet TradePanel this lets the user add
- * one of this market's outcomes to the combo ticket (tap again to remove). The
- * slip itself (auto-opened on the first pick) handles stake and placement, and
+ * Right-rail panel on a SPORTS market detail page. Instead of the TradePanel
+ * this adds one of this market's outcomes to the bet slip (tap again to remove).
+ * The slip itself (auto-opened on the first pick) handles stake and placement:
+ * one pick places a single bet, picks from several games make a combo, and it
  * enforces one market per event.
  */
 const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
@@ -28,9 +28,9 @@ const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
           <HugeiconsIcon icon={TicketStarIcon} size={18} />
         </span>
         <div className='min-w-0'>
-          <p className='text-sm font-bold text-black'>Add to combo</p>
+          <p className='text-sm font-bold text-black'>Add to bet slip</p>
           <p className='text-xs text-neutral-10'>
-            Pick an outcome, then combine across other games.
+            Bet on one outcome, or combine picks across games.
           </p>
         </div>
       </div>
@@ -80,12 +80,12 @@ const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
         </p>
       ) : (
         <p className='text-center text-xs text-neutral-10'>
-          Tap an outcome to start your combo.
+          Tap an outcome to add it to your bet slip.
         </p>
       )}
 
       <p className='text-center text-[11px] text-neutral-10'>
-        Only one market per event. Every pick must win.
+        Combos: one market per event, and every pick must win.
       </p>
     </div>
   )
