@@ -1,4 +1,5 @@
 import { groupedChoices, YES_LABELS } from './marketDisplay'
+import { shortOutcomeLabel, teamsFromTitle } from './teamNames'
 import type { EventTeam, UiMarket, UiOutcome } from '../types/market.types'
 
 export type MatchColumn = 'moneyline' | 'spread' | 'total' | 'btts'
@@ -11,7 +12,13 @@ export const MATCH_COLUMN_LABELS: Record<MatchColumn, string> = {
 }
 
 /** One button in a match row: which market/outcome it bets, and its text. */
-export type MatchPick = { market: UiMarket; outcome: UiOutcome; label: string }
+export type MatchPick = {
+  market: UiMarket
+  outcome: UiOutcome
+  label: string
+  /** Unshortened label, for the button's tooltip. */
+  fullLabel?: string
+}
 
 export type SportsMatch = {
   key: string
@@ -134,16 +141,30 @@ export const buildSportsMatches = (markets: UiMarket[]): SportsMatch[] => {
     const teamInfo = [...(ms.find((m) => m.teams?.length)?.teams ?? [])].sort(
       (a, b) => Number(b.side === 'home') - Number(a.side === 'home'),
     )
+    const teams =
+      teamInfo.length >= 2 ? teamInfo.map((t) => t.name) : teamsFromTitle(title)
+    // Team names on the buttons become codes ("GAL", "GAL -1.5").
+    const shorten = shortOutcomeLabel(
+      teams,
+      teamInfo.length >= 2 ? teamInfo.map((t) => t.shortName) : [],
+    )
+    for (const picks of Object.values(cells)) {
+      picks?.forEach((pick) => {
+        pick.fullLabel = pick.label
+        pick.label = shorten(pick.label)
+      })
+    }
     return {
       key,
       eventId: main.eventId || main.id,
       title,
-      teams:
-        teamInfo.length >= 2
-          ? teamInfo.map((t) => t.name)
-          : title.split(/\s+vs\.?\s+/i).map((t) => t.trim()).filter(Boolean),
+      teams,
       teamInfo,
-      league: (main.subtitle ?? '').trim(),
+      // API-Sports puts the league in the subtitle; Polymarket imports put the
+      // outcome's short name there instead, so no league for those.
+      league: main.seriesKey?.startsWith('apisports:')
+        ? (main.subtitle ?? '').trim()
+        : '',
       kickoff: Math.min(...ms.map((m) => time(m.closeTime)).filter(Boolean)),
       live: ms.some((m) => m.live),
       volume: ms.reduce((sum, m) => sum + (m.volume || 0), 0),

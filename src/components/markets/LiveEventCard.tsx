@@ -14,6 +14,7 @@ import TeamLogo from './TeamLogo'
 import { useCountdown } from '../../hooks/useCountdown'
 import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
 import MarketMetaLine from './MarketMetaLine'
+import { shortOutcomeLabel, teamsFromTitle } from '../../utils/teamNames'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
 import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
 
@@ -40,6 +41,17 @@ const LiveEventCard = ({
   const grouped = groupedChoices(event.markets)
   const eventHref = `/events/${event.id}`
   const teams = event.teams ?? market?.teams ?? null
+  // Sports buttons name teams by code ("GAL", not "GALATASARAY …"): the API's
+  // short name when it has one, else one made from the name.
+  const shorten =
+    market && isSportsMarket(market)
+      ? shortOutcomeLabel(
+          teams && teams.length >= 2
+            ? teams.map((t) => t.name)
+            : teamsFromTitle(event.title),
+          teams && teams.length >= 2 ? teams.map((t) => t.shortName) : [],
+        )
+      : (l: string) => l
   const { label, display } = useCountdown(market?.openTime, market?.closeTime)
 
   // Combo-by-default for sports: tap an outcome to add/remove it from the combo
@@ -149,13 +161,14 @@ const LiveEventCard = ({
             key={b.key}
             type='button'
             onClick={() => handleOutcome(b.market, b.outcome)}
+            title={b.label}
             className={`flex min-w-0 flex-1 flex-col items-center justify-center rounded-lg cursor-pointer px-1 py-2 text-xs font-bold ${TONE_STYLES[b.tone].button} ${
               isActive(b.market, b.outcome) ? 'ring-2 ring-black ring-offset-1' : ''
             }`}
           >
             <span className='flex w-full min-w-0 items-center justify-center gap-1'>
               <TeamLogo team={findTeam(teams, b.label)} size={14} />
-              <span className='min-w-0 truncate uppercase'>{b.label}</span>
+              <span className='min-w-0 truncate uppercase'>{shorten(b.label)}</span>
               <span className='shrink-0'>{priceLabel(b.market, b.outcome)}</span>
             </span>
           </button>

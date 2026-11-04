@@ -59,9 +59,12 @@ const PortfolioSummaryCards = ({
   // Same figure as the header's "Portfolio": cash plus open positions' value.
   const positionsValue = summary ? toMajorUnits(summary.currentValue.amount) : 0
   const total = cash + positionsValue
+  // Combos are included by the API (won/lost exactly as History labels them).
   const net = summary ? toMajorUnits(summary.netPnl.amount) : 0
   const unrealized = summary ? toMajorUnits(summary.unrealizedPnl.amount) : 0
   const realized = summary ? toMajorUnits(summary.realizedPnl.amount) : 0
+  const wonCount = summary?.wonCount ?? 0
+  const lostCount = summary?.lostCount ?? 0
   const show = (s: string) => (hidden ? MASK : s)
 
   if (loading)
@@ -166,7 +169,7 @@ const PortfolioSummaryCards = ({
             </span>
             {summary && (
               <span className='text-[11px] text-neutral-10'>
-                {summary.wonCount} won · {summary.lostCount} lost
+                {wonCount} won · {lostCount} lost
               </span>
             )}
           </div>

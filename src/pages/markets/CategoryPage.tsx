@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { FilterIcon, Search01Icon } from '@hugeicons/core-free-icons'
+import {
+  ArrowDown01Icon,
+  FilterIcon,
+  Search01Icon,
+} from '@hugeicons/core-free-icons'
 import MarketCard from '../../components/markets/MarketCard'
 import LiveEventCard from '../../components/markets/LiveEventCard'
 import {
@@ -67,6 +71,25 @@ const matchesTopic = (market: UiMarket, pattern: RegExp) =>
   pattern.test(market.eventTitle ?? '')
 
 const OTHER = 'Other'
+// The API-Sports feed calls it Football; the Polymarket subcategory, Soccer.
+// One sport, shown as Football.
+const SPORT_ALIASES: Record<string, string> = { soccer: 'football' }
+const SPORT_LABELS: Record<string, string> = { football: 'Football' }
+const sportKey = (name: string) => {
+  const key = name.trim().toLowerCase()
+  return SPORT_ALIASES[key] ?? key
+}
+
+type SportNavItem = {
+  key: string
+  label: string
+  count: number
+  /** Admin subcategory to load (server-side), if the sport has one. */
+  subSlug: string | null
+  /** Sport name in the parent feed (API-Sports), filtered client-side. */
+  dataSport: string | null
+  leagues: { name: string; count: number }[]
+}
 const marketLeague = (market: UiMarket): string =>
   (market.subtitle ?? '').trim() || OTHER
 
@@ -122,7 +145,11 @@ const CategoryPage = () => {
   const categoryName =
     (apiCategories ?? []).find((c) => c.slug.toLowerCase() === activeSlug)
       ?.name ?? active
-  const activeLabel = activeSub?.name ?? categoryName
+  const activeLabel = activeSub
+    ? isSports
+      ? (SPORT_LABELS[sportKey(activeSub.name)] ?? activeSub.name)
+      : activeSub.name
+    : categoryName
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -299,6 +326,91 @@ const CategoryPage = () => {
       .sort((a, b) => b.count - a.count)
   }, [isSports, byCategory])
 
+  // The parent Sports feed holds the API-Sports matches; each subcategory is
+  // its own feed. Keep the parent's sport → league tree while a subcategory
+  // is open so its leagues stay listed.
+  const [feedSports, setFeedSports] = useState(sportsGroups)
+  if (!activeSub && feedSports !== sportsGroups) setFeedSports(sportsGroups)
+
+  // One list of sports for the sidebar: the admin subcategories plus any
+  // sport only the parent feed has, merged by name (Football = Soccer).
+  const sportsNav = useMemo<SportNavItem[]>(() => {
+    if (!isSports) return []
+    const items = new Map<string, SportNavItem>()
+    for (const c of subcategories) {
+      items.set(sportKey(c.name), {
+        key: sportKey(c.name),
+        label: SPORT_LABELS[sportKey(c.name)] ?? c.name,
+        count: c.eventCount,
+        subSlug: c.slug.toLowerCase(),
+        dataSport: null,
+        leagues: [],
+      })
+    }
+    for (const g of feedSports) {
+      if (g.sport === OTHER) continue
+      const leagues = g.leagues.filter((l) => l.name !== OTHER)
+      const existing = items.get(sportKey(g.sport))
+      if (existing) {
+        existing.dataSport = g.sport
+        existing.leagues = leagues
+      } else {
+        items.set(sportKey(g.sport), {
+          key: sportKey(g.sport),
+          label: SPORT_LABELS[sportKey(g.sport)] ?? g.sport,
+          count: g.count,
+          subSlug: null,
+          dataSport: g.sport,
+          leagues,
+        })
+      }
+    }
+    return [...items.values()].sort((a, b) => b.count - a.count)
+  }, [isSports, subcategories, feedSports])
+
+  // Which sports are expanded to show their leagues (collapsed by default so
+  // one sport's long league list doesn't push the others off screen).
+  const [openSports, setOpenSports] = useState<Set<string>>(new Set())
+  const toggleSportOpen = (key: string) =>
+    setOpenSports((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  const isSportActive = (item: SportNavItem) =>
+    activeSub
+      ? item.subSlug === activeSub.slug.toLowerCase()
+      : !!activeSport && item.dataSport === activeSport && !activeLeague
+  const selectAllSports = () => {
+    changeSub(null)
+    setActiveSport(null)
+    setActiveLeague(null)
+  }
+  // The whole row is the accordion: a sport already picked opens/closes;
+  // another one is picked and opened.
+  const selectSport = (item: SportNavItem) => {
+    if (isSportActive(item)) {
+      toggleSportOpen(item.key)
+      return
+    }
+    if (item.subSlug) {
+      changeSub(item.subSlug)
+      setActiveSport(null)
+    } else {
+      changeSub(null)
+      setActiveSport(item.dataSport)
+    }
+    setActiveLeague(null)
+    setOpenSports((prev) => new Set(prev).add(item.key))
+  }
+  // Leagues live in the parent feed, so picking one leaves the subcategory.
+  const selectLeague = (item: SportNavItem, league: string) => {
+    changeSub(null)
+    setActiveSport(item.dataSport)
+    setActiveLeague(league)
+  }
+
   const byTopic = useMemo(() => {
     if (isSports) {
       return byCategory.filter((m) => {
@@ -376,64 +488,61 @@ const CategoryPage = () => {
       {/* Sports sub-navigation — pick a sport type, then a league within it.
           Data-driven from the loaded feed (seriesKey → sport, subtitle →
           league) rather than a curated topic list. */}
-      {isSports && sportsGroups.length > 0 && (
-        <aside className='hidden w-52 shrink-0 md:block'>
-          <nav className='flex flex-col gap-0.5'>
+      {isSports && sportsNav.length > 0 && (
+        <aside className='hidden w-56 shrink-0 md:block'>
+          <nav className='sticky top-36 flex max-h-[calc(100vh-10rem)] flex-col gap-0.5 overflow-y-auto pr-1'>
             <button
               type='button'
-              onClick={() => {
-                setActiveSport(null)
-                setActiveLeague(null)
-              }}
-              className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm text-black/60 hover:bg-hover ${
-                !activeSport && !activeLeague ? 'bg-hover' : ''
+              onClick={selectAllSports}
+              className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold text-black/70 hover:bg-hover ${
+                !activeSub && !activeSport ? 'bg-hover text-black' : ''
               }`}
             >
               All sports
-              <span className='text-xs text-neutral-10'>
-                {formatCompact(byCategory.length)}
-              </span>
             </button>
-            {sportsGroups.map((group) => {
-              const expanded =
-                activeSport === group.sport || sportsGroups.length === 1
+            {sportsNav.map((item) => {
+              const open = openSports.has(item.key)
               return (
-                <div key={group.sport} className='flex flex-col gap-0.5'>
+                <div key={item.key} className='flex flex-col gap-0.5'>
                   <button
                     type='button'
-                    onClick={() => {
-                      setActiveSport(group.sport)
-                      setActiveLeague(null)
-                    }}
-                    className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold text-black/70 hover:bg-hover ${
-                      activeSport === group.sport && !activeLeague
-                        ? 'bg-hover'
-                        : ''
+                    onClick={() => selectSport(item)}
+                    aria-expanded={item.leagues.length ? open : undefined}
+                    className={`flex w-full cursor-pointer items-center gap-2 rounded-md py-2 pr-2 pl-3 text-left text-sm hover:bg-hover ${
+                      isSportActive(item)
+                        ? 'bg-hover font-semibold text-black'
+                        : 'text-black/70'
                     }`}
                   >
-                    {group.sport}
-                    <span className='text-xs font-normal text-neutral-10'>
-                      {formatCompact(group.count)}
+                    <span className='min-w-0 flex-1 truncate'>{item.label}</span>
+                    <span className='shrink-0 text-xs font-normal text-neutral-10'>
+                      {formatCompact(item.count)}
                     </span>
+                    {item.leagues.length > 0 ? (
+                      <HugeiconsIcon
+                        icon={ArrowDown01Icon}
+                        size={14}
+                        className={`shrink-0 text-neutral-10 transition-transform ${open ? 'rotate-180' : ''}`}
+                      />
+                    ) : (
+                      <span className='w-3.5 shrink-0' />
+                    )}
                   </button>
-                  {expanded &&
-                    group.leagues.map((league) => (
+                  {open &&
+                    item.leagues.map((league) => (
                       <button
                         key={league.name}
                         type='button'
-                        onClick={() => {
-                          setActiveSport(group.sport)
-                          setActiveLeague(league.name)
-                        }}
-                        className={`flex cursor-pointer items-center justify-between rounded-md py-1.5 pr-3 pl-6 text-left text-sm text-black/60 hover:bg-hover ${
+                        onClick={() => selectLeague(item, league.name)}
+                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-md py-1.5 pr-7.5 pl-6 text-left text-sm hover:bg-hover ${
                           activeLeague === league.name &&
-                          activeSport === group.sport
-                            ? 'bg-hover'
-                            : ''
+                          activeSport === item.dataSport
+                            ? 'bg-hover font-semibold text-black'
+                            : 'text-black/60'
                         }`}
                       >
                         <span className='truncate'>{league.name}</span>
-                        <span className='shrink-0 text-xs text-neutral-10'>
+                        <span className='shrink-0 text-xs font-normal text-neutral-10'>
                           {formatCompact(league.count)}
                         </span>
                       </button>
@@ -482,7 +591,11 @@ const CategoryPage = () => {
         </aside>
       )}
 
-      <div className='flex min-w-0 flex-1 flex-col gap-5'>
+      {/* Sports is capped so team names sit near their prices and the
+          toolbar stays beside the list on wide screens. */}
+      <div
+        className={`flex min-w-0 flex-1 flex-col gap-5 ${isSports ? 'max-w-5xl' : ''}`}
+      >
         <div className='flex items-center justify-between gap-3'>
           <h1 className='text-lg font-bold text-black md:text-2xl'>
             {active === 'All'
@@ -571,7 +684,7 @@ const CategoryPage = () => {
 
         {/* Admin-created subcategories — on every screen size, since the
             set changes at runtime and isn't part of the curated sidebar. */}
-        {active !== 'All' && subcategories.length > 0 && (
+        {!isSports && active !== 'All' && subcategories.length > 0 && (
           <div className='hide-scroll-bar -mt-2 flex gap-2 overflow-x-auto'>
             {[null, ...subcategories].map((sub) => (
               <button
@@ -610,52 +723,66 @@ const CategoryPage = () => {
           </div>
         )}
 
-        {/* Sports chips — the mobile stand-in for the sport → league sidebar:
-            a row of sports, then the picked sport's leagues beneath it. */}
-        {isSports && sportsGroups.length > 0 && (
+        {/* Sports chips — the mobile stand-in for the sidebar: the same list
+            of sports, then the picked sport's leagues beneath it. */}
+        {isSports && sportsNav.length > 0 && (
           <div className='-mt-2 flex flex-col gap-2 md:hidden'>
             <div className='hide-scroll-bar flex gap-2 overflow-x-auto'>
-              {[null, ...sportsGroups.map((g) => g.sport)].map((sport) => (
-                <button
-                  key={sport ?? 'all'}
-                  type='button'
-                  onClick={() => {
-                    setActiveSport(sport)
-                    setActiveLeague(null)
-                  }}
-                  className={`shrink-0 cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium ${
-                    activeSport === sport
-                      ? 'bg-black text-white'
-                      : 'bg-card text-neutral-10'
-                  }`}
-                >
-                  {sport ?? 'All sports'}
-                </button>
-              ))}
-            </div>
-            {activeSport && (
-              <div className='hide-scroll-bar flex gap-2 overflow-x-auto'>
-                {[
-                  null,
-                  ...(sportsGroups
-                    .find((g) => g.sport === activeSport)
-                    ?.leagues.map((l) => l.name) ?? []),
-                ].map((league) => (
+              <button
+                type='button'
+                onClick={selectAllSports}
+                className={`shrink-0 cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium ${
+                  !activeSub && !activeSport
+                    ? 'bg-black text-white'
+                    : 'bg-card text-neutral-10'
+                }`}
+              >
+                All sports
+              </button>
+              {sportsNav.map((item) => {
+                const selected =
+                  isSportActive(item) ||
+                  (!!activeLeague && item.dataSport === activeSport)
+                return (
                   <button
-                    key={league ?? 'all'}
+                    key={item.key}
                     type='button'
-                    onClick={() => setActiveLeague(league)}
-                    className={`shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-medium ${
-                      activeLeague === league
-                        ? 'bg-black text-white'
-                        : 'bg-card text-neutral-10'
+                    onClick={() => selectSport(item)}
+                    className={`shrink-0 cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium ${
+                      selected ? 'bg-black text-white' : 'bg-card text-neutral-10'
                     }`}
                   >
-                    {league ?? `All ${activeSport}`}
+                    {item.label}
                   </button>
-                ))}
-              </div>
-            )}
+                )
+              })}
+            </div>
+            {(() => {
+              const current = sportsNav.find(
+                (item) =>
+                  isSportActive(item) ||
+                  (!!activeLeague && item.dataSport === activeSport),
+              )
+              if (!current?.leagues.length) return null
+              return (
+                <div className='hide-scroll-bar flex gap-2 overflow-x-auto'>
+                  {current.leagues.map((league) => (
+                    <button
+                      key={league.name}
+                      type='button'
+                      onClick={() => selectLeague(current, league.name)}
+                      className={`shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-medium ${
+                        activeLeague === league.name
+                          ? 'bg-black text-white'
+                          : 'bg-card text-neutral-10'
+                      }`}
+                    >
+                      {league.name}
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         )}
 

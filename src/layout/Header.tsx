@@ -24,7 +24,6 @@ import {
   Home01Icon,
   Menu01FreeIcons,
   Notification03Icon,
-  User02FreeIcons,
 } from '@hugeicons/core-free-icons'
 import SearchResultsList from '../data_layer/SearchResultsList'
 import MobileSearchOverlay from '../mobile/MobileSearchOverlay'
@@ -36,6 +35,7 @@ import useLogout from '../hooks/useLogout'
 import useAccountSuspended from '../hooks/useAccountSuspended'
 import { SUSPENDED_CTA_HINT } from '../utils/constants'
 import ProfileDropdownMenu from '../components/globals/ProfileDropdownMenu'
+import { ProfileAvatar } from '../components/globals/ReusedText'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSantiBetQuery } from '../data_layer/utils'
 import {
@@ -422,12 +422,14 @@ const Header = () => {
               <Link
                 to='/account-profile'
                 aria-label='Account profile'
-                className=' p-2 hover:bg-hover rounded-md cursor-pointer transition-colors duration-200'
+                title='Account profile'
+                className='hidden shrink-0 rounded-full transition-opacity hover:opacity-80 md:flex'
               >
-                <HugeiconsIcon
-                  icon={User02FreeIcons}
-                  size={22}
-                  className='shrink-0 text-black'
+                <ProfileAvatar
+                  firstName={user.firstName ?? ''}
+                  lastName={user.lastName ?? ''}
+                  imageUrl={user.avatarUrl}
+                  className='border border-border'
                 />
               </Link>
               <Dropdown
