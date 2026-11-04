@@ -30,11 +30,11 @@ const BetSlipFab = ({ onClick }: { onClick: () => void }) => {
       type='button'
       onClick={onClick}
       aria-label={empty ? 'Start a bet slip' : 'Open bet slip'}
-      className={`fixed right-4 z-40 flex items-center gap-3 rounded-full bg-black py-3 pr-5 pl-3 text-white shadow-xl transition-transform hover:scale-[1.03] ${
+      className={`fixed right-4 z-40 flex items-center gap-3 rounded-full bg-text-black py-3 pr-5 pl-3 text-[#ffffff] shadow-xl transition-transform hover:scale-[1.03] ${
         chatAvailable ? FAB_STACK_CLASS.withChat : FAB_STACK_CLASS.withoutChat
       }`}
     >
-      <span className='relative flex h-9 w-9 items-center justify-center rounded-full bg-brand-green text-black'>
+      <span className='relative flex h-9 w-9 items-center justify-center rounded-full bg-brand-green text-text-black'>
         <HugeiconsIcon icon={TicketStarIcon} size={20} />
         {!empty && (
           <span className='absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[11px] font-bold text-white'>

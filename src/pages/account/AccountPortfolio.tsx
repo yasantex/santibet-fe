@@ -179,6 +179,8 @@ const AccountPortfolio = () => {
     <main className='mx-auto flex w-full flex-col gap-6'>
       <PortfolioSummaryCards
         summary={summary}
+        // Same combos the History list shows, so the counts agree with it.
+        combos={betsQuery.data?.pages[0]?.combos ?? []}
         cash={spendableBalance(wallet)}
         loading={summaryLoading}
         onDeposit={() => handleModalOpen('deposit')}

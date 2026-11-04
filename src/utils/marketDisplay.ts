@@ -427,12 +427,16 @@ const isYesNoMarket = (m: { outcomes: { label: string }[] }) =>
   m.outcomes.length === 2 &&
   m.outcomes.some((o) => YES_LABELS.includes(o.label.trim().toLowerCase()))
 
-/** Short name for one market in a group: "Will Arsenal win on …?" → "Arsenal",
- *  "…end in a draw?" → "Draw"; otherwise the market title as is. */
-const groupItemLabel = (title: string) => {
-  if (/\bend in a draw\b/i.test(title)) return 'Draw'
-  const win = title.match(/^will (.+?) win\b/i)
-  return win ? win[1] : title
+/** Short name for one market in a group. Polymarket imports carry it as the
+ *  subtitle ("Arsenal", "Draw (Arsenal vs. Chelsea)"); otherwise read it from
+ *  the question: "Will Arsenal win on …?" → "Arsenal", "…a draw?" → "Draw". */
+const groupItemLabel = (market: { title: string; subtitle?: string | null }) => {
+  const sub = (market.subtitle ?? '').trim()
+  if (/^draw\b/i.test(sub) || /\bend in a draw\b/i.test(market.title))
+    return 'Draw'
+  if (sub) return sub
+  const win = market.title.match(/^will (.+?) win\b/i)
+  return win ? win[1] : market.title
 }
 
 /**
@@ -446,6 +450,6 @@ export const groupedChoices = <M extends UiMarket>(markets: M[]) => {
   return markets.map((market) => ({
     market,
     outcome: market.yes ?? market.outcomes[0],
-    label: groupItemLabel(market.title),
+    label: groupItemLabel(market),
   }))
 }

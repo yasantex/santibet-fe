@@ -33,7 +33,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd())
+  // Empty prefix so non-VITE_ vars (dev-server only, never bundled) load too.
+  const env = loadEnv(mode, process.cwd(), '')
 
   return {
     plugins: [react(), tailwindcss(), googleTagManager(env.VITE_APP_GTM_ID)],
@@ -41,8 +42,7 @@ export default defineConfig(({ mode }) => {
       port: 3004,
       proxy: {
         '/api': {
-          target: 'https://api.santibet.com',
-          // target: 'https://santibet-8b7dfea9557d.herokuapp.com',
+          target: env.API_PROXY_TARGET,
           changeOrigin: true,
           secure: true,
           cookieDomainRewrite: 'localhost',

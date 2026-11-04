@@ -46,6 +46,7 @@ const PickButton = ({
     <button
       type='button'
       onClick={() => onPick(pick.market, pick.outcome)}
+      title={pick.fullLabel}
       className={`flex h-8 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2.5 text-xs font-bold md:flex-none ${
         tone
           ? TONE_STYLES[tone].button
@@ -54,7 +55,10 @@ const PickButton = ({
     >
       <span className='flex min-w-0 items-center gap-1.5'>
         {/* Team-named picks (moneyline) get the crest; Draw / lines don't. */}
-        <TeamLogo team={findTeam(pick.market.teams, pick.label)} size={14} />
+        <TeamLogo
+          team={findTeam(pick.market.teams, pick.fullLabel ?? pick.label)}
+          size={14}
+        />
         <span className='min-w-0 truncate uppercase'>{pick.label}</span>
       </span>
       <span className='shrink-0'>{priceLabel(pick.market, pick.outcome)}</span>
@@ -168,8 +172,7 @@ const SportsMatchList = ({
   const days = useMemo(() => groupMatchesByDay(matches), [matches])
 
   return (
-    // Capped so the team names sit close to their prices on wide screens.
-    <div className='flex w-full max-w-4xl flex-col gap-5'>
+    <div className='flex w-full flex-col gap-5'>
       {days.map((day, d) => (
         <section key={day.label} className='flex flex-col gap-2'>
           <div className={`grid grid-cols-1 items-end gap-3 px-4 ${gridFor(columns.length)}`}>

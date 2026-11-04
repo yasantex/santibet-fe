@@ -119,6 +119,35 @@ body {
   --color-border: #22262a;
   --color-hover: #22262a;
   --color-card: #16191a;
+  /* Contrast: secondary text must clear 4.5:1 on cards (#7F7F7F was 4.4:1,
+     the placeholder grey 3.4:1). */
+  --color-neutral-10: #9ba19e;
+  --color-placeholder: #8f9592;
+  /* Badge and chip fills were still the light pastels, putting green/red or
+     near-white text on near-white (~2:1). Dark tints, like the outcome
+     buttons above. */
+  --color-success-bg: #12301f;
+  --color-surface-success: #12301f;
+  --color-error-bg: #36181a;
+  --color-surface-error: #36181a;
+  --color-surface-base: #12301f;
+  --color-surface-hover: #2c3330;
+  --color-plain: #22262a;
+}
+
+/* Brand green is light in both themes, so whatever sits on it stays dark —
+   `text-black` flips to near-white in dark mode. */
+.dark .bg-brand-green {
+  color: var(--color-text-black);
+}
+
+@layer base {
+  /* Everything clickable shows the hand cursor (Tailwind v4 leaves buttons
+     on the default arrow). */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
 }
 
 /* Featured carousel: fade each slide in as it rotates. */
