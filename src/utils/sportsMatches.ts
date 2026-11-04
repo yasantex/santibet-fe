@@ -1,5 +1,5 @@
 import { groupedChoices, YES_LABELS } from './marketDisplay'
-import type { UiMarket, UiOutcome } from '../types/market.types'
+import type { EventTeam, UiMarket, UiOutcome } from '../types/market.types'
 
 export type MatchColumn = 'moneyline' | 'spread' | 'total' | 'btts'
 
@@ -19,6 +19,8 @@ export type SportsMatch = {
   eventId: string
   title: string
   teams: string[]
+  /** The event's team records (with logos), when the feed provides them. */
+  teamInfo: EventTeam[]
   league: string
   kickoff: number
   live: boolean
@@ -128,11 +130,19 @@ export const buildSportsMatches = (markets: UiMarket[]): SportsMatch[] => {
       total: total(ms),
       btts: btts(ms),
     }
+    // Prefer the feed's teams (home first) over parsing "A vs B" from the title.
+    const teamInfo = [...(ms.find((m) => m.teams?.length)?.teams ?? [])].sort(
+      (a, b) => Number(b.side === 'home') - Number(a.side === 'home'),
+    )
     return {
       key,
       eventId: main.eventId || main.id,
       title,
-      teams: title.split(/\s+vs\.?\s+/i).map((t) => t.trim()).filter(Boolean),
+      teams:
+        teamInfo.length >= 2
+          ? teamInfo.map((t) => t.name)
+          : title.split(/\s+vs\.?\s+/i).map((t) => t.trim()).filter(Boolean),
+      teamInfo,
       league: (main.subtitle ?? '').trim(),
       kickoff: Math.min(...ms.map((m) => time(m.closeTime)).filter(Boolean)),
       live: ms.some((m) => m.live),

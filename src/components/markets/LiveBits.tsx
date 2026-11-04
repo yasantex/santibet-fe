@@ -1,4 +1,6 @@
-import type { LiveState } from '../../types/market.types'
+import type { EventTeam, LiveState } from '../../types/market.types'
+import { findTeam } from '../../utils/marketDisplay'
+import TeamLogo from './TeamLogo'
 
 export const LiveBadge = ({ className = '' }: { className?: string }) => (
   <span
@@ -13,7 +15,14 @@ export const LiveBadge = ({ className = '' }: { className?: string }) => (
 )
 
 /** In-play scoreboard for a live sports event (from event.liveState). */
-export const ScoreBoard = ({ state }: { state: LiveState }) => {
+export const ScoreBoard = ({
+  state,
+  teams,
+}: {
+  state: LiveState
+  /** Event teams, for a crest beside each competitor. */
+  teams?: EventTeam[] | null
+}) => {
   const meta = [state.status, state.period, state.clock]
     .filter(Boolean)
     .join(' · ')
@@ -25,7 +34,10 @@ export const ScoreBoard = ({ state }: { state: LiveState }) => {
             key={s.competitor}
             className='flex items-center justify-between gap-6 text-sm'
           >
-            <span className='font-medium text-black'>{s.competitor}</span>
+            <span className='flex min-w-0 items-center gap-2 font-medium text-black'>
+              <TeamLogo team={findTeam(teams, s.competitor)} size={16} />
+              <span className='truncate'>{s.competitor}</span>
+            </span>
             <span className='font-bold text-black'>{s.score}</span>
           </div>
         ))}

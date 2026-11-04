@@ -4,11 +4,13 @@ import { Link } from 'react-router'
 import { LiveBadge, ScoreBoard } from './LiveBits'
 import {
   categoryIcon,
+  findTeam,
   groupedChoices,
   marketDisplayTitle,
   outcomeTone,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
+import TeamLogo from './TeamLogo'
 import { useCountdown } from '../../hooks/useCountdown'
 import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
 import MarketMetaLine from './MarketMetaLine'
@@ -37,6 +39,7 @@ const LiveEventCard = ({
   // "Will A win?" / "Draw?" / "Will B win?" read as one row: A | Draw | B.
   const grouped = groupedChoices(event.markets)
   const eventHref = `/events/${event.id}`
+  const teams = event.teams ?? market?.teams ?? null
   const { label, display } = useCountdown(market?.openTime, market?.closeTime)
 
   // Combo-by-default for sports: tap an outcome to add/remove it from the combo
@@ -124,7 +127,7 @@ const LiveEventCard = ({
       )}
 
       {event.liveState ? (
-        <ScoreBoard state={event.liveState} />
+        <ScoreBoard state={event.liveState} teams={teams} />
       ) : (
         display && (
           <div className='flex items-center gap-1.5 text-xs font-semibold text-placeholder'>
@@ -151,6 +154,7 @@ const LiveEventCard = ({
             }`}
           >
             <span className='flex w-full min-w-0 items-center justify-center gap-1'>
+              <TeamLogo team={findTeam(teams, b.label)} size={14} />
               <span className='min-w-0 truncate uppercase'>{b.label}</span>
               <span className='shrink-0'>{priceLabel(b.market, b.outcome)}</span>
             </span>

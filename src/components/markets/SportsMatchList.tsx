@@ -5,7 +5,8 @@ import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { LiveBadge } from './LiveBits'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
 import { useComboSlip } from '../../hooks/useComboSlip'
-import { outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
+import { findTeam, outcomeTone, TONE_STYLES } from '../../utils/marketDisplay'
+import TeamLogo from './TeamLogo'
 import { formatNairaCompact } from '../../utils/functions'
 import {
   buildSportsMatches,
@@ -51,7 +52,11 @@ const PickButton = ({
           : 'border border-border bg-white text-black hover:bg-hover'
       } ${active ? 'ring-2 ring-black ring-offset-1' : ''}`}
     >
-      <span className='min-w-0 truncate uppercase'>{pick.label}</span>
+      <span className='flex min-w-0 items-center gap-1.5'>
+        {/* Team-named picks (moneyline) get the crest; Draw / lines don't. */}
+        <TeamLogo team={findTeam(pick.market.teams, pick.label)} size={14} />
+        <span className='min-w-0 truncate uppercase'>{pick.label}</span>
+      </span>
       <span className='shrink-0'>{priceLabel(pick.market, pick.outcome)}</span>
     </button>
   )
@@ -131,11 +136,11 @@ const MatchRow = ({
         className='flex min-w-0 flex-col justify-center gap-1.5'
       >
         {(match.teams.length >= 2 ? match.teams : [match.title]).map((team) => (
-          <span
-            key={team}
-            className='truncate text-sm font-semibold text-black hover:underline'
-          >
-            {team}
+          <span key={team} className='flex min-w-0 items-center gap-2'>
+            <TeamLogo team={findTeam(match.teamInfo, team)} size={20} />
+            <span className='truncate text-sm font-semibold text-black hover:underline'>
+              {team}
+            </span>
           </span>
         ))}
       </Link>
