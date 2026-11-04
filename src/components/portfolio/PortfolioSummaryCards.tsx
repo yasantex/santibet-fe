@@ -10,7 +10,7 @@ import { Button } from '../globals/Button'
 import { formatCurrency, toMajorUnits } from '../../utils/functions'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
 import { SUSPENDED_CTA_HINT } from '../../utils/constants'
-import type { ComboTicket, PortfolioSummary } from '../../types/bet.types'
+import type { PortfolioSummary } from '../../types/bet.types'
 
 const HIDE_KEY = 'portfolioHidden'
 const MASK = '••••••'
@@ -32,36 +32,14 @@ type PortfolioSummaryCardsProps = {
   /** Cash the user can trade with, in naira. */
   cash: number
   loading: boolean
-  /** Combo tickets — `/bets/portfolio` counts single bets only, while the
-   *  History list shows combo results too, so they're added in here. */
-  combos?: ComboTicket[]
   onDeposit: () => void
   onWithdraw: () => void
-}
-
-/** Settled combos' results and realized P&L, in naira. */
-const comboTotals = (combos: ComboTicket[]) => {
-  let won = 0
-  let lost = 0
-  let realized = 0
-  for (const c of combos) {
-    const stake = toMajorUnits(c.stake.amount)
-    if (c.status === 'WON') {
-      won++
-      realized += (c.payout ? toMajorUnits(c.payout.amount) : 0) - stake
-    } else if (c.status === 'LOST') {
-      lost++
-      realized -= stake
-    }
-  }
-  return { won, lost, realized }
 }
 
 const PortfolioSummaryCards = ({
   summary,
   cash,
   loading,
-  combos = [],
   onDeposit,
   onWithdraw,
 }: PortfolioSummaryCardsProps) => {
@@ -81,13 +59,12 @@ const PortfolioSummaryCards = ({
   // Same figure as the header's "Portfolio": cash plus open positions' value.
   const positionsValue = summary ? toMajorUnits(summary.currentValue.amount) : 0
   const total = cash + positionsValue
-  const combo = comboTotals(combos)
-  const net = (summary ? toMajorUnits(summary.netPnl.amount) : 0) + combo.realized
+  // Combos are included by the API (won/lost exactly as History labels them).
+  const net = summary ? toMajorUnits(summary.netPnl.amount) : 0
   const unrealized = summary ? toMajorUnits(summary.unrealizedPnl.amount) : 0
-  const realized =
-    (summary ? toMajorUnits(summary.realizedPnl.amount) : 0) + combo.realized
-  const wonCount = (summary?.wonCount ?? 0) + combo.won
-  const lostCount = (summary?.lostCount ?? 0) + combo.lost
+  const realized = summary ? toMajorUnits(summary.realizedPnl.amount) : 0
+  const wonCount = summary?.wonCount ?? 0
+  const lostCount = summary?.lostCount ?? 0
   const show = (s: string) => (hidden ? MASK : s)
 
   if (loading)
