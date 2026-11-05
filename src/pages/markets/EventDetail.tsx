@@ -2,9 +2,13 @@ import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useEvent } from '../../data_layer/markets'
 import { useFavorites } from '../../hooks/useFavorites'
+import { useCategoryCrumbs } from '../../hooks/useCategoryCrumbs'
 import MarketCard from '../../components/markets/MarketCard'
+import MultiChoiceEventView from '../../components/markets/MultiChoiceEventView'
+import PageNav from '../../components/globals/PageNav'
 import {
   categoryIcon,
+  isMultiChoiceEvent,
   marketHref,
   moreMarketsSlug,
 } from '../../utils/marketDisplay'
@@ -12,15 +16,22 @@ import { MarketCardSkeleton } from '../../components/globals/ReusedText'
 import { formatCloseTimer } from '../../utils/functions'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
 
+// Multi-choice events have no live stream of their own; refresh the prices.
+const EVENT_POLL_MS = 30_000
+
 const EventDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data: event, isLoading, isError } = useEvent(id)
+  const { data: event, isLoading, isError } = useEvent(id, {
+    refetchMs: EVENT_POLL_MS,
+  })
+  const multiChoice = !!event && isMultiChoiceEvent(event.markets)
   // The feed imports a match's spreads/totals as a separate
   // "<match> - More Markets" event; list them here too.
-  const { data: moreEvent } = useEvent(moreMarketsSlug(event?.slug), {
-    optional: true,
-  })
+  const { data: moreEvent } = useEvent(
+    multiChoice ? undefined : moreMarketsSlug(event?.slug),
+    { optional: true },
+  )
   // On the match's own page its name is the heading, so each card shows just
   // the market ("Spread: Newcastle (-1.5)", not "Newcastle vs …: Spread…").
   const markets = useMemo(
@@ -32,12 +43,16 @@ const EventDetail = () => {
     [event, moreEvent],
   )
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
+  const categoryCrumbs = useCategoryCrumbs(event?.categorySlug, event?.category)
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
 
   return (
     <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-4 pb-20 md:px-8'>
+      <PageNav
+        crumbs={event ? [...categoryCrumbs, { label: event.title }] : []}
+      />
       {isLoading ? (
         <>
           <div className='h-8 w-64 animate-pulse rounded bg-card' />
@@ -58,6 +73,8 @@ const EventDetail = () => {
             Back to markets
           </button>
         </div>
+      ) : multiChoice ? (
+        <MultiChoiceEventView event={event} />
       ) : (
         <>
           <div className='flex items-center gap-3'>

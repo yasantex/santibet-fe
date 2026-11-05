@@ -12,7 +12,7 @@ import {
   openPositionMark,
   toMajorUnits,
 } from '../../utils/functions'
-import { outcomeLabelClass } from '../../utils/marketDisplay'
+import { CARD_HOVER_SOFT, outcomeLabelClass } from '../../utils/marketDisplay'
 import type { BetPosition } from '../../types/bet.types'
 
 type PositionCardProps = {
@@ -86,7 +86,7 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
               }
 
   return (
-    <div className='flex flex-col gap-3 rounded-lg bg-card p-4'>
+    <div className={`flex flex-col gap-3 rounded-lg bg-card p-4 ${CARD_HOVER_SOFT}`}>
       <section className='flex flex-col items-start justify-between gap-2.5 md:flex-row md:items-center'>
         <main className='flex flex-col gap-2.5'>
           <div className='flex items-center'>

@@ -93,7 +93,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
               loading || disabled,
             group: hover,
             'disabled:cursor-not-allowed disabled:opacity-70 ': loading,
-            'h-6 text-[13px]': size == 'small',
+            'h-6 text-xs!': size == 'small',
             'h-8.5 text-sm': size === 'medium',
             'h-13 text-base': size === 'large',
           },

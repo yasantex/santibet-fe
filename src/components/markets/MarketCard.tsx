@@ -7,6 +7,7 @@ import {
   marketDisplayTitle,
   outcomeTone,
   TONE_STYLES,
+  CARD_HOVER,
   type OutcomeTone,
 } from '../../utils/marketDisplay'
 import TeamLogo from './TeamLogo'
@@ -205,7 +206,7 @@ const MarketCard = ({
       onKeyDown={(e) => {
         if (e.key === 'Enter') onSelect?.(market)
       }}
-      className='flex h-full cursor-pointer flex-col gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:border-brand-green/60'
+      className={`flex h-full cursor-pointer flex-col gap-4 rounded-lg border border-border bg-card p-4 ${CARD_HOVER}`}
     >
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2'>

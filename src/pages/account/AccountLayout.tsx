@@ -1,10 +1,21 @@
-import { Outlet, useNavigate } from 'react-router'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowLeft01Icon } from '@hugeicons/core-free-icons'
+import { Outlet, useLocation } from 'react-router'
 import AccountSidebar from '../../components/account/AccountSidebar'
+import PageNav from '../../components/globals/PageNav'
+import { accountMenuItems } from '../../utils/constants'
+
+const SECTION_LABELS: Record<string, string> = {
+  '/notifications': 'Notifications',
+  '/rewards': 'Rewards',
+  '/bonuses': 'Bonuses',
+  '/orders': 'Orders',
+  '/refer-earn': 'Refer & Earn',
+}
 
 const AccountLayout = () => {
-  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const section =
+    accountMenuItems.find((item) => item.path === pathname)?.label ??
+    SECTION_LABELS[pathname]
 
   return (
     <div className='mx-auto flex w-full lg:w-[70%] flex-col gap-6 px-3 py-10 md:flex-row '>
@@ -13,14 +24,14 @@ const AccountLayout = () => {
       </div>
 
       <div className='min-w-0 flex-1'>
-        <button
-          type='button'
-          onClick={() => navigate('/account')}
-          className='mb-4 flex items-center gap-1 text-sm font-medium text-black hover:text-black/60 md:hidden'
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
-          My Profile
-        </button>
+        <PageNav
+          className='mb-4'
+          fallbackHref='/account'
+          crumbs={[
+            { label: 'My Profile', href: '/account' },
+            ...(section ? [{ label: section }] : []),
+          ]}
+        />
 
         <Outlet />
       </div>

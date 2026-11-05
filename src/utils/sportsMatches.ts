@@ -1,4 +1,5 @@
 import { groupedChoices, YES_LABELS } from './marketDisplay'
+import { shortOutcomeLabel, teamsFromTitle } from './teamNames'
 import type { EventTeam, UiMarket, UiOutcome } from '../types/market.types'
 
 export type MatchColumn = 'moneyline' | 'spread' | 'total' | 'btts'
@@ -11,7 +12,13 @@ export const MATCH_COLUMN_LABELS: Record<MatchColumn, string> = {
 }
 
 /** One button in a match row: which market/outcome it bets, and its text. */
-export type MatchPick = { market: UiMarket; outcome: UiOutcome; label: string }
+export type MatchPick = {
+  market: UiMarket
+  outcome: UiOutcome
+  label: string
+  /** Unshortened label, for the button's tooltip. */
+  fullLabel?: string
+}
 
 export type SportsMatch = {
   key: string
@@ -27,6 +34,10 @@ export type SportsMatch = {
   volume: number
   marketCount: number
   cells: Partial<Record<MatchColumn, MatchPick[]>>
+  /** Picks for a match with no moneyline: its main market's outcomes. */
+  fallback?: MatchPick[]
+  /** The market a card's question/buttons belong to. */
+  lead: UiMarket
 }
 
 const MORE_MARKETS = / - More Markets$/i
@@ -34,6 +45,17 @@ const baseTitle = (m: UiMarket) =>
   (m.eventTitle || m.title).replace(MORE_MARKETS, '').trim()
 
 const time = (iso?: string | null) => new Date(iso ?? '').getTime() || 0
+
+/** Earliest close time among a match's markets; 0 when none has one
+ *  (season-long futures like "Team Win Totals" ship `closeTime: null`). */
+const kickoffOf = (ms: UiMarket[]) => {
+  const times = ms.map((m) => time(m.closeTime)).filter(Boolean)
+  return times.length ? Math.min(...times) : 0
+}
+
+/** Whether a match has a usable kickoff time to show or group by. */
+export const hasKickoff = (m: Pick<SportsMatch, 'kickoff'>) =>
+  Number.isFinite(m.kickoff) && m.kickoff > 0
 
 /** The line closest to a coin flip — the "main" spread or total. */
 const mainLine = (markets: UiMarket[]) =>
@@ -45,12 +67,23 @@ const mainLine = (markets: UiMarket[]) =>
 
 const formatLine = (n: number) => (n > 0 ? `+${n}` : `${n}`)
 
-const moneyline = (markets: UiMarket[]): MatchPick[] | undefined => {
+const isYesNo = (m: UiMarket) =>
+  m.outcomes.length === 2 &&
+  m.outcomes.some((o) => YES_LABELS.includes(o.label.trim().toLowerCase()))
+
+const moneyline = (
+  markets: UiMarket[],
+  title: string,
+): MatchPick[] | undefined => {
   // API-Sports: one "Match Winner" market with Home / Draw / Away.
+  // Polymarket games: the market is titled like the match ("Hawks vs.
+  // Wizards") and its outcomes are the teams.
   const winner = markets.find(
     (m) =>
-      /match winner|moneyline|1x2|full time result/i.test(m.title) &&
-      m.outcomes.length >= 2,
+      m.outcomes.length >= 2 &&
+      !isYesNo(m) &&
+      (/match winner|moneyline|1x2|full time result/i.test(m.title) ||
+        m.title.trim().toLowerCase() === title.toLowerCase()),
   )
   if (winner)
     return winner.outcomes.map((outcome) => ({
@@ -85,7 +118,7 @@ const total = (markets: UiMarket[]): MatchPick[] | undefined => {
   const line = mainLine(
     markets.filter(
       (m) =>
-        /over\s*\/\s*under|\btotal\b/i.test(m.title) &&
+        /over\s*\/\s*under|\bO\/U\b|\btotal\b/i.test(m.title) &&
         m.outcomes.some((o) => /^over\b/i.test(o.label)),
     ),
   )
@@ -125,53 +158,115 @@ export const buildSportsMatches = (markets: UiMarket[]): SportsMatch[] => {
     const main = ms.find((m) => !MORE_MARKETS.test(m.eventTitle ?? '')) ?? ms[0]
     const title = baseTitle(main)
     const cells: SportsMatch['cells'] = {
-      moneyline: moneyline(ms),
+      moneyline: moneyline(ms, title),
       spread: spread(ms),
       total: total(ms),
       btts: btts(ms),
     }
+    // Nothing recognisable (e.g. a one-off prop): the card still offers the
+    // main market's outcomes.
+    const picked = new Set(
+      Object.values(cells).flatMap((p) => p?.map((x) => x.market.id) ?? []),
+    )
+    // Prefer one still open: a live match's earlier props ("Goal between
+    // 15'–30'?") close as the game goes on.
+    const spare = ms.filter((m) => !picked.has(m.id) && m.outcomes.length >= 2)
+    const lead = spare.find((m) => m.status === 'open') ?? spare[0]
+    const fallback: MatchPick[] | undefined =
+      !cells.moneyline && lead
+        ? lead.outcomes.slice(0, 3).map((outcome) => ({
+            market: lead,
+            outcome,
+            label: outcome.label,
+          }))
+        : undefined
     // Prefer the feed's teams (home first) over parsing "A vs B" from the title.
     const teamInfo = [...(ms.find((m) => m.teams?.length)?.teams ?? [])].sort(
       (a, b) => Number(b.side === 'home') - Number(a.side === 'home'),
     )
+    const teams =
+      teamInfo.length >= 2 ? teamInfo.map((t) => t.name) : teamsFromTitle(title)
+    // Team names on the buttons become codes ("GAL", "GAL -1.5").
+    const shorten = shortOutcomeLabel(
+      teams,
+      teamInfo.length >= 2 ? teamInfo.map((t) => t.shortName) : [],
+    )
+    for (const picks of [...Object.values(cells), fallback]) {
+      picks?.forEach((pick) => {
+        pick.fullLabel = pick.label
+        pick.label = shorten(pick.label)
+      })
+    }
     return {
       key,
       eventId: main.eventId || main.id,
       title,
-      teams:
-        teamInfo.length >= 2
-          ? teamInfo.map((t) => t.name)
-          : title.split(/\s+vs\.?\s+/i).map((t) => t.trim()).filter(Boolean),
+      teams,
       teamInfo,
-      league: (main.subtitle ?? '').trim(),
-      kickoff: Math.min(...ms.map((m) => time(m.closeTime)).filter(Boolean)),
+      // API-Sports puts the league in the subtitle; Polymarket imports put the
+      // outcome's short name there instead, so no league for those.
+      league: main.seriesKey?.startsWith('apisports:')
+        ? (main.subtitle ?? '').trim()
+        : '',
+      kickoff: kickoffOf(ms),
       live: ms.some((m) => m.live),
       volume: ms.reduce((sum, m) => sum + (m.volume || 0), 0),
       marketCount: ms.length,
       cells,
+      fallback,
+      lead: ms.find((m) => cells.moneyline?.[0]?.market.id === m.id) ?? lead ?? main,
     }
   })
 }
 
-/** Columns to show: the ones any match in the list actually has. */
-export const matchColumns = (matches: SportsMatch[], max = 3): MatchColumn[] =>
-  (['moneyline', 'spread', 'total', 'btts'] as const)
-    .filter((c) => matches.some((m) => m.cells[c]?.length))
+/** Market types a match has (moneyline, spread…). */
+export const filledColumns = (m: SportsMatch) =>
+  (Object.values(m.cells) as (MatchPick[] | undefined)[]).filter(
+    (p) => p?.length,
+  ).length
+
+/**
+ * Board (one row, a column per market type) only pays off when most matches
+ * have several market types — big leagues with moneyline + spread + total.
+ * Otherwise the columns are mostly "—", so the list shows as cards.
+ */
+export const preferMatchBoard = (matches: SportsMatch[]) =>
+  matches.length > 0 &&
+  matches.filter((m) => filledColumns(m) >= 2).length >= matches.length / 2
+
+/** Columns to show: the market types the most matches have (a column only
+ *  one prop-heavy match fills shouldn't push out a common one). */
+export const matchColumns = (matches: SportsMatch[], max = 3): MatchColumn[] => {
+  const order = ['moneyline', 'spread', 'total', 'btts'] as const
+  const count = (c: MatchColumn) =>
+    matches.filter((m) => m.cells[c]?.length).length
+  return order
+    .filter((c) => count(c) > 0)
+    .sort((a, b) => count(b) - count(a) || order.indexOf(a) - order.indexOf(b))
     .slice(0, max)
+    .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+}
 
 const dayKey = (ms: number) => new Date(ms).toDateString()
 
-/** Matches grouped under a date heading, live games first, then by kickoff. */
+/** Matches grouped under a date heading, live games first, then by kickoff;
+ *  anything without a kickoff time goes last under "Date to be confirmed". */
 export const groupMatchesByDay = (matches: SportsMatch[]) => {
+  const rank = (m: SportsMatch) => (m.live ? 0 : hasKickoff(m) ? 1 : 2)
   const sorted = [...matches].sort(
-    (a, b) => Number(b.live) - Number(a.live) || a.kickoff - b.kickoff,
+    (a, b) =>
+      rank(a) - rank(b) ||
+      (hasKickoff(a) && hasKickoff(b) ? a.kickoff - b.kickoff : 0),
   )
   const days = new Map<string, { label: string; matches: SportsMatch[] }>()
   for (const m of sorted) {
-    const key = m.live ? 'live' : dayKey(m.kickoff)
+    const dated = hasKickoff(m)
+    const key = m.live ? 'live' : dated ? dayKey(m.kickoff) : 'tbc'
     const label = m.live
       ? 'Live now'
-      : new Intl.DateTimeFormat('en-US', {
+      : !dated
+        ? 'Date to be confirmed'
+        : new Intl.DateTimeFormat('en-US', {
           weekday: 'short',
           month: 'long',
           day: 'numeric',

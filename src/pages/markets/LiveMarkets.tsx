@@ -16,6 +16,7 @@ import { formatCompact } from '../../utils/functions'
 import { marketHref, marketSport } from '../../utils/marketDisplay'
 import { useComboSlip, isSportsMarket } from '../../hooks/useComboSlip'
 import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
+import PageNav from '../../components/globals/PageNav'
 
 /** Sports and Crypto are always listed — the two kinds of in-play betting —
  *  plus any other category that currently has live events. */
@@ -206,6 +207,12 @@ const LiveMarkets = () => {
       </aside>
 
       <div className='flex min-w-0 flex-1 flex-col gap-5'>
+        <PageNav
+          crumbs={[
+            { label: 'Live', href: activeGroup ? '/live' : undefined },
+            ...(activeGroup ? [{ label: activeSub?.value ?? activeGroup.label }] : []),
+          ]}
+        />
         <div className='flex items-center gap-3'>
           <h1 className='text-lg font-bold text-black md:text-2xl'>
             {activeSub?.value ?? activeGroup?.label ?? 'Live now'}

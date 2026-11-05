@@ -4,27 +4,26 @@ import ComboSlip from './ComboSlip'
 import { useComboSlip } from '../../hooks/useComboSlip'
 
 /**
- * App-level mount for the combo bet slip: the floating slip button plus the
+ * App-level mount for the bet slip: the floating slip button plus the
  * slide-over panel. Rendered once in the layout so the slip is reachable from
  * any page and its state (Redux) persists across navigation.
  *
- * Combo mode is on by default for sports (tapping a sports outcome auto-adds a
- * leg — see useComboSlip). To make the ticket "show" without the user hunting
- * for it, the panel auto-opens the first time a selection is added (0 → 1),
- * SportyBet-style. It is NOT reopened on later adds (so the user can keep
- * selecting), nor on mount for a slip restored from a previous session.
+ * Tapping a sports outcome adds it to the slip (one pick = a single bet), so
+ * the panel opens on every new pick — the tap goes straight to the stake.
+ * Removing a pick, or a slip restored from a previous session, doesn't open it.
  */
 const ComboSlipMount = () => {
   const [open, setOpen] = useState(false)
-  const { legCount } = useComboSlip()
-  // Seed with the current (possibly persisted) count so a restored slip doesn't
-  // pop open on load — only an in-session 0 → 1 does.
-  const prevCount = useRef(legCount)
+  const { legs } = useComboSlip()
+  // Seed with the current (possibly persisted) picks so a restored slip
+  // doesn't pop open on load.
+  const seen = useRef(new Set(legs.map((l) => l.outcomeId)))
 
   useEffect(() => {
-    if (prevCount.current === 0 && legCount > 0) setOpen(true)
-    prevCount.current = legCount
-  }, [legCount])
+    const ids = new Set(legs.map((l) => l.outcomeId))
+    if ([...ids].some((id) => !seen.current.has(id))) setOpen(true)
+    seen.current = ids
+  }, [legs])
 
   return (
     <>

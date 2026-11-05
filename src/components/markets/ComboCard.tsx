@@ -7,6 +7,7 @@ import {
   toMajorUnits,
 } from '../../utils/functions'
 import type { ComboTicket, ComboTicketStatus } from '../../types/bet.types'
+import { CARD_HOVER_SOFT } from '../../utils/marketDisplay'
 
 const STATUS_META: Record<ComboTicketStatus, { label: string; className: string }> = {
   OPEN: { label: 'In progress', className: 'bg-warning/10 text-warning' },
@@ -33,7 +34,7 @@ const ComboCard = ({ combo }: { combo: ComboTicket }) => {
   const won = combo.legs.filter((l) => l.status === 'WON').length
 
   return (
-    <div className='flex flex-col gap-3 rounded-lg bg-card p-4'>
+    <div className={`flex flex-col gap-3 rounded-lg bg-card p-4 ${CARD_HOVER_SOFT}`}>
       <div className='flex items-center justify-between gap-2'>
         <div className='flex items-center gap-2'>
           <span

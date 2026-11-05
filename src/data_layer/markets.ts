@@ -212,6 +212,7 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
     provider: e.provider === 'KALSHI' ? 'kalshi' : 'polymarket',
     title: e.title,
     category,
+    categorySlug,
     closeTime: e.closeTime,
     slug: e.slug,
     imageUrl: e.imageUrl,
@@ -219,6 +220,7 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
     liveState: e.liveState ?? null,
     featured: e.featured ?? false,
     teams: e.teams ?? null,
+    marketCount: e.marketCount ?? e.markets?.length ?? 0,
     markets: (e.markets ?? []).map((m) => ({
       ...normalizeLobbyMarket(m, category, e.id, e.imageUrl, e.title),
       categorySlug,
@@ -463,7 +465,10 @@ export const useLobbyCategories = () =>
 export const useEventsInfinite = (
   params: EventQueryParams = {},
   // Keep the previous results on screen while new params load (e.g. typing a search).
-  { keepPrevious = false }: { keepPrevious?: boolean } = {},
+  {
+    keepPrevious = false,
+    enabled = true,
+  }: { keepPrevious?: boolean; enabled?: boolean } = {},
 ) =>
   useInfiniteQuery<
     { events: UiEvent[]; cursor: string | null },
@@ -473,6 +478,7 @@ export const useEventsInfinite = (
     string | undefined
   >({
     queryKey: ['events-infinite', params],
+    enabled,
     initialPageParam: undefined,
     queryFn: ({ pageParam }) => fetchEvents(params, pageParam),
     getNextPageParam: (last) => last.cursor ?? undefined,
@@ -736,12 +742,20 @@ export const useLobbyHome = (limit = 12) =>
   })
 
 /** `id` may also be a lobby slug. `optional`: a 404 is expected (e.g. a
- *  match with no "More Markets" sibling), so don't retry it. */
-export const useEvent = (id?: string, { optional = false } = {}) =>
+ *  match with no "More Markets" sibling), so don't retry it. `refetchMs`:
+ *  re-poll prices on that interval. */
+export const useEvent = (
+  id?: string,
+  {
+    optional = false,
+    refetchMs,
+  }: { optional?: boolean; refetchMs?: number } = {},
+) =>
   useQuery({
     queryKey: ['event', id],
     enabled: !!id,
     retry: optional ? false : undefined,
+    refetchInterval: refetchMs ?? false,
     queryFn: async () => {
       const feed = await resolveFeed()
       if (feed === 'lobby') {
