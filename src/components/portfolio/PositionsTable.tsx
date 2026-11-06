@@ -75,7 +75,7 @@ const PositionRow = ({ row }: { row: Extract<Row, { kind: 'position' }> }) => {
         </div>
       </div>
 
-      <Cell label='Avg → Now' className='text-neutral-10'>
+      <Cell label='Odds: Bought → Now' className='text-neutral-10'>
         {pool ? (
           '—'
         ) : (
@@ -90,13 +90,13 @@ const PositionRow = ({ row }: { row: Extract<Row, { kind: 'position' }> }) => {
           </span>
         )}
       </Cell>
-      <Cell label='Traded' className='text-neutral-10'>
+      <Cell label='Stake' className='text-neutral-10'>
         {formatCurrency(row.traded)}
       </Cell>
-      <Cell label='To win' className='text-neutral-10'>
+      <Cell label='Potential Winnings' className='text-neutral-10'>
         {formatCurrency(row.toWin)}
       </Cell>
-      <Cell label='Value'>
+      <Cell label='Cash Out Value'>
         {row.value == null ? (
           <span className='flex flex-col'>
             <span className='font-semibold text-black'>—</span>
@@ -127,7 +127,7 @@ const PositionRow = ({ row }: { row: Extract<Row, { kind: 'position' }> }) => {
             title={row.title}
             outcomeLabel={outcomeLabel}
             size='small'
-            label='Sell'
+            label='Cash Out'
           />
         )}
         <ShareBetButton
@@ -166,16 +166,16 @@ const ComboRow = ({ row }: { row: Extract<Row, { kind: 'combo' }> }) => {
           </div>
         </div>
       </div>
-      <Cell label='Avg → Now' className='text-neutral-10'>
+      <Cell label='Odds: Bought → Now' className='text-neutral-10'>
         —
       </Cell>
-      <Cell label='Traded' className='text-neutral-10'>
+      <Cell label='Stake' className='text-neutral-10'>
         {formatCurrency(row.traded)}
       </Cell>
-      <Cell label='To win' className='text-neutral-10'>
+      <Cell label='Potential Winnings' className='text-neutral-10'>
         {formatCurrency(row.toWin)}
       </Cell>
-      <Cell label='Value'>
+      <Cell label='Cash Out Value'>
         <span className='flex flex-col'>
           <span className='font-semibold text-black'>—</span>
           <span className='text-xs text-neutral-10'>
@@ -192,13 +192,13 @@ const ComboRow = ({ row }: { row: Extract<Row, { kind: 'combo' }> }) => {
 const PositionsTable = ({ rows }: { rows: Row[] }) => (
   <div className='flex flex-col gap-2'>
     <div
-      className={`hidden gap-x-3 px-3 pb-1 text-xs font-medium text-neutral-10 md:grid ${POSITION_GRID}`}
+      className={`hidden items-end gap-x-3 px-3 pb-1 text-xs font-medium text-neutral-10 md:grid ${POSITION_GRID}`}
     >
-      <span>Market</span>
-      <span>Avg → Now</span>
-      <span>Traded</span>
-      <span>To win</span>
-      <span>Value</span>
+      <span>Event / Your Pick</span>
+      <span>Odds: Bought → Now</span>
+      <span>Stake</span>
+      <span>Potential Winnings</span>
+      <span>Cash Out Value</span>
       <span />
     </div>
     {rows.map((row) =>

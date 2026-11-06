@@ -45,7 +45,7 @@ const OpenOrdersTable = ({ orders }: { orders: Bet[] }) => {
       <div
         className={`hidden gap-x-3 px-3 pb-1 text-xs font-medium text-neutral-10 md:grid ${GRID}`}
       >
-        <span>Market</span>
+        <span>Event / Your Pick</span>
         <span>Filled</span>
         <span>Amount</span>
         <span>Placed</span>

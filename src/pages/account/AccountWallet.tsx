@@ -185,7 +185,7 @@ const AccountWallet = () => {
               <div className='flex flex-row items-center gap-2.5'>
                 <Button
                   type='button'
-                  text='Deposit cash'
+                  text='Deposit'
                   variation='primary'
                   size='medium'
                   className='w-fit!'

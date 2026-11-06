@@ -7,16 +7,16 @@ import type { BetPosition, ComboTicket } from '../../types/bet.types'
 export type PositionSort = 'value' | 'traded' | 'toWin' | 'pnl' | 'newest'
 
 export const POSITION_SORTS: { value: PositionSort; label: string }[] = [
-  { value: 'value', label: 'Current value' },
-  { value: 'traded', label: 'Traded' },
-  { value: 'toWin', label: 'To win' },
-  { value: 'pnl', label: 'Profit/Loss' },
+  { value: 'value', label: 'Cash out value' },
+  { value: 'traded', label: 'Stake' },
+  { value: 'toWin', label: 'Potential Winnings' },
+  { value: 'pnl', label: 'Live P/L' },
   { value: 'newest', label: 'Newest' },
 ]
 
-// Market | Avg → Now | Traded | To win | Value | actions
+// Event / Your Pick | Odds: Bought → Now | Stake | Potential Winnings | Cash Out Value | actions
 export const POSITION_GRID =
-  'md:grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,1fr)_7.5rem]'
+  'md:grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,1fr)_9rem]'
 
 /** One row's numbers, shared by sorting and rendering. */
 export type PositionRow =
