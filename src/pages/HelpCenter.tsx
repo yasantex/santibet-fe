@@ -28,7 +28,7 @@ const faqs = [
   },
   {
     q: 'Can I exit a position early?',
-    a: 'Yes. Open positions can be cashed out from your Portfolio at their current value, before the market resolves.',
+    a: 'Yes. Active bets can be cashed out from My Bets at their current value, before the market resolves.',
   },
   {
     q: 'How are markets resolved?',

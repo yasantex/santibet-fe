@@ -47,7 +47,7 @@ interface CashOutButtonProps {
   variation?: 'primary' | 'plain'
   size?: 'small' | 'medium' | 'large'
   className?: string
-  /** Trigger text; "Sell" in the portfolio table. */
+  /** Trigger text; "Cash Out" in the My Bets table. */
   label?: string
 }
 

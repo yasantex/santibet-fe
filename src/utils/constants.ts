@@ -266,7 +266,7 @@ export const accountMenuItems: ProfileAction[] = [
 
   {
     id: 'portfolio',
-    label: 'Portfolio',
+    label: 'My Bets',
     icon: Wallet03FreeIcons,
     path: '/account-portfolio',
     action: (navigate, close) => {
@@ -286,7 +286,7 @@ export const accountMenuItems: ProfileAction[] = [
   },
   {
     id: 'orders',
-    label: 'Orders',
+    label: 'Bet History',
     icon: Invoice01Icon,
     path: '/orders',
     action: (navigate, close) => {

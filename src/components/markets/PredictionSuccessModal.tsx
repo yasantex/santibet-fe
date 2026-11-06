@@ -197,7 +197,7 @@ const PredictionSuccessModal = ({
             )
           ) : (
             <p className='text-xs text-neutral-10'>
-              Your position will show in your portfolio once the order fills.
+              Your bet will show in My Bets once the order fills.
             </p>
           )}
         </section>
@@ -232,7 +232,7 @@ const PredictionSuccessModal = ({
           <div className='flex gap-2'>
             <Button
               type='button'
-              text='View portfolio'
+              text='View My Bets'
               variation='plain'
               className='flex-1'
               onClick={() => {

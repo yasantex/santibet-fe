@@ -33,7 +33,7 @@ const HistoryTable = ({ items }: { items: Activity[] }) => (
       className={`hidden gap-x-3 px-3 pb-1 text-xs font-medium text-neutral-10 md:grid ${GRID}`}
     >
       <span>Activity</span>
-      <span>Market</span>
+      <span>Event / Your Pick</span>
       <span>Value</span>
       <span>Time</span>
     </div>
