@@ -69,14 +69,14 @@ const PortfolioSummaryCards = ({
 
   if (loading)
     return (
-      <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+      <div className='grid grid-cols-1 gap-4 xl:grid-cols-2'>
         <div className='h-56 animate-pulse rounded-2xl bg-card' />
         <div className='h-56 animate-pulse rounded-2xl bg-card' />
       </div>
     )
 
   return (
-    <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+    <div className='grid grid-cols-1 gap-4 xl:grid-cols-2'>
       <section className='flex flex-col justify-between gap-6 rounded-2xl border border-border p-5'>
         <div className='flex items-start justify-between gap-4'>
           <div className='flex min-w-0 flex-col gap-1'>

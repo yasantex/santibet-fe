@@ -185,7 +185,7 @@ const AccountPortfolio = () => {
         onWithdraw={() => handleModalOpen('withdraw')}
       />
 
-      <div className='flex flex-wrap items-start gap-2'>
+      <div className='flex xl:flex-row flex-col items-start gap-2'>
         <div className='flex h-11 w-fit shrink-0 items-center gap-1 rounded-[10px] border border-border p-1'>
           {TABS.map((tab) => (
             <button
@@ -202,7 +202,7 @@ const AccountPortfolio = () => {
             </button>
           ))}
         </div>
-        <div className='flex min-w-0 flex-1 flex-wrap items-centergap-2'>
+        <div className='flex min-w-0 flex-1 flex-wrap items-center gap-2.5'>
           {/* Never squeezed: the menus wrap to the next line instead. */}
           <div className='min-w-54 flex-1'>
             <SearchInput
