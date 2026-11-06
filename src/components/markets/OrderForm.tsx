@@ -212,6 +212,61 @@ const OrderForm = ({
   const spendable = usingBonus ? bonusSlip.balance : cash
   const selectedBonusReason = bonusSlip.ineligibleReason(outcome?.id)
 
+  // The smallest stake this order can go through at (0 = no minimum).
+  const minRequired = Math.max(
+    marketMinNaira ?? 0,
+    usingBonus ? (bonusSlip.minStake ?? 0) : 0,
+  )
+  const minLabel = formatCurrency(minRequired)
+  const belowMin = stakeNum > 0 && stakeNum < minRequired
+  const amountValid = stakeNum > 0 && !belowMin
+
+  // A bonus awaiting KYC stops at the "verify" prompt on submit, so the amount
+  // rules below must not block the button and hide it.
+  const kycFirst =
+    bonusSlip.offered && bonusSlip.useBonus && bonusSlip.pendingKyc
+  // An unloaded wallet reads as ₦0, which must not look like a real shortfall.
+  const fundsKnown =
+    isOpen && isSignedIn && !kycFirst && (usingBonus || wallet != null)
+  const canAffordMin = !fundsKnown || spendable >= minRequired
+  const shortfall = fundsKnown
+    ? Math.max(Math.max(stakeNum, minRequired) - spendable, 0)
+    : 0
+  const needsFunds = shortfall > 0
+  // Bonus credit can't be topped up, so only a cash bet is sent to the wallet.
+  const goToFunds = needsFunds && !usingBonus
+
+  // Why the amount can't be placed yet, shown as it's typed.
+  const amountNotice = (() => {
+    if (!isOpen || kycFirst) return null
+    if (needsFunds) {
+      if (usingBonus) {
+        return canAffordMin
+          ? 'Not enough bonus credit for this stake.'
+          : `You don't have enough bonus credit for the ${minLabel} minimum. Turn off bonus to bet with cash.`
+      }
+      return stakeNum > minRequired
+        ? `You need ${formatCurrency(shortfall)} more to bet this amount.`
+        : `Minimum bet is ${minLabel}. You need ${formatCurrency(shortfall)} more.`
+    }
+    return belowMin ? `Minimum bet is ${minLabel} for this market.` : null
+  })()
+  // Stay calm mid-typing ("1" on the way to "1,500"); firm once they've stopped.
+  const [amountFocused, setAmountFocused] = useState(false)
+  const amountInvalid = !!amountNotice && stakeNum > 0 && !amountFocused
+
+  // Button label when the order can't go through yet (it's disabled then).
+  const blockedLabel =
+    !isOpen || !isSignedIn || kycFirst
+      ? null
+      : needsFunds && usingBonus
+        ? 'Not enough bonus credit'
+        : stakeNum <= 0
+          ? 'Enter an amount'
+          : belowMin
+            ? `Minimum is ${minLabel}`
+            : null
+
   // Price-move guard: remember the price the player first saw for this
   // outcome + stake; if a re-quote moves it, they accept before placing.
   // Adjust-state-during-render, keyed so it resets on their own edits.
@@ -286,13 +341,13 @@ const OrderForm = ({
       if (bonusSlip.minStake != null && stakeNum < bonusSlip.minStake) {
         setMinStake(Math.min(bonusSlip.minStake, bonusSlip.balance))
         setBetError(
-          `The minimum bonus bet is ${symbol}${bonusSlip.minStake.toLocaleString()}`,
+          `The minimum bonus bet is ${formatCurrency(bonusSlip.minStake)}`,
         )
         return
       }
       if (bonusSlip.maxStake != null && stakeNum > bonusSlip.maxStake) {
         setBetError(
-          `The maximum bonus bet is ${symbol}${bonusSlip.maxStake.toLocaleString()}`,
+          `The maximum bonus bet is ${formatCurrency(bonusSlip.maxStake)}`,
         )
         return
       }
@@ -303,7 +358,7 @@ const OrderForm = ({
     if (marketMinNaira != null && stakeNum < marketMinNaira) {
       setMinStake(marketMinNaira)
       setBetError(
-        `Minimum bet is ${symbol}${marketMinNaira.toLocaleString()} for this market.`,
+        `Minimum bet is ${formatCurrency(marketMinNaira)} for this market.`,
       )
       return
     }
@@ -466,8 +521,16 @@ const OrderForm = ({
 
       {/* Amount */}
       <div className='flex flex-col gap-2'>
-        <div className='flex items-center justify-between text-xs'>
-          <span className='text-neutral-10'>Amount</span>
+        <div className='flex items-center justify-between gap-2 text-xs'>
+          <span className='text-neutral-10'>
+            Amount
+            {minRequired > 0 && (
+              <span className='font-semibold text-black'>
+                {' '}
+                · Min {minLabel}
+              </span>
+            )}
+          </span>
           {isSignedIn && (
             <span
               className={usingBonus ? 'font-semibold text-success' : 'text-neutral-10'}
@@ -476,7 +539,11 @@ const OrderForm = ({
             </span>
           )}
         </div>
-        <div className='flex items-center rounded-lg border-2 border-black px-3 py-2.5'>
+        <div
+          className={`flex items-center rounded-lg border-2 px-3 py-2.5 ${
+            amountInvalid ? 'border-error' : 'border-black'
+          }`}
+        >
           <span className='text-sm font-bold text-neutral-10'>{symbol}</span>
           <input
             type='text'
@@ -486,11 +553,30 @@ const OrderForm = ({
               clearBetError()
               setAmount(sanitizeAmount(e.target.value))
             }}
-            placeholder='0.00'
+            onFocus={() => setAmountFocused(true)}
+            onBlur={() => setAmountFocused(false)}
+            placeholder={
+              minRequired > 0
+                ? `Min ${minLabel.slice(symbol.length)}`
+                : '0.00'
+            }
+            aria-invalid={amountInvalid}
             className='w-full bg-transparent px-1 text-sm font-bold text-black outline-none'
           />
         </div>
         <div className='flex flex-wrap items-center gap-2'>
+          {minRequired > 0 && canAffordMin && (
+            <button
+              type='button'
+              onClick={() => {
+                clearBetError()
+                setAmount(String(minRequired))
+              }}
+              className='rounded-full bg-hover px-3 py-1 text-xs font-semibold text-neutral-10 hover:text-black'
+            >
+              Min
+            </button>
+          )}
           {QUICK_ADDS.map((v) => (
             <button
               key={v}
@@ -502,7 +588,7 @@ const OrderForm = ({
               {v.toLocaleString()}
             </button>
           ))}
-          {isSignedIn && spendable > 0 && (
+          {isSignedIn && spendable > 0 && spendable >= minRequired && (
             <button
               type='button'
               onClick={() => {
@@ -516,20 +602,17 @@ const OrderForm = ({
           )}
         </div>
 
-        {!betError &&
-          (usingBonus && bonusSlip.minStake != null ? (
-            <p className='text-xs text-neutral-10'>
-              Minimum bonus bet {symbol}
-              {Math.max(bonusSlip.minStake, marketMinNaira ?? 0).toLocaleString()}
-            </p>
-          ) : marketMinNaira != null ? (
-            <p className='text-xs text-neutral-10'>
-              Minimum bet {symbol}
-              {marketMinNaira.toLocaleString()}
-            </p>
-          ) : null)}
+        {amountNotice && !betError && (
+          <p
+            className={`rounded-lg px-3 py-2 text-xs font-medium ${
+              amountInvalid ? 'bg-error-bg text-error' : 'bg-warning/10 text-black'
+            }`}
+          >
+            {amountNotice}
+          </p>
+        )}
 
-        {usingBonus && bonusSlip.quoteRefusal && !betError && (
+        {usingBonus && bonusSlip.quoteRefusal && !betError && !amountNotice && (
           <p className='text-xs font-medium text-warning'>
             {bonusSlip.quoteRefusal}
           </p>
@@ -547,19 +630,28 @@ const OrderForm = ({
                 Verify identity
               </button>
             )}
-            {minStake != null && (
-              <button
-                type='button'
-                onClick={() => {
-                  setAmount(String(minStake))
-                  clearBetError()
-                }}
-                className='self-start rounded-full bg-error/15 px-3 py-1 text-xs font-semibold text-error hover:bg-error/25'
-              >
-                Use minimum · {symbol}
-                {minStake.toLocaleString()}
-              </button>
-            )}
+            {minStake != null &&
+              (!fundsKnown || minStake <= spendable ? (
+                <button
+                  type='button'
+                  onClick={() => {
+                    setAmount(String(minStake))
+                    clearBetError()
+                  }}
+                  className='self-start rounded-full bg-error/15 px-3 py-1 text-xs font-semibold text-error hover:bg-error/25'
+                >
+                  Use minimum · {formatCurrency(minStake)}
+                </button>
+              ) : !usingBonus ? (
+                // Filling in a minimum they can't cover would only dead-end.
+                <button
+                  type='button'
+                  onClick={() => navigate('/account-wallet')}
+                  className='self-start rounded-full bg-error/15 px-3 py-1 text-xs font-semibold text-error hover:bg-error/25'
+                >
+                  Add funds
+                </button>
+              ) : null)}
           </div>
         )}
       </div>
@@ -602,7 +694,7 @@ const OrderForm = ({
             )}
           </span>
         </div>
-        {fee > 0 && (
+        {fee > 0 && amountValid && (
           <div className='flex justify-between'>
             <span className='text-neutral-10'>Fee</span>
             <span className='font-semibold text-black'>
@@ -620,9 +712,9 @@ const OrderForm = ({
                 : 'Win (to bonus balance)'}
             </span>
             <span
-              className={`font-semibold text-success ${bonusSlip.quoteLoading ? 'opacity-60' : ''}`}
+              className={`font-semibold ${amountValid ? 'text-success' : 'text-black'} ${bonusSlip.quoteLoading ? 'opacity-60' : ''}`}
             >
-              {formatCurrency(bonusSlip.creditOnWin)}
+              {amountValid ? formatCurrency(bonusSlip.creditOnWin) : '—'}
             </span>
           </div>
         ) : (
@@ -633,17 +725,21 @@ const OrderForm = ({
                 {outcome?.label ?? 'it'} wins
               </span>
               <span className='font-semibold text-black'>
-                {formatCurrency(Math.max(payout, 0))}
+                {amountValid ? formatCurrency(Math.max(payout, 0)) : '—'}
               </span>
             </div>
             <div className='flex justify-between'>
               <span className='text-neutral-10'>Profit</span>
-              <span
-                className={`font-semibold ${profit >= 0 ? 'text-success' : 'text-error'}`}
-              >
-                {profit >= 0 ? '+' : '-'}
-                {formatCurrency(Math.abs(stakeNum > 0 ? profit : 0))}
-              </span>
+              {amountValid ? (
+                <span
+                  className={`font-semibold ${profit >= 0 ? 'text-success' : 'text-error'}`}
+                >
+                  {profit >= 0 ? '+' : '-'}
+                  {formatCurrency(Math.abs(profit))}
+                </span>
+              ) : (
+                <span className='font-semibold text-black'>—</span>
+              )}
             </div>
           </>
         )}
@@ -662,18 +758,25 @@ const OrderForm = ({
             ? 'Market closed'
             : !isSignedIn
               ? 'Sign in to predict'
-              : movedFrom != null
-                ? 'Accept new price'
-                : usingBonus
-                  ? `${submitText} with bonus`
-                  : submitText
+              : goToFunds
+                ? 'Add funds'
+                : (blockedLabel ??
+                  (movedFrom != null
+                    ? 'Accept new price'
+                    : usingBonus
+                      ? `${submitText} with bonus`
+                      : submitText))
         }
         variation='primary'
         size='large'
         className='w-full'
         loading={isPending}
-        disabled={!isOpen || (isSignedIn && suspended)}
-        onClick={handleSubmit}
+        disabled={
+          !isOpen ||
+          (isSignedIn && suspended) ||
+          (!goToFunds && blockedLabel != null)
+        }
+        onClick={goToFunds ? () => navigate('/account-wallet') : handleSubmit}
       />
       {isSignedIn && suspended && (
         <SuspendedHint className='-mt-2 text-center' />

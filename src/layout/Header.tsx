@@ -423,7 +423,7 @@ const Header = () => {
                 to='/account-profile'
                 aria-label='Account profile'
                 title='Account profile'
-                className='hidden shrink-0 rounded-full transition-opacity hover:opacity-80 md:flex'
+                className='shrink-0 rounded-full transition-opacity hover:opacity-80 flex'
               >
                 <ProfileAvatar
                   firstName={user.firstName ?? ''}
