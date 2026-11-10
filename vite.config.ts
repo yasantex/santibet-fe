@@ -1,6 +1,9 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { existsSync } from 'node:fs'
+import seoPlugin from './seo/vitePluginSeo.ts'
+import { normalizeSiteUrl } from './src/seo/site.ts'
 
 // Injects Google Tag Manager into index.html. GTM only loads when the
 // container ID is set, so local dev and preview builds without it don't send
@@ -36,8 +39,26 @@ export default defineConfig(({ mode }) => {
   // Empty prefix so non-VITE_ vars (dev-server only, never bundled) load too.
   const env = loadEnv(mode, process.cwd(), '')
 
+  // Drop a 1200×630 `public/og-image.png` in and link previews pick it up.
+  const ogImage = existsSync('public/og-image.png') ? '/og-image.png' : ''
+  // The sitemap's category list needs an absolute API URL; a relative base
+  // (local dev's `/api` proxy) falls back to production.
+  const apiBase = env.VITE_APP_API_BASE_URL?.startsWith('http')
+    ? env.VITE_APP_API_BASE_URL.replace(/\/+$/, '')
+    : 'https://api.santibet.com/api'
+
   return {
-    plugins: [react(), tailwindcss(), googleTagManager(env.VITE_APP_GTM_ID)],
+    define: { __OG_IMAGE__: JSON.stringify(ogImage) },
+    plugins: [
+      react(),
+      tailwindcss(),
+      googleTagManager(env.VITE_APP_GTM_ID),
+      seoPlugin({
+        siteUrl: normalizeSiteUrl(env.VITE_APP_SITE_URL),
+        apiBaseUrl: apiBase,
+        ogImage,
+      }),
+    ],
     server: {
       port: 3004,
       proxy: {

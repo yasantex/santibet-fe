@@ -1,5 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
+import { JsonLd } from '../../seo/Seo'
+import { absoluteUrl } from '../../seo/seoUtils'
 import { useGoBack } from '../../hooks/useGoBack'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
@@ -30,9 +32,29 @@ const PageNav = ({
     [...trail.slice(0, -1)].reverse().find((c) => c.href)?.href ??
     '/'
   const goBack = useGoBack(parentHref)
+  const { pathname } = useLocation()
+
+  // BreadcrumbList markup so search results show the trail. Unlinked middle
+  // crumbs are skipped (schema.org needs a URL for every item but the last).
+  const breadcrumbLd =
+    crumbs.length > 0 && crumbs[crumbs.length - 1].label
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: trail
+            .filter((c, i) => c.href || i === trail.length - 1)
+            .map((c, i, list) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              name: c.label,
+              item: absoluteUrl(i === list.length - 1 ? pathname : c.href!),
+            })),
+        }
+      : null
 
   return (
     <div className={`flex items-center justify-between gap-3 ${className}`}>
+      {breadcrumbLd && <JsonLd data={breadcrumbLd} />}
       <nav
         aria-label='Breadcrumb'
         className='flex min-w-0 items-center gap-2 text-sm text-neutral-10'

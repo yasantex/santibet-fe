@@ -43,6 +43,7 @@ import {
   WALLET_TRANSACTIONS_KEY,
 } from '../data_layer/queryKeys'
 import { usePortfolioSummary } from '../data_layer/bets'
+import { useSignUpHidden } from '../data_layer/authOptions'
 import { useUnreadNotificationCount } from '../data_layer/notifications'
 import { formatCurrency, scrollToTop, toMajorUnits } from '../utils/functions'
 import type { WalletBalance } from '../types/wallet.types'
@@ -240,6 +241,7 @@ const Header = () => {
       browseSort === sort ? 'text-black' : 'text-black/60 hover:text-black'
     }`
   const authNavigate = useAuthNavigate()
+  const signUpHidden = useSignUpHidden()
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
   const { isDark, toggleTheme } = useTheme()
@@ -463,12 +465,14 @@ const Header = () => {
                 text='Login'
                 onClick={() => authNavigate('/signin')}
               />
-              <Button
-                type='button'
-                text='Sign up'
-                variation='plain'
-                onClick={() => authNavigate('/signup')}
-              />
+              {!signUpHidden && (
+                <Button
+                  type='button'
+                  text='Sign up'
+                  variation='plain'
+                  onClick={() => authNavigate('/signup')}
+                />
+              )}
               <Dropdown
                 align='end'
                 className='w-full'

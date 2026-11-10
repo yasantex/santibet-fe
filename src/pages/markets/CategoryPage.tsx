@@ -45,6 +45,7 @@ import {
 } from '../../utils/timeBuckets'
 import PageNav from '../../components/globals/PageNav'
 import { useCategoryCrumbs } from '../../hooks/useCategoryCrumbs'
+import Seo from '../../seo/Seo'
 
 type SortOption = NonNullable<EventQueryParams['sort']>
 
@@ -539,6 +540,15 @@ const CategoryPage = () => {
 
   return (
     <main className='mx-auto flex w-full max-w-8xl flex-col gap-5 px-5 pt-10 pb-20 md:flex-row md:px-8'>
+      {/* /browse is covered by the layout's RouteSeo. Subcategories (?sub=)
+          canonicalise to their parent category. */}
+      {routeCategory && (
+        <Seo
+          title={`${categoryName} Prediction Markets`}
+          description={`Predict ${categoryName.toLowerCase()} outcomes on SantiBet. Browse open ${categoryName} markets, see live odds and back YES or NO with Naira, USDT or USDC.`}
+          path={`/category/${encodeURIComponent(activeSlug)}`}
+        />
+      )}
       {/* Sports sub-navigation — pick a sport type, then a league within it.
           Data-driven from the loaded feed (seriesKey → sport, subtitle →
           league) rather than a curated topic list. */}

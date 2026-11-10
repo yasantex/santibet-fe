@@ -49,6 +49,8 @@ import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
 import { useCategoryCrumbs } from '../../hooks/useCategoryCrumbs'
 import PageNav from '../../components/globals/PageNav'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
+import Seo from '../../seo/Seo'
+import { toDescription } from '../../seo/seoUtils'
 
 // A multi-choice event's prices, shown in its view, refresh on this timer.
 const EVENT_POLL_MS = 30_000
@@ -211,11 +213,37 @@ const MarketDetail = () => {
     ? market.outcomes.find((o) => o.id === market.resolvedOutcomeId)
     : undefined
 
+  const seoTitle = !market
+    ? 'Market'
+    : inMultiEvent && event
+      ? `${event.title}: ${market.subtitle?.trim() || market.title}`
+      : market.eventTitle && market.eventTitle !== market.title
+        ? `${market.eventTitle}: ${market.title}`
+        : market.title
+  const seo = (
+    <Seo
+      title={seoTitle}
+      description={
+        market
+          ? toDescription(
+              `${seoTitle}. ${category ? `${category} prediction market` : 'Prediction market'} ` +
+                `on SantiBet: back your call and get paid automatically when it resolves. ` +
+                (market.rules ?? ''),
+            )
+          : undefined
+      }
+      path={`/markets/${id}`}
+      image={market?.imageUrl ?? event?.imageUrl}
+      noindex={!isLoading && (isError || !market)}
+    />
+  )
+
   // Wait for the event too: a multi-choice event's market opens in the
   // event's own view, so rendering the single-market layout first would flash.
   if (isLoading || (!!eventId && eventLoading)) {
     return (
       <main className='mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 pt-4 pb-20 md:px-8'>
+        {seo}
         <div className='h-6 w-40 animate-pulse rounded bg-card' />
         <div className='grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]'>
           <div className='h-96 animate-pulse rounded-2xl bg-card' />
@@ -228,6 +256,7 @@ const MarketDetail = () => {
   if (isError || !market) {
     return (
       <main className='mx-auto flex w-full max-w-6xl flex-col items-center gap-4 px-3 py-20 text-center'>
+        {seo}
         <p className='text-sm text-neutral-10'>We couldn’t load this market.</p>
         <button
           type='button'
@@ -245,6 +274,7 @@ const MarketDetail = () => {
   if (event && isMultiChoiceEvent(event.markets)) {
     return (
       <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-4 pb-20 md:px-8'>
+        {seo}
         <PageNav
           crumbs={[
             ...categoryCrumbs,
@@ -265,6 +295,7 @@ const MarketDetail = () => {
 
   return (
     <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-4 pb-20 md:px-8'>
+      {seo}
       <PageNav
         crumbs={[
           ...categoryCrumbs,

@@ -25,6 +25,11 @@ const queryClient = new QueryClient({
   },
 })
 
+// index.html (and the per-route copies written at build) carry static SEO
+// tags for crawlers that don't run JavaScript. React renders its own from
+// here on, so drop these or the browser would keep using the first <title>.
+document.querySelectorAll('[data-static-seo]').forEach((el) => el.remove())
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>
