@@ -15,6 +15,7 @@ import SupportLauncher from '../components/support/SupportLauncher'
 import BadgeCelebration from '../components/points/BadgeCelebration'
 import BonusGrantedModal from '../components/bonus/BonusGrantedModal'
 import useReferralCapture from '../hooks/useReferralCapture'
+import RouteSeo from '../seo/RouteSeo'
 
 const AppLayout = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
@@ -39,6 +40,7 @@ const AppLayout = () => {
 
   return (
     <SupportProvider>
+      <RouteSeo />
       <div className='flex min-h-screen'>
         <div className='flex w-full flex-1 flex-col '>
           <Header />

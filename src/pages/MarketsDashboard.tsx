@@ -231,6 +231,10 @@ const MarketsDashboard = () => {
 
   return (
     <main className='mx-auto flex w-full flex-col gap-6 px-3 pt-4 pb-20 md:px-8'>
+      {/* The page's topic for search engines and screen readers. */}
+      <h1 className='sr-only'>
+        SantiBet: predict sports, politics, crypto and entertainment in Nigeria
+      </h1>
       <div className='grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]'>
         {!featuredEvents.length ? (
           <div className='h-85 animate-pulse rounded-lg bg-card' />

@@ -7,6 +7,8 @@ import { Button } from './Button'
 import { isPageNotFound, useContentPage } from '../../data_layer/pages'
 import { findKnownContentPage } from '../../utils/contentPages'
 import { formatShortDate } from '../../utils/points'
+import Seo from '../../seo/Seo'
+import { toDescription } from '../../seo/seoUtils'
 
 interface ContentPageViewProps {
   slug: string
@@ -44,6 +46,16 @@ const ContentPageView = ({ slug, children }: ContentPageViewProps) => {
 
   return (
     <main className='max-w-2xl mx-auto px-5 py-8'>
+      {/* Known pages get their tags from the layout's RouteSeo. */}
+      {!known && (
+        <Seo
+          title={title || 'Page'}
+          description={body ? toDescription(body) : undefined}
+          path={`/pages/${encodeURIComponent(slug)}`}
+          type='article'
+          noindex={notPublished || failed}
+        />
+      )}
       <PageNav crumbs={title ? [{ label: title }] : []} />
       <h1 className='my-5 text-2xl font-bold text-black'>{title}</h1>
       {page.data?.updatedAt && formatShortDate(page.data.updatedAt) && (

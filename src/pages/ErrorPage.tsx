@@ -2,6 +2,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { SadDizzyIcon } from '@hugeicons/core-free-icons'
 import { useNavigate } from 'react-router'
 import { Button } from '../components/globals/Button'
+import Seo from '../seo/Seo'
 
 interface ErrorPageProps {
   code?: string
@@ -20,6 +21,7 @@ const ErrorPage = ({
 
   return (
     <main className='mx-auto flex w-full max-w-md flex-col items-center gap-5 px-5 py-24 text-center'>
+      <Seo title={title} noindex />
       <div className='flex h-16 w-16 items-center justify-center rounded-full bg-error-bg text-error'>
         <HugeiconsIcon icon={SadDizzyIcon} size={32} />
       </div>
