@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import useUpdateToken from '../../hooks/useUpdateToken'
 import { useAppDispatch } from '../../utils/hooks'
 import { useFormik } from 'formik'
@@ -18,7 +18,7 @@ import {
 } from '@simplewebauthn/browser'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FingerPrintIcon } from '@hugeicons/core-free-icons'
-import { showWarningToast } from '../../utils/toastUtils'
+import { showSuccessToast, showWarningToast } from '../../utils/toastUtils'
 import { setUser } from '../../redux/userSlice'
 import { Button } from '../../components/globals/Button'
 import { FormInput } from '../../components/globals/FormInput'
@@ -34,17 +34,23 @@ import {
   passkeyErrorCode,
 } from '../../utils/passkeys'
 import {
-  startGoogleOAuth,
+  // startGoogleOAuth, // Google sign-in is off for now (see the button below)
   getGoogleOAuthCodeVerifier,
   removeGoogleOAuthCodeVerifier,
 } from '../../utils/googleAuth'
 import {
+  CAMPAIGN_PLAYER_NO_ACCOUNT,
+  SIGNUP_CLOSED,
+  useSignUpHidden,
+} from '../../data_layer/authOptions'
+import {
   AUTH_REDIRECT_PARAM,
+  KYC_PATH,
   buildAuthPath,
   clearRememberedAuthRedirect,
   getRememberedAuthRedirect,
   getSafeRedirect,
-  rememberAuthRedirect,
+  // rememberAuthRedirect, // used by the Google button, off for now
 } from '../../utils/authRedirect'
 import {
   REFERRAL_HINT,
@@ -63,6 +69,9 @@ type Step = 'identifier' | 'password' | 'otp' | 'setPassword'
 interface StartAuthResponse {
   hasPassword: boolean
   codeSent: boolean
+  // Verified campaign player with no account yet (flag on). Optional so an
+  // API without the field just reads as false.
+  campaignPlayer?: boolean
 }
 
 interface VerifyResponse {
@@ -98,11 +107,18 @@ const LoginPage = () => {
   const updateToken = useUpdateToken()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
+  // Sign-in-only mode (campaign-player-login flag): no sign-up anywhere.
+  const signUpHidden = useSignUpHidden()
 
   const [step, setStep] = useState<Step>('identifier')
   const [identifier, setIdentifier] = useState('')
   const [verificationTicket, setVerificationTicket] = useState('')
+  // Played a campaign but has no account yet: signing in sent them to
+  // verify + set a password instead, which creates the account.
+  const [isCampaignPlayer, setIsCampaignPlayer] = useState(false)
+  // 403 SIGNUP_CLOSED from /auth/start, shown under the identifier input.
+  const [signUpClosedMessage, setSignUpClosedMessage] = useState('')
   const [supportsPasskeys] = useState(() => browserSupportsWebAuthn())
   const [isPasskeySigningIn, setIsPasskeySigningIn] = useState(false)
   // Set synchronously so the first render already shows the loader instead
@@ -172,6 +188,12 @@ const LoginPage = () => {
       refreshToken: data.refreshToken,
     })
     dispatch(setUser(data.user))
+    // A campaign prize is only paid once KYC is approved, so send them there.
+    if (isNewAccount && isCampaignPlayer) {
+      showSuccessToast('Complete your ID check to receive your prize.')
+      navigate(KYC_PATH, { replace: true })
+      return
+    }
     navigate(isNewAccount ? '/account-profile' : (redirectTo ?? '/'), {
       replace: true,
     })
@@ -184,8 +206,25 @@ const LoginPage = () => {
   >({
     path: '/auth/start',
     mutationOptions: {
-      onError: handleMutationError,
-      onSuccess: (data) => setStep(data.hasPassword ? 'password' : 'otp'),
+      onError: (error) => {
+        // Sign-in-only mode and this identifier has no account and never
+        // played a campaign. Keep them on this step with the API's message.
+        if (
+          isAxiosError(error) &&
+          error.response?.data?.code === SIGNUP_CLOSED
+        ) {
+          setSignUpClosedMessage(
+            error.response.data.message ??
+              "We couldn't find a SantiBet account for this. New sign-ups are closed for now.",
+          )
+          return
+        }
+        handleMutationError(error)
+      },
+      onSuccess: (data) => {
+        setIsCampaignPlayer(data.campaignPlayer === true)
+        setStep(data.hasPassword ? 'password' : 'otp')
+      },
     },
   })
 
@@ -193,6 +232,7 @@ const LoginPage = () => {
     initialValues: { identifier: '' },
     validationSchema: IdentifierSchema,
     onSubmit: async (vals) => {
+      setSignUpClosedMessage('')
       try {
         setIdentifier(vals.identifier)
         await startAuth({ identifier: vals.identifier })
@@ -208,7 +248,16 @@ const LoginPage = () => {
       {
         path: '/auth/login',
         mutationOptions: {
-          onError: handleMutationError,
+          onError: (error) => {
+            if (
+              isAxiosError(error) &&
+              error.response?.data?.code === CAMPAIGN_PLAYER_NO_ACCOUNT
+            ) {
+              continueAsCampaignPlayer()
+              return
+            }
+            handleMutationError(error)
+          },
           onSuccess: (data) => {
             // Offer "Add a passkey for next time" once they land in the app.
             if (supportsPasskeys) markPasskeyOfferPending()
@@ -229,6 +278,23 @@ const LoginPage = () => {
       }
     },
   })
+
+  // Older path: /auth/start didn't flag them (or the API predates
+  // `campaignPlayer`), so /auth/login answered CAMPAIGN_PLAYER_NO_ACCOUNT.
+  // Run the normal sign-up steps (code -> verify -> set password) for the
+  // identifier they just typed. The code proves the number/inbox is theirs.
+  // The backend will drop this error once every app reads `campaignPlayer`.
+  const continueAsCampaignPlayer = async () => {
+    passwordForm.resetForm()
+    try {
+      await startAuth({ identifier })
+      // After the await: startAuth's onSuccess sets these from its reply.
+      setIsCampaignPlayer(true)
+      setStep('otp')
+    } catch (error) {
+      console.error(error)
+    }
+  }
 
   // Step 2b — new user -> /auth/verify
   const { mutateAsync: verifyCode, isPending: isVerifying } =
@@ -341,10 +407,6 @@ const LoginPage = () => {
     headers: deviceFingerprintHeaders(),
     mutationOptions: {
       onSuccess: (data) => handleAuthSuccess(data),
-      onError: (error) => {
-        showWarningToast(error.message)
-        navigate(buildAuthPath('/signin', redirectTo), { replace: true })
-      },
     },
   })
 
@@ -369,8 +431,13 @@ const LoginPage = () => {
       redirectUri,
       ...referralSignupFields(getReferralCode()),
     })
-      .catch(() => {
-        showWarningToast('Google sign-in failed. Please try again.')
+      .catch((error) => {
+        // Show the API's reason when there is one (e.g. sign-ups closed),
+        // not axios's "Request failed with status code …".
+        showWarningToast(
+          (isAxiosError(error) && error.response?.data?.message) ||
+            'Google sign-in failed. Please try again.',
+        )
         navigate(buildAuthPath('/signin', redirectTo), { replace: true })
       })
       .finally(() => {
@@ -391,9 +458,14 @@ const LoginPage = () => {
 
   const goBackToIdentifier = () => {
     setStep('identifier')
+    setIsCampaignPlayer(false)
     passwordForm.resetForm()
     otpForm.resetForm()
     setPasswordForm.resetForm()
+  }
+
+  if (signUpHidden && pathname === '/signup') {
+    return <Navigate to={`/signin${search}`} replace />
   }
 
   if (isGoogleCallback) {
@@ -419,6 +491,10 @@ const LoginPage = () => {
       </p>
       {step === 'identifier' && (
         <>
+          {/* Google sign-in is off for now: /auth/google still creates
+              accounts while sign-ups are closed (campaign-player-login).
+              The callback handling below stays, so restoring this button
+              is all it takes.
           <Button
             type='button'
             text='Continue with Google'
@@ -434,6 +510,7 @@ const LoginPage = () => {
               })
             }}
           />
+          */}
           {/* Sign-in only: a passkey can't create an account. */}
           {supportsPasskeys && pathname === '/signin' && (
             <Button
@@ -452,11 +529,14 @@ const LoginPage = () => {
               onClick={handlePasskeySignIn}
             />
           )}
-          <div className='flex items-center w-full gap-2.5 mt-2.5 text-sm text-neutral-10'>
-            <span className='flex-1 h-px bg-border' />
-            OR
-            <span className='flex-1 h-px bg-border' />
-          </div>
+          {/* Only when there's a button above it (Google is off for now). */}
+          {supportsPasskeys && pathname === '/signin' && (
+            <div className='flex items-center w-full gap-2.5 mt-2.5 text-sm text-neutral-10'>
+              <span className='flex-1 h-px bg-border' />
+              OR
+              <span className='flex-1 h-px bg-border' />
+            </div>
+          )}
           <form
             onSubmit={identifierForm.handleSubmit}
             className='w-full flex flex-col my-5 gap-5'
@@ -466,13 +546,16 @@ const LoginPage = () => {
               name='identifier'
               value={identifierForm.values.identifier}
               placeholder='email address/phone number'
-              onChange={identifierForm.handleChange}
+              onChange={(e) => {
+                setSignUpClosedMessage('')
+                identifierForm.handleChange(e)
+              }}
               onBlur={identifierForm.handleBlur}
               errors={
                 identifierForm.errors.identifier &&
                 identifierForm.touched.identifier
                   ? identifierForm.errors.identifier
-                  : ''
+                  : signUpClosedMessage
               }
             />
             {/* Sign-up only, so a Google sign-up can carry a code too. A new
@@ -537,6 +620,12 @@ const LoginPage = () => {
           onSubmit={otpForm.handleSubmit}
           className='w-full flex flex-col mt-5 gap-5'
         >
+          {isCampaignPlayer && (
+            <p className='text-sm font-semibold text-black'>
+              You played a SantiBet campaign with this. Create a password to
+              set up your account.
+            </p>
+          )}
           <p className='text-sm text-neutral-10'>
             Enter the code sent to {identifier}
           </p>
@@ -579,6 +668,12 @@ const LoginPage = () => {
           <p className='text-sm text-neutral-10'>
             Create a password to finish setting up your account
           </p>
+          {isCampaignPlayer && (
+            <p className='text-sm text-neutral-10'>
+              Any prize you won moves to this account. Complete your ID check
+              after this to receive it.
+            </p>
+          )}
           <FormInput
             type='password'
             name='password'
@@ -593,7 +688,7 @@ const LoginPage = () => {
                 : ''
             }
           />
-          {referralField}
+          {!signUpHidden && referralField}
           <Button
             type='submit'
             text='Create account'

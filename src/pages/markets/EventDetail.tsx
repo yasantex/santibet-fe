@@ -15,6 +15,8 @@ import {
 import { MarketCardSkeleton } from '../../components/globals/ReusedText'
 import { formatCloseTimer } from '../../utils/functions'
 import type { UiMarket, UiOutcome } from '../../types/market.types'
+import Seo from '../../seo/Seo'
+import { toDescription } from '../../seo/seoUtils'
 
 // Multi-choice events have no live stream of their own; refresh the prices.
 const EVENT_POLL_MS = 30_000
@@ -50,6 +52,25 @@ const EventDetail = () => {
 
   return (
     <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-4 pb-20 md:px-8'>
+      <Seo
+        title={event?.title ?? 'Event'}
+        description={
+          event
+            ? toDescription(
+                `${event.title}: ${markets.length} ${event.category} prediction ` +
+                  `market${markets.length === 1 ? '' : 's'} on SantiBet. ` +
+                  markets
+                    .slice(0, 4)
+                    .map((m) => m.subtitle?.trim() || m.title)
+                    .join(', ') +
+                  '. Back your call and get paid automatically when it resolves.',
+              )
+            : undefined
+        }
+        path={`/events/${id}`}
+        image={event?.imageUrl}
+        noindex={!isLoading && (isError || !event)}
+      />
       <PageNav
         crumbs={event ? [...categoryCrumbs, { label: event.title }] : []}
       />

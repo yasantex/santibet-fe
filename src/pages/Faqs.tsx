@@ -4,6 +4,7 @@ import PageNav from '../components/globals/PageNav'
 import { TextLoader } from '../components/globals/ReusedText'
 import { Button } from '../components/globals/Button'
 import { useFaqs } from '../data_layer/pages'
+import { JsonLd } from '../seo/Seo'
 
 /** Question-and-answer pairs from `/faqs`, in the order admins set. */
 const Faqs = () => {
@@ -36,6 +37,18 @@ const Faqs = () => {
         </p>
       ) : (
         <div className='flex flex-col divide-y divide-border rounded-2xl border border-border bg-card'>
+          {/* FAQPage markup: lets search and answer engines quote these. */}
+          <JsonLd
+            data={{
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: faqs.map((faq) => ({
+                '@type': 'Question',
+                name: faq.question,
+                acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+              })),
+            }}
+          />
           {faqs.map((faq) => (
             <details key={faq.id} className='group px-4'>
               <summary className='flex cursor-pointer list-none items-center justify-between gap-3 py-4 text-sm font-semibold text-black [&::-webkit-details-marker]:hidden'>
