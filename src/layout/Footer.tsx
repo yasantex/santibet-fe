@@ -80,11 +80,9 @@ const Footer = () => {
           <div className='max-w-md space-y-4 text-sm leading-relaxed text-neutral-10'>
             <p>
               SantiBet is operated by AWA LAWA LIMITED, a company registered in
-              Nigeria, with its registered office at Adegite House, Adegite
-              Close, Off Iyin-Ado Road, Iyin-Ekiti, Ekiti State, Nigeria. AWA
-              LAWA LIMITED operates under an Operational Accord with the Ekiti
-              State Lotteries and Gaming Commission. SantiBet is for use by
-              persons aged 18 and above only.
+              Nigeria. AWA LAWA LIMITED operates under an Operational Accord
+              with the Ekiti State Lotteries and Gaming Commission. SantiBet is
+              for use by persons aged 18 and above only.
             </p>
             <p>
               We use cookies and third-party cookies. You can modify the

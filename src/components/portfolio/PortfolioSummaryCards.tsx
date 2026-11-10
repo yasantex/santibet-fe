@@ -56,7 +56,7 @@ const PortfolioSummaryCards = ({
     })
   }
 
-  // Same figure as the header's "Portfolio": cash plus open positions' value.
+  // Same figure as the header's "Total Balance": cash plus open positions' value.
   const positionsValue = summary ? toMajorUnits(summary.currentValue.amount) : 0
   const total = cash + positionsValue
   // Combos are included by the API (won/lost exactly as History labels them).
@@ -69,18 +69,18 @@ const PortfolioSummaryCards = ({
 
   if (loading)
     return (
-      <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+      <div className='grid grid-cols-1 gap-4 xl:grid-cols-2'>
         <div className='h-56 animate-pulse rounded-2xl bg-card' />
         <div className='h-56 animate-pulse rounded-2xl bg-card' />
       </div>
     )
 
   return (
-    <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+    <div className='grid grid-cols-1 gap-4 xl:grid-cols-2'>
       <section className='flex flex-col justify-between gap-6 rounded-2xl border border-border p-5'>
         <div className='flex items-start justify-between gap-4'>
           <div className='flex min-w-0 flex-col gap-1'>
-            <span className='text-sm text-neutral-10'>Portfolio</span>
+            <span className='text-sm text-neutral-10'>Total Balance</span>
             <div className='flex items-center gap-2'>
               <span className='truncate text-2xl font-bold text-black md:text-3xl'>
                 {show(formatCurrency(total))}
@@ -96,14 +96,14 @@ const PortfolioSummaryCards = ({
             </div>
             {summary && (
               <span className='text-xs text-neutral-10'>
-                {summary.openPositions} open position
+                {summary.openPositions} live bet
                 {summary.openPositions === 1 ? '' : 's'} ·{' '}
-                {show(formatCurrency(positionsValue))} in play
+                {show(formatCurrency(positionsValue))} staked
               </span>
             )}
           </div>
           <div className='flex shrink-0 flex-col items-end gap-1 text-right'>
-            <span className='text-xs text-neutral-10'>Available to trade</span>
+            <span className='text-xs text-neutral-10'>Available to bet</span>
             <span className='text-lg font-bold text-black md:text-2xl'>
               {show(formatCurrency(cash))}
             </span>
@@ -146,7 +146,7 @@ const PortfolioSummaryCards = ({
             <span
               className={`h-2 w-2 rounded-full ${net >= 0 ? 'bg-success' : 'bg-error'}`}
             />
-            Profit/Loss
+            Net Winnings
           </span>
           <span className={`text-2xl font-bold md:text-3xl ${pnlClass(net)}`}>
             {show(signed(net))}
@@ -156,14 +156,14 @@ const PortfolioSummaryCards = ({
 
         <div className='grid grid-cols-2 gap-3'>
           <div className='flex flex-col gap-0.5 rounded-xl bg-card p-3'>
-            <span className='text-xs text-neutral-10'>Unrealized</span>
+            <span className='text-xs text-neutral-10'>Live P/L</span>
             <span className={`text-sm font-bold ${pnlClass(unrealized)}`}>
               {show(signed(unrealized))}
             </span>
-            <span className='text-[11px] text-neutral-10'>Open positions</span>
+            <span className='text-[11px] text-neutral-10'>On running bets</span>
           </div>
           <div className='flex flex-col gap-0.5 rounded-xl bg-card p-3'>
-            <span className='text-xs text-neutral-10'>Realized</span>
+            <span className='text-xs text-neutral-10'>Settled</span>
             <span className={`text-sm font-bold ${pnlClass(realized)}`}>
               {show(signed(realized))}
             </span>

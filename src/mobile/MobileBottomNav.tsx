@@ -74,7 +74,7 @@ const MobileBottomNav = ({
       {user ? (
         <Button
           type='button'
-          text='Deposit cash'
+          text='Deposit'
           title={suspended ? SUSPENDED_CTA_HINT : undefined}
           disabled={suspended}
           onClick={onOpenDeposit}

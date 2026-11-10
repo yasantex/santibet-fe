@@ -16,13 +16,6 @@ Our support team is here to help with anything related to your SantiBet account,
 
 If you are not satisfied with the outcome of a support request, you can ask for your complaint to be escalated. We aim to review every escalated complaint fairly and respond within a reasonable time.
 
-## Registered office
-
-AWA LAWA LIMITED  
-Adegite House, Adegite Close  
-Off Iyin-Ado Road, Iyin-Ekiti  
-Ekiti State, Nigeria
-
 ## Before you contact us
 
 Many common questions about deposits, withdrawals, and how predictions are resolved are already answered on our FAQs page at [santibet.com/faqs](/faqs).

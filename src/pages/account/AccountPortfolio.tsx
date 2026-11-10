@@ -43,8 +43,8 @@ import type { WalletBalance } from '../../types/wallet.types'
 
 type PortfolioTab = 'POSITIONS' | 'OPEN' | 'HISTORY'
 const TABS: { key: PortfolioTab; label: string }[] = [
-  { key: 'POSITIONS', label: 'Positions' },
-  { key: 'OPEN', label: 'Open' },
+  { key: 'POSITIONS', label: 'Active Bets' },
+  { key: 'OPEN', label: 'Pending Orders' },
   { key: 'HISTORY', label: 'History' },
 ]
 
@@ -172,8 +172,8 @@ const AccountPortfolio = () => {
         ? 'No activity yet.'
         : 'No activity of this type yet.'
       : activeTab === 'OPEN'
-        ? 'No open orders.'
-        : 'No open positions yet.'
+        ? 'No pending orders.'
+        : 'No active bets yet.'
 
   return (
     <main className='mx-auto flex w-full flex-col gap-6'>
@@ -185,14 +185,14 @@ const AccountPortfolio = () => {
         onWithdraw={() => handleModalOpen('withdraw')}
       />
 
-      <div className='flex flex-wrap items-start gap-2'>
-        <div className='flex h-11 w-fit shrink-0 items-center gap-1 rounded-[10px] border border-border p-1'>
+      <div className='flex xl:flex-row flex-col items-start gap-2'>
+        <div className='flex h-11 w-fit max-w-full shrink-0 items-center gap-1 overflow-x-auto rounded-[10px] border border-border p-1'>
           {TABS.map((tab) => (
             <button
               key={tab.key}
               type='button'
               onClick={() => setActiveTab(tab.key)}
-              className={`h-full rounded-md px-4 text-sm font-semibold transition-colors ${
+              className={`h-full shrink-0 rounded-md px-3 text-sm font-semibold whitespace-nowrap transition-colors sm:px-4 ${
                 activeTab === tab.key
                   ? 'bg-hover text-black'
                   : 'text-neutral-10 hover:text-black'
@@ -202,7 +202,7 @@ const AccountPortfolio = () => {
             </button>
           ))}
         </div>
-        <div className='flex min-w-0 flex-1 flex-wrap items-centergap-2'>
+        <div className='flex min-w-0 flex-1 flex-wrap items-center gap-2.5'>
           {/* Never squeezed: the menus wrap to the next line instead. */}
           <div className='min-w-54 flex-1'>
             <SearchInput
@@ -243,7 +243,7 @@ const AccountPortfolio = () => {
           loading={isLoading}
           error={
             isError
-              ? `We couldn’t load your ${activeTab === 'HISTORY' ? 'history' : activeTab === 'OPEN' ? 'orders' : 'positions'} right now.`
+              ? `We couldn’t load your ${activeTab === 'HISTORY' ? 'history' : activeTab === 'OPEN' ? 'pending orders' : 'active bets'} right now.`
               : null
           }
           empty={emptyText}

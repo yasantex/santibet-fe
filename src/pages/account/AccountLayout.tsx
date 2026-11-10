@@ -7,7 +7,7 @@ const SECTION_LABELS: Record<string, string> = {
   '/notifications': 'Notifications',
   '/rewards': 'Rewards',
   '/bonuses': 'Bonuses',
-  '/orders': 'Orders',
+  '/orders': 'Bet History',
   '/refer-earn': 'Refer & Earn',
 }
 

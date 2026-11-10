@@ -275,7 +275,7 @@ const Orders = () => {
     <main className='mx-auto flex w-full flex-col gap-6'>
       <div className='flex items-center justify-between gap-4'>
         <h1 className='text-[18px] font-bold text-black md:text-[28px]'>
-          Orders
+          Bet History
         </h1>
         <FilterComponent
           categories={orderFilterCategories}

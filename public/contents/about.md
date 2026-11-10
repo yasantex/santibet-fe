@@ -2,7 +2,7 @@
 
 SantiBet is a Nigerian prediction platform. We let you back your opinion on real world events with real money, and win when you call it right. Sports, politics, entertainment, crypto, and business questions all live on one platform, built around the way Nigerians already argue about what is going to happen next.
 
-SantiBet is operated by AWA LAWA LIMITED, a company registered in Nigeria, with its registered office at Adegite House, Adegite Close, Off Iyin-Ado Road, Iyin-Ekiti, Ekiti State, Nigeria. We operate under an Operational Accord with the Ekiti State Lotteries and Gaming Commission.
+SantiBet is operated by AWA LAWA LIMITED, a company registered in Nigeria. We operate under an Operational Accord with the Ekiti State Lotteries and Gaming Commission.
 
 ## What makes SantiBet different
 

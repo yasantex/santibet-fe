@@ -259,7 +259,7 @@ const Header = () => {
   const { events: liveBets } = useLiveBets({ limit: 100 })
   const liveCount = liveBets.length
 
-  // Portfolio = cash + the live value of open positions, from the server
+  // Total Balance = cash + the live value of open positions, from the server
   // summary so it covers every position, not just one page of them.
   const { data: portfolio } = usePortfolioSummary()
   const openPositionsValue = toMajorUnits(portfolio?.currentValue.amount ?? 0)
@@ -366,7 +366,7 @@ const Header = () => {
                 <span>
                   {formatCurrency(String(portfolioValue), wallet?.currency)}
                 </span>
-                <span className='text-[10px] text-neutral-10'>Portfolio</span>
+                <span className='text-[10px] text-neutral-10'>Total Balance</span>
               </Link>
               <Link
                 to='/account-wallet'
@@ -380,7 +380,7 @@ const Header = () => {
                       )
                     : '—'}
                 </span>
-                <span className='text-[10px] text-neutral-10'>Cash</span>
+                <span className='text-[10px] text-neutral-10'>Balance</span>
               </Link>
               {/* Bonus credit sits apart from cash — never added to it. */}
               {wallet && Number(wallet.bonus ?? 0) + Number(wallet.bonusLocked ?? 0) > 0 && (
@@ -400,7 +400,7 @@ const Header = () => {
               >
                 <Button
                   type='button'
-                  text='Deposit cash'
+                  text='Deposit'
                   disabled={suspended}
                   onClick={() => handleModalOpen('deposit')}
                   className='shrink-0 w-fit!'
@@ -423,7 +423,7 @@ const Header = () => {
                 to='/account-profile'
                 aria-label='Account profile'
                 title='Account profile'
-                className='hidden shrink-0 rounded-full transition-opacity hover:opacity-80 md:flex'
+                className='shrink-0 rounded-full transition-opacity hover:opacity-80 flex'
               >
                 <ProfileAvatar
                   firstName={user.firstName ?? ''}
