@@ -9,7 +9,6 @@ import EventOutcomesChart from './EventOutcomesChart'
 import ModalComponent from '../globals/ModalComponent'
 import {
   categoryIcon,
-  chanceLabel,
   eventMarketLabels,
   MARKET_STATUS_LABELS,
 } from '../../utils/marketDisplay'
@@ -40,7 +39,7 @@ const ChoiceRow = ({
   selectedOutcomeId?: string
   onSelect: (market: UiMarket, outcome?: UiOutcome) => void
 }) => {
-  const { priceLabel } = useOddsFormat()
+  const { priceLabel, chanceLabel } = useOddsFormat()
   const open = market.status === 'open'
   const winner = market.resolvedOutcomeId
     ? market.outcomes.find((o) => o.id === market.resolvedOutcomeId)

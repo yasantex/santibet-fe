@@ -4,7 +4,6 @@ import { Link } from 'react-router'
 import { LiveBadge, ScoreBoard } from './LiveBits'
 import {
   categoryIcon,
-  chanceLabel,
   eventMarketLabels,
   findTeam,
   groupedChoices,
@@ -49,6 +48,7 @@ const MultiChoiceCard = ({
   marketCount: number
   onSelectOutcome: (market: UiMarket, outcome: UiOutcome) => void
 }) => {
+  const { chanceLabel } = useOddsFormat()
   const eventHref = `/events/${event.id}`
   const labels = eventMarketLabels(event.markets)
   const open = event.markets.filter((m) => m.status === 'open')

@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import {
+  chanceLabel as formatChance,
   outcomePriceLabel,
   type OddsFormat,
 } from '../utils/marketDisplay'
@@ -53,5 +54,12 @@ export const useOddsFormat = () => {
     [format],
   )
 
-  return { format, setFormat, priceLabel }
+  // An outcome's chance ("58%") or, in decimal mode, its odds ("×1.73").
+  const chanceLabel = useCallback(
+    (outcome: Parameters<typeof formatChance>[0]) =>
+      formatChance(outcome, format),
+    [format],
+  )
+
+  return { format, setFormat, priceLabel, chanceLabel }
 }

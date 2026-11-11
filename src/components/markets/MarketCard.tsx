@@ -4,6 +4,7 @@ import type { EventTeam, UiMarket, UiOutcome } from '../../types/market.types'
 import {
   categoryIcon,
   findTeam,
+  isPoolMarket,
   marketDisplayTitle,
   outcomeTone,
   TONE_STYLES,
@@ -21,6 +22,7 @@ import { useOddsFormat } from '../../hooks/useOddsFormat'
 const OutcomeRow = ({
   outcome,
   priceLabel,
+  chance,
   tone,
   active = false,
   team,
@@ -29,6 +31,9 @@ const OutcomeRow = ({
   outcome?: UiOutcome
   /** "₦63", or the odds on a pool market. */
   priceLabel: string
+  /** The chance ("58%") or odds ("×1.73") beside the label; null hides it
+   *  (a pool market in decimal mode already shows its odds on the button). */
+  chance: string | null
   tone: OutcomeTone
   active?: boolean
   /** The team this outcome names (sports), for its crest. */
@@ -47,9 +52,11 @@ const OutcomeRow = ({
               {outcome.label}
             </span>
           </span>
-          <span className={`shrink-0 font-bold ${style.percent}`}>
-            {outcome.percent}%
-          </span>
+          {chance && (
+            <span className={`shrink-0 font-bold ${style.percent}`}>
+              {chance}
+            </span>
+          )}
         </div>
         <div className='h-1 w-full overflow-hidden rounded-full bg-border/40'>
           <div
@@ -86,6 +93,7 @@ const OutcomeStatRow = ({
   team?: EventTeam | null
 }) => {
   const style = TONE_STYLES[tone]
+  const { format, chanceLabel } = useOddsFormat()
   return (
     <div className='flex items-center justify-between gap-2 text-sm'>
       <span className='flex min-w-0 items-center gap-1.5'>
@@ -95,7 +103,7 @@ const OutcomeStatRow = ({
         </span>
       </span>
       <span className={`shrink-0 font-bold ${style.percent}`}>
-        {outcome.percent}%
+        {format === 'odds' ? chanceLabel(outcome) : `${outcome.percent}%`}
       </span>
     </div>
   )
@@ -188,7 +196,14 @@ const MarketCard = ({
   // and the selected outcome stays highlighted. Non-sports keep the caller's
   // behaviour (open the market to trade singly).
   const combo = useComboSlip()
-  const { priceLabel } = useOddsFormat()
+  const { priceLabel, format, chanceLabel } = useOddsFormat()
+  // Decimal mode on a pool market: the button already shows the odds.
+  const outcomeChance = (outcome: UiOutcome) =>
+    format === 'percent'
+      ? `${outcome.percent}%`
+      : isPoolMarket(market)
+        ? null
+        : chanceLabel(outcome)
   const comboEnabled = isSportsMarket(market)
   const effectiveActiveOutcomeId = comboEnabled
     ? combo.selectedOutcomeIdForMarket(market.id)
@@ -258,6 +273,7 @@ const MarketCard = ({
                 key={outcome.id}
                 outcome={outcome}
                 priceLabel={outcome ? priceLabel(market, outcome) : ''}
+                chance={outcomeChance(outcome)}
                 tone={tone}
                 active={outcome.id === effectiveActiveOutcomeId}
                 team={findTeam(market.teams, outcome.label)}

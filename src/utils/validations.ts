@@ -1,4 +1,5 @@
 import * as Yup from 'yup'
+import { isAdult, UNDERAGE_MESSAGE } from './age'
 
 export const SignInSchema = Yup.object({
   identifier: Yup.string().required('Email or phone number is required'),
@@ -137,7 +138,8 @@ export const UpdateProfileSchema = Yup.object({
   dateOfBirth: Yup.date()
     .max(new Date(), 'Date of birth must be in the past')
     .min(new Date(1900, 0, 1), 'Date of birth must be after 1900')
-    .nullable(),
+    .nullable()
+    .test('min-age', UNDERAGE_MESSAGE, (value) => !value || isAdult(value)),
   avatarUrl: Yup.string()
     .url('Must be a valid URL')
     .max(2000, 'Avatar URL must be 2000 characters or fewer')
