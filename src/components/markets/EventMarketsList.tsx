@@ -4,7 +4,6 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
 import {
-  chanceLabel,
   eventMarketLabels,
   isMultiChoiceEvent,
   marketHref,
@@ -30,7 +29,7 @@ const EventMarketsList = ({
   currentMarketId: string
 }) => {
   const navigate = useNavigate()
-  const { priceLabel } = useOddsFormat()
+  const { priceLabel, chanceLabel } = useOddsFormat()
   const [expanded, setExpanded] = useState(false)
 
   // Open markets first, each group in the event's own order.

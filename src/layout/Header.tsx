@@ -242,6 +242,8 @@ const Header = () => {
     }`
   const authNavigate = useAuthNavigate()
   const signUpHidden = useSignUpHidden()
+  // Highlight whichever auth page is open; Login stays primary elsewhere.
+  const isSignupRoute = !signUpHidden && location.pathname === '/signup'
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
   const { isDark, toggleTheme } = useTheme()
@@ -325,14 +327,6 @@ const Header = () => {
             <Link to='/browse?sort=closing_soon' className={browseLinkClass('closing_soon')}>
               Upcoming
             </Link>
-            <a
-              href='https://santibet.com'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='flex items-center text-black/60 hover:text-black'
-            >
-              Campaign
-            </a>
           </div>
         </div>
         <div className='flex items-center justify-end gap-5 w-full'>
@@ -463,13 +457,14 @@ const Header = () => {
               <Button
                 type='button'
                 text='Login'
+                variation={isSignupRoute ? 'plain' : 'primary'}
                 onClick={() => authNavigate('/signin')}
               />
               {!signUpHidden && (
                 <Button
                   type='button'
                   text='Sign up'
-                  variation='plain'
+                  variation={isSignupRoute ? 'primary' : 'plain'}
                   onClick={() => authNavigate('/signup')}
                 />
               )}

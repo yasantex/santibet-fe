@@ -464,9 +464,22 @@ export const CARD_HOVER =
 export const CARD_HOVER_SOFT =
   'border border-transparent transition-[border-color,box-shadow] duration-200 hover:border-border hover:shadow-[0_4px_16px_-8px_rgba(0,0,0,0.16)]'
 
-/** "<1%" rather than a misleading "0%" for long shots (percent is rounded). */
-export const chanceLabel = (outcome?: { price: number } | null) => {
-  const pct = (outcome?.price ?? 0) * 100
+/**
+ * An outcome's chance in the user's odds format: "58%" ("<1%" rather than a
+ * misleading "0%" for long shots, as percent is rounded), or "×1.73" when
+ * they picked decimal odds. Read it through `useOddsFormat().chanceLabel` so
+ * it follows the menu.
+ */
+export const chanceLabel = (
+  outcome?: { price: number; decimalOdds?: number | null } | null,
+  format: OddsFormat = 'percent',
+) => {
+  const price = outcome?.price ?? 0
+  if (format === 'odds') {
+    const odds = outcome?.decimalOdds ?? (price > 0 ? 1 / price : 0)
+    return odds > 0 ? `×${odds.toFixed(2)}` : '—'
+  }
+  const pct = price * 100
   return pct > 0 && pct < 1 ? '<1%' : `${Math.round(pct)}%`
 }
 
