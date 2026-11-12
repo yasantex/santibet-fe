@@ -13,11 +13,16 @@ const BonusSlipToggle = ({ slip }: { slip: BonusSlip }) => {
   const { bonus } = slip
   if (!bonus) return null
 
-  const disabled = slip.pendingKyc || slip.marketOrdersOnly || !bonus.canBet
+  const disabled =
+    slip.pendingKyc ||
+    slip.marketOrdersOnly ||
+    !bonus.canBet ||
+    !!slip.marketBlockedReason
 
   return (
     <div className='flex flex-col gap-2 rounded-lg border border-brand-green/40 bg-surface-success/40 px-3 py-2.5'>
       <label
+        title={slip.marketBlockedReason ?? undefined}
         className={`flex items-center gap-2.5 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <HugeiconsIcon icon={GiftIcon} size={18} className='shrink-0 text-success' />
@@ -57,6 +62,10 @@ const BonusSlipToggle = ({ slip }: { slip: BonusSlip }) => {
           <Link to={KYC_PATH} className='font-semibold underline underline-offset-2'>
             Verify now
           </Link>
+        </p>
+      ) : slip.marketBlockedReason ? (
+        <p className='rounded-md bg-warning/10 px-2.5 py-2 text-xs font-medium text-warning'>
+          {slip.marketBlockedReason} — this bet will use your cash balance.
         </p>
       ) : slip.marketOrdersOnly ? (
         <p className='text-xs text-neutral-10'>

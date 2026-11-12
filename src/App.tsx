@@ -32,6 +32,7 @@ const ReferEarn = lazy(() => import('./pages/ReferEarn'))
 const Leaderboard = lazy(() => import('./pages/Leaderboard'))
 const Rewards = lazy(() => import('./pages/Rewards'))
 const Bonuses = lazy(() => import('./pages/Bonuses'))
+const Promos = lazy(() => import('./pages/Promos'))
 const HelpCenter = lazy(() => import('./pages/HelpCenter'))
 const ContactSupport = lazy(() => import('./pages/ContactSupport'))
 const Faqs = lazy(() => import('./pages/Faqs'))
@@ -80,6 +81,7 @@ function App() {
             {/* Bonus T&Cs (`termsUrl` from the bonus API), e.g. /terms/1000-bonus. */}
             <Route path='/terms/:slug' element={<ContentPage />} />
             <Route path='/faqs' element={<Faqs />} />
+            <Route path='/promos' element={<Promos />} />
             <Route path='/leaderboard' element={<Leaderboard />} />
             <Route path='/help-center' element={<HelpCenter />} />
             <Route path='/verify-account' element={<VerifyAccount />} />

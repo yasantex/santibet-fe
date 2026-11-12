@@ -146,6 +146,7 @@ const PasskeyRow = ({ passkey }: { passkey: Passkey }) => {
                   variation='primary'
                   size='medium'
                   disabled={isRenaming}
+                  className='w-fit! shrink-0 px-4'
                 />
                 <Button
                   type='button'
@@ -153,6 +154,7 @@ const PasskeyRow = ({ passkey }: { passkey: Passkey }) => {
                   variation='plain'
                   size='medium'
                   disabled={isRenaming}
+                  className='w-fit! shrink-0 px-4'
                   onClick={cancelEdit}
                 />
               </form>

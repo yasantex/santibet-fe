@@ -1,19 +1,46 @@
 import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon, LockIcon } from '@hugeicons/core-free-icons'
-import type { KycStatusResponse } from '../../../types/types'
+import type { KycStatusResponse, UserData } from '../../../types/types'
 import { kycStatusBadge } from '../../../utils/status'
+import { showWarningToast } from '../../../utils/toastUtils'
 import StandardVerification from '../../../components/appModals/StandardVerification'
 
 type KycTabProps = {
   kycStatus: KycStatusResponse | undefined
   kycLoading: boolean
   refetchKyc: () => void
+  profile: UserData | null | undefined
+  onGoToProfile: () => void
 }
 
-const KycTab = ({ kycStatus, kycLoading, refetchKyc }: KycTabProps) => {
+const KycTab = ({
+  kycStatus,
+  kycLoading,
+  refetchKyc,
+  profile,
+  onGoToProfile,
+}: KycTabProps) => {
   const [kycModalOpen, setKycModalOpen] = useState(false)
   const badge = kycStatusBadge(kycStatus?.status)
+
+  // Standard KYC needs the profile's first name, last name and date of birth.
+  const profileComplete = Boolean(
+    profile?.firstName?.trim() &&
+      profile?.lastName?.trim() &&
+      profile?.dateOfBirth,
+  )
+
+  const openStandard = () => {
+    if (!profileComplete) {
+      showWarningToast(
+        'Add your first name, last name and date of birth to your profile before starting standard verification.',
+        { label: 'Go to profile', onClick: onGoToProfile },
+      )
+      return
+    }
+    setKycModalOpen(true)
+  }
 
   return (
     <div className='flex flex-col gap-5'>
@@ -58,7 +85,7 @@ const KycTab = ({ kycStatus, kycLoading, refetchKyc }: KycTabProps) => {
           {/* Standard — government ID verification */}
           <button
             type='button'
-            onClick={() => setKycModalOpen(true)}
+            onClick={openStandard}
             className='flex flex-col gap-3 rounded-2xl cursor-pointer border border-border bg-card p-4 text-left transition-colors hover:bg-hover'
           >
             <div className='flex items-center justify-between gap-2'>
