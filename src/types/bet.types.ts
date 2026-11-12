@@ -138,6 +138,20 @@ export interface PortfolioSummary {
   unrealizedPnl: Money
   realizedPnl: Money
   netPnl: Money
+  /** Stake tied up in open bets and combos, split by what funded it. When
+   *  present it's authoritative; older APIs omit it and the client sums the
+   *  open positions it has loaded instead. */
+  openStake?: { cash: Money; bonus: Money } | null
+  /** The same five figures for bonus-funded bets. The top-level ones are cash
+   *  bets only (singles and combos). An open bonus bet is held at its stake,
+   *  since it can't be cashed out. Counts above still include bonus bets. */
+  bonus?: {
+    invested: Money
+    currentValue: Money
+    unrealizedPnl: Money
+    realizedPnl: Money
+    netPnl: Money
+  } | null
 }
 
 export interface BetPosition {

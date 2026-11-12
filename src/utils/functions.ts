@@ -39,6 +39,11 @@ export const toMajorUnits = (amount: string | number): number =>
 export const spendableBalance = (wallet?: WalletBalance | null): number =>
   toMajorUnits(wallet?.total ?? 0)
 
+/** Cash that can be withdrawn, in naira. Only winnings qualify: deposits in
+ *  `trading` must be bet first. Falls back to `winnings` on an older API. */
+export const withdrawableBalance = (wallet?: WalletBalance | null): number =>
+  toMajorUnits(wallet?.withdrawable ?? wallet?.winnings ?? 0)
+
 /** A pool (parimutuel) position: no share price, no live value, no cash-out. */
 export const isPoolPosition = (position: BetPosition): boolean =>
   position.executionModel
@@ -88,6 +93,30 @@ export const openPositionMark = (position: BetPosition) => {
     ? toMajorUnits(position.unrealizedPnl.amount)
     : value - staked
   return { staked, value, pnl, estPayout }
+}
+
+/**
+ * Stake tied up in open bets, in naira, split by what funded it. Bonus stakes
+ * are kept apart: they came from bonus credit, settle on the market only and
+ * are never cash, so they don't belong in a cash "Total Balance". Combos are
+ * cash-only (the bet slip never stakes bonus).
+ */
+export const openStakeSplit = (
+  positions: BetPosition[],
+  combos: { status: string; stake: { amount: string } }[] = [],
+) => {
+  let cash = 0
+  let bonus = 0
+  for (const p of positions) {
+    if (p.status !== 'OPEN') continue
+    const { staked } = openPositionMark(p)
+    if (isBonusPosition(p)) bonus += staked
+    else cash += staked
+  }
+  for (const c of combos) {
+    if (c.status === 'OPEN') cash += toMajorUnits(c.stake.amount)
+  }
+  return { cash, bonus }
 }
 
 /**
