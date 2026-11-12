@@ -31,6 +31,10 @@ type PortfolioSummaryCardsProps = {
   summary?: PortfolioSummary
   /** Cash the user can trade with, in naira. */
   cash: number
+  /** The part of `cash` that can be withdrawn (winnings), in naira. */
+  withdrawable?: number
+  /** Stake on live bets in naira, split by funding; undefined while loading. */
+  openStake?: { cash: number; bonus: number }
   loading: boolean
   onDeposit: () => void
   onWithdraw: () => void
@@ -39,6 +43,8 @@ type PortfolioSummaryCardsProps = {
 const PortfolioSummaryCards = ({
   summary,
   cash,
+  withdrawable,
+  openStake,
   loading,
   onDeposit,
   onWithdraw,
@@ -56,13 +62,19 @@ const PortfolioSummaryCards = ({
     })
   }
 
-  // Same figure as the header's "Total Balance": cash plus open positions' value.
-  const positionsValue = summary ? toMajorUnits(summary.currentValue.amount) : 0
-  const total = cash + positionsValue
+  // Total Balance = free cash + the CASH staked on live bets, at its stake —
+  // what the user would have if every live bet were handed back. Bonus stakes
+  // are left out: they came from bonus credit and are never cash.
+  const cashStaked = openStake?.cash ?? 0
+  const bonusStaked = openStake?.bonus ?? 0
+  const total = cash + cashStaked
   // Combos are included by the API (won/lost exactly as History labels them).
   const net = summary ? toMajorUnits(summary.netPnl.amount) : 0
   const unrealized = summary ? toMajorUnits(summary.unrealizedPnl.amount) : 0
   const realized = summary ? toMajorUnits(summary.realizedPnl.amount) : 0
+  // Net Winnings and the P/L tiles are cash bets only; bonus-bet results are
+  // reported apart (they're paid as bonus credit, not cash).
+  const bonusNet = summary?.bonus ? toMajorUnits(summary.bonus.netPnl.amount) : 0
   const wonCount = summary?.wonCount ?? 0
   const lostCount = summary?.lostCount ?? 0
   const show = (s: string) => (hidden ? MASK : s)
@@ -80,11 +92,20 @@ const PortfolioSummaryCards = ({
       <section className='flex flex-col justify-between gap-6 rounded-2xl border border-border p-5'>
         <div className='flex items-start justify-between gap-4'>
           <div className='flex min-w-0 flex-col gap-1'>
-            <span className='text-sm text-neutral-10'>Total Balance</span>
+            <span
+              className='text-sm text-neutral-10'
+              title='Cash available to bet plus the cash staked on your live bets. Bonus bets are not included.'
+            >
+              Total Balance
+            </span>
             <div className='flex items-center gap-2'>
-              <span className='truncate text-2xl font-bold text-black md:text-3xl'>
-                {show(formatCurrency(total))}
-              </span>
+              {openStake ? (
+                <span className='truncate text-2xl font-bold text-black md:text-3xl'>
+                  {show(formatCurrency(total))}
+                </span>
+              ) : (
+                <span className='h-8 w-36 animate-pulse rounded-md bg-card' />
+              )}
               <button
                 type='button'
                 aria-label={hidden ? 'Show balances' : 'Hide balances'}
@@ -94,11 +115,17 @@ const PortfolioSummaryCards = ({
                 <HugeiconsIcon icon={hidden ? ViewIcon : ViewOffSlashIcon} size={18} />
               </button>
             </div>
-            {summary && (
+            {summary && openStake && (
               <span className='text-xs text-neutral-10'>
                 {summary.openPositions} live bet
                 {summary.openPositions === 1 ? '' : 's'} ·{' '}
-                {show(formatCurrency(positionsValue))} staked
+                {show(formatCurrency(cashStaked))} staked
+              </span>
+            )}
+            {bonusStaked > 0 && (
+              <span className='text-xs text-success'>
+                + {show(formatCurrency(bonusStaked))} in bonus bets · not
+                included
               </span>
             )}
           </div>
@@ -107,6 +134,11 @@ const PortfolioSummaryCards = ({
             <span className='text-lg font-bold text-black md:text-2xl'>
               {show(formatCurrency(cash))}
             </span>
+            {withdrawable != null && (
+              <span className='text-xs text-neutral-10'>
+                {show(formatCurrency(withdrawable))} withdrawable
+              </span>
+            )}
           </div>
         </div>
 
@@ -151,7 +183,12 @@ const PortfolioSummaryCards = ({
           <span className={`text-2xl font-bold md:text-3xl ${pnlClass(net)}`}>
             {show(signed(net))}
           </span>
-          <span className='text-xs text-neutral-10'>All time</span>
+          <span className='text-xs text-neutral-10'>All time · cash bets</span>
+          {bonusNet !== 0 && (
+            <span className={`text-xs ${pnlClass(bonusNet)}`}>
+              Bonus bets: {show(signed(bonusNet))} · paid as bonus credit
+            </span>
+          )}
         </div>
 
         <div className='grid grid-cols-2 gap-3'>

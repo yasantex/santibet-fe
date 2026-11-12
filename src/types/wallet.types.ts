@@ -4,7 +4,13 @@ export interface WalletBalance {
   winnings: string
   pendingWithdrawal: string
   pendingDeposit: string
+  /** Cash the player can bet with: `trading` + `winnings`. Not all of it can
+   *  be withdrawn — see `withdrawable`. */
   total: string
+  /** Cash that can be withdrawn (= `winnings`). Deposited money in `trading`
+   *  has to be bet first. A withdrawal's fee is taken from this on top of the
+   *  amount requested. */
+  withdrawable?: string
   /** Bonus credit (kobo). Never part of `total` and never withdrawable. */
   bonus?: string
   /** Locked bonus winnings (kobo). Never part of `total`. */
