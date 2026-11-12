@@ -170,13 +170,27 @@ const CategoryRow = () => {
             row's `overflow-x-auto` implicitly clips vertical overflow too
             (an axis can't stay `visible` once the other isn't), which was
             hiding this dropdown's menu even though it was in the DOM. */}
-        {visibleMoreLinks.length > 0 && (
+        {/* On mobile "More" always shows, since it also holds Promos (the
+            header's Promos link is desktop-only). */}
+        <div
+          className={`ml-6 shrink-0 ${visibleMoreLinks.length > 0 ? '' : 'lg:hidden'}`}
+        >
           <Dropdown
             align='end'
-            className='ml-6 shrink-0'
             menuClassName='w-52 max-h-[70vh] overflow-y-auto rounded-lg py-1'
             menu={({ close }) => (
               <div className='flex flex-col'>
+                <NavLink
+                  to='/promos'
+                  onClick={close}
+                  className={({ isActive }) =>
+                    `px-3 py-2 text-left text-sm hover:bg-hover lg:hidden ${
+                      isActive ? 'font-semibold text-black' : 'text-black/60'
+                    }`
+                  }
+                >
+                  Promos
+                </NavLink>
                 {visibleMoreLinks.map((link) => (
                   <div key={link.href} className='flex flex-col'>
                     <NavLink
@@ -211,7 +225,7 @@ const CategoryRow = () => {
               <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
             </span>
           </Dropdown>
-        )}
+        </div>
         {canScrollRight && (
           <button
             type='button'
@@ -326,6 +340,14 @@ const Header = () => {
             <Link to='/browse?sort=closing_soon' className={browseLinkClass('closing_soon')}>
               Upcoming
             </Link>
+            <NavLink
+              to='/promos'
+              className={({ isActive }) =>
+                isActive ? 'text-black' : 'text-black/60 hover:text-black'
+              }
+            >
+              Promos
+            </NavLink>
           </div>
         </div>
         <div className='flex items-center justify-end gap-5 w-full'>

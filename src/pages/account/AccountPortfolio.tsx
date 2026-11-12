@@ -50,7 +50,7 @@ type PortfolioTab = 'POSITIONS' | 'OPEN' | 'HISTORY'
 const TABS: { key: PortfolioTab; label: string }[] = [
   { key: 'POSITIONS', label: 'Active Bets' },
   { key: 'OPEN', label: 'Pending Orders' },
-  { key: 'HISTORY', label: 'History' },
+  { key: 'HISTORY', label: 'History/Settled Bets' },
 ]
 
 const flatten = <T,>(pages?: ({ data?: T[] } | undefined)[]) =>

@@ -181,12 +181,12 @@ export const STATIC_ROUTES: RouteSeo[] = [
       ['/account', 'Account'],
       ['/account-profile', 'Profile'],
       ['/account-wallet', 'Wallet'],
-      ['/account-portfolio', 'Portfolio'],
+      ['/account-portfolio', 'My Bets'],
       ['/account-favorites', 'Favorites'],
       ['/notifications', 'Notifications'],
       ['/rewards', 'Rewards'],
       ['/bonuses', 'Bonuses'],
-      ['/orders', 'Orders'],
+      ['/orders', 'Bet History'],
       ['/refer-earn', 'Refer & Earn'],
     ] as const
   ).map(([path, title]) => ({
