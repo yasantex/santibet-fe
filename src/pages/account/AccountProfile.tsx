@@ -115,6 +115,8 @@ const AccountProfile = () => {
             kycStatus={kycStatus}
             kycLoading={kycLoading}
             refetchKyc={refetchKyc}
+            profile={profile}
+            onGoToProfile={() => setActiveTab('profile')}
           />
         ))}
 

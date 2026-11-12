@@ -48,8 +48,9 @@ const useBonusSlip = ({
   const offered = !!bonus
   const pendingKyc = !!bonus && (bonus.kycRequired || bonus.status === 'PENDING_KYC')
   const marketOrdersOnly = type !== 'market'
-  /** Bonus rules apply to this slip. */
-  const active = offered && useBonus && !marketOrdersOnly && !pendingKyc && bonus.canBet
+  /** Bonus would apply, before checking this market's outcomes. */
+  const wantsBonus =
+    offered && useBonus && !marketOrdersOnly && !pendingKyc && bonus.canBet
 
   const { data: eligibility } = useBonusEligibility(
     market.id,
@@ -61,6 +62,17 @@ const useBonusSlip = ({
     eligibility?.outcomes.forEach((o) => map.set(o.outcomeId, o))
     return map
   }, [eligibility])
+
+  // No outcome here takes bonus credit (e.g. a live market): the switch is
+  // disabled and the bet goes in as cash. Holds the server's reason.
+  const marketBlockedReason =
+    eligibility?.outcomes.length && eligibility.outcomes.every((o) => !o.eligible)
+      ? (eligibility.outcomes.find((o) => o.reason)?.reason ??
+        "This market can't use bonus credit")
+      : null
+
+  /** Bonus rules apply to this slip. */
+  const active = wantsBonus && !marketBlockedReason
 
   /** Why a bonus bet can't go on this outcome, or null if it can (or unknown). */
   const ineligibleReason = (outcomeId?: string) => {
@@ -122,6 +134,7 @@ const useBonusSlip = ({
     active,
     pendingKyc,
     marketOrdersOnly,
+    marketBlockedReason,
     balance,
     minStake,
     maxStake,

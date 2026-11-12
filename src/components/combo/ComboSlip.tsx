@@ -29,6 +29,7 @@ import {
 import type { WalletBalance } from '../../types/wallet.types'
 import type { ComboLeg } from '../../types/combo.types'
 import { useCurrentBonus } from '../../data_layer/bonuses'
+import { shortOutcomeLabel, teamsFromTitle } from '../../utils/teamNames'
 
 const QUICK_ADDS = [100, 500, 1000, 2000]
 
@@ -37,6 +38,15 @@ const legOdds = (price: number) => (price > 0 ? 1 / price : 0)
 // A re-quoted leg at least this far (0.5 points of probability) from the price
 // on the slip is an odds change the player has to accept.
 const PRICE_MOVE_THRESHOLD = 0.005
+
+/** "Manchester City" → "MAN", same codes as the match cards. */
+const legPickLabel = (leg: ComboLeg) => {
+  const teams = leg.teams && leg.teams.length >= 2 ? leg.teams : null
+  return shortOutcomeLabel(
+    teams ? teams.map((t) => t.name) : teamsFromTitle(leg.eventTitle),
+    teams ? teams.map((t) => t.shortName) : [],
+  )(leg.outcomeLabel)
+}
 
 const LegRow = ({
   leg,
@@ -60,8 +70,11 @@ const LegRow = ({
         {leg.marketTitle}
       </p>
       <div className='mt-1 flex items-center gap-2'>
-        <span className='rounded-full bg-brand-green/15 px-2 py-0.5 text-xs font-bold text-black uppercase'>
-          {leg.outcomeLabel}
+        <span
+          title={leg.outcomeLabel}
+          className='rounded-full bg-brand-green/15 px-2 py-0.5 text-xs font-bold text-black uppercase'
+        >
+          {legPickLabel(leg)}
         </span>
         {unavailable ? (
           <span className='text-xs font-semibold text-error'>

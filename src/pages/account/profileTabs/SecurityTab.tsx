@@ -73,23 +73,29 @@ const SecurityTab = () => {
         }
       },
     },
-    {
-      id: 'generate-backup-codes',
-      label: 'Generate Backup Codes',
-      description: 'Generate backup codes for two-factor authentication',
-      onClick: () => {
-        handleModalOpen('generate-backup-codes')
-      },
-    },
+    // Backup codes only exist once 2FA is on.
+    ...(user?.mfaEnabled
+      ? [
+          {
+            id: 'generate-backup-codes',
+            label: 'Generate Backup Codes',
+            description: 'Generate backup codes for two-factor authentication',
+            onClick: () => {
+              handleModalOpen('generate-backup-codes')
+            },
+          },
+        ]
+      : []),
 
-    {
-      id: 'login-activity',
-      label: 'Login Activity',
-      description: 'See devices and locations',
-      onClick: () => {
-        console.log('Navigate to login activity')
-      },
-    },
+    // Hidden until login activity is built.
+    // {
+    //   id: 'login-activity',
+    //   label: 'Login Activity',
+    //   description: 'See devices and locations',
+    //   onClick: () => {
+    //     console.log('Navigate to login activity')
+    //   },
+    // },
   ]
 
   return (

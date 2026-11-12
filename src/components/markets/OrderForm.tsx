@@ -34,6 +34,7 @@ import useAuthNavigate from '../../hooks/useAuthNavigate'
 import useMarketOpen from '../../hooks/useMarketOpen'
 import useBonusSlip from '../../hooks/useBonusSlip'
 import BonusSlipToggle from '../bonus/BonusSlipToggle'
+import { shortOutcomeLabel, teamsFromTitle } from '../../utils/teamNames'
 import { BONUS_KYC_CODE } from '../../utils/bonus'
 import { KYC_PATH } from '../../utils/authRedirect'
 import type { FundedBy } from '../../types/bonus.types'
@@ -469,6 +470,17 @@ const OrderForm = ({
     }
   }
 
+  // Team outcomes read as codes on the buttons ("Manchester City" → "MAN"),
+  // like the match cards; full name stays in the tooltip.
+  const slipTeams =
+    market.teams && market.teams.length >= 2 ? market.teams : null
+  const outcomeShort = shortOutcomeLabel(
+    slipTeams
+      ? slipTeams.map((t) => t.name)
+      : teamsFromTitle(market.eventTitle ?? ''),
+    slipTeams ? slipTeams.map((t) => t.shortName) : [],
+  )
+
   return (
     <>
       {/* Outcome selector */}
@@ -487,7 +499,7 @@ const OrderForm = ({
                 clearBetError()
                 onSelectOutcome(o)
               }}
-              title={noBonus ?? undefined}
+              title={noBonus ?? o.label}
               className={`flex min-w-0 flex-1 flex-col items-center rounded-lg border py-2 text-sm font-bold transition-colors ${
                 active
                   ? TONE_STYLES[tone].active
@@ -497,7 +509,7 @@ const OrderForm = ({
               <span className='flex w-full min-w-0 items-center justify-center gap-1.5'>
                 <TeamLogo team={findTeam(market.teams, o.label)} size={16} />
                 <span className='min-w-0 truncate text-center uppercase'>
-                  {o.label}
+                  {outcomeShort(o.label)}
                 </span>
               </span>
               <span>{priceLabel(market, o)}</span>
@@ -769,7 +781,9 @@ const OrderForm = ({
         }
         variation='primary'
         size='large'
-        className='w-full'
+        // shrink-0: in the mobile slip's scrolling flex column, overflow
+        // would otherwise squash the button's height.
+        className='w-full shrink-0'
         loading={isPending}
         disabled={
           !isOpen ||
