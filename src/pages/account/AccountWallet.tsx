@@ -1,5 +1,10 @@
 import { useModalControl } from '../../hooks/useModalControl'
-import { formatCurrency, formatDate, toMajorUnits } from '../../utils/functions'
+import {
+  formatCurrency,
+  formatDate,
+  toMajorUnits,
+  withdrawableBalance,
+} from '../../utils/functions'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons'
 import { useEffect, useRef, useState } from 'react'
@@ -180,6 +185,13 @@ const AccountWallet = () => {
                       wallet?.currency,
                     )
                   : '••••••'}
+              </span>
+              {/* Not all of the balance can be cashed out: only winnings. */}
+              <span className='-mt-1 text-xs text-neutral-10'>
+                {visible
+                  ? formatCurrency(withdrawableBalance(wallet), wallet?.currency)
+                  : '••••••'}{' '}
+                withdrawable
               </span>
 
               <div className='flex flex-row items-center gap-2.5'>

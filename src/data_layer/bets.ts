@@ -119,12 +119,12 @@ export const useBets = (status?: string, limit = 20) =>
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   })
 
-export const useBetPositions = (status?: string, limit = 20) =>
+export const useBetPositions = (status?: string, limit = 20, enabled = true) =>
   useSantiBetInfiniteQuery<BetPositionListResponse>({
     path: '/bets/positions',
     queryKey: ['bet-positions', { status, limit }],
     params: { status, limit },
-    enabled: true,
+    enabled,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   })
 

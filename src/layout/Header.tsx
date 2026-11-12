@@ -263,10 +263,10 @@ const Header = () => {
   const { events: liveBets } = useLiveBets({ limit: 100 })
   const liveCount = liveBets.length
 
-  // Total Balance = cash + the live value of open positions, from the server
-  // summary so it covers every position, not just one page of them.
+  // The top bar shows only what the user can spend: Balance (cash) and Bonus.
+  // Total Balance (cash + stakes on live bets) lives on the My Bets page. The
+  // summary is still read here to catch settlements (below).
   const { data: portfolio } = usePortfolioSummary()
-  const openPositionsValue = toMajorUnits(portfolio?.currentValue.amount ?? 0)
 
   // Backstop for the notification stream: a bet settling or being voided moves
   // a position from open to settled (and pays out or refunds), so when the
@@ -284,7 +284,6 @@ const Header = () => {
       queryClient.invalidateQueries({ queryKey: WALLET_TRANSACTIONS_KEY })
     }
   }, [settledCount, queryClient])
-  const portfolioValue = toMajorUnits(wallet?.total ?? 0) + openPositionsValue
 
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -355,15 +354,6 @@ const Header = () => {
           </main>
           {user ? (
             <div className='flex items-center gap-1.5'>
-              <Link
-                to='/account-portfolio'
-                className='shrink-0 hidden md:flex flex-col items-center gap-px rounded-md px-3 text-xs font-semibold text-black py-1 hover:bg-hover/70'
-              >
-                <span>
-                  {formatCurrency(String(portfolioValue), wallet?.currency)}
-                </span>
-                <span className='text-[10px] text-neutral-10'>Total Balance</span>
-              </Link>
               <Link
                 to='/account-wallet'
                 className='shrink-0 flex flex-col items-center gap-px rounded-md px-3 text-xs font-semibold text-black py-1 hover:bg-hover/70'

@@ -37,7 +37,12 @@ import {
 } from '../../data_layer/bets'
 import { useSantiBetQuery } from '../../data_layer/utils'
 import { useModalControl } from '../../hooks/useModalControl'
-import { spendableBalance } from '../../utils/functions'
+import {
+  openStakeSplit,
+  spendableBalance,
+  toMajorUnits,
+  withdrawableBalance,
+} from '../../utils/functions'
 import type { Bet, BetPosition } from '../../types/bet.types'
 import type { WalletBalance } from '../../types/wallet.types'
 
@@ -96,6 +101,25 @@ const AccountPortfolio = () => {
     () => sortPositionRows(positions, openCombos, search, positionSort),
     [positions, openCombos, search, positionSort],
   )
+
+  // Stake on live bets, split into cash and bonus for the summary card. The
+  // server's `openStake` is authoritative; only an older API that omits it
+  // falls back to summing every open position (plus open combos) here.
+  const needStakeFallback = !!summary && !summary.openStake
+  const stakeQuery = useBetPositions('open', 100, needStakeFallback)
+  const openStake = useMemo(() => {
+    if (summary?.openStake) {
+      return {
+        cash: toMajorUnits(summary.openStake.cash.amount),
+        bonus: toMajorUnits(summary.openStake.bonus.amount),
+      }
+    }
+    if (!stakeQuery.data) return undefined
+    return openStakeSplit(
+      flatten<BetPosition>(stakeQuery.data.pages),
+      stakeQuery.data.pages[0]?.combos ?? [],
+    )
+  }, [summary, stakeQuery.data])
 
   const orders = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -180,6 +204,8 @@ const AccountPortfolio = () => {
       <PortfolioSummaryCards
         summary={summary}
         cash={spendableBalance(wallet)}
+        withdrawable={wallet ? withdrawableBalance(wallet) : undefined}
+        openStake={openStake}
         loading={summaryLoading}
         onDeposit={() => handleModalOpen('deposit')}
         onWithdraw={() => handleModalOpen('withdraw')}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import ModalComponent, { type ModalProps } from '../globals/ModalComponent'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons'
@@ -22,6 +22,7 @@ import {
   formatCurrency,
   toMajorUnits,
   toMinorUnits,
+  withdrawableBalance,
 } from '../../utils/functions'
 
 type WithdrawalQuoteResponse = BaseApiResponse & {
@@ -93,18 +94,26 @@ const Withdraw = ({
   )
   const isCryptoSelected = selectedAccount?.type === 'crypto'
 
-  useEffect(() => {
-    if (!open) return
-    setAmount('')
-    setAmountError('')
-    setConfirmOpen(false)
-    setWithdrawalId('')
-    setStep('form')
-    setQuote(null)
-    setPendingWithdrawal(null)
-    setSelectedAccountId(bankAccounts[0]?.id ?? cryptoAccounts[0]?.id ?? '')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, accountsData])
+  // Fresh form each time the modal opens, and again once the saved accounts
+  // load (to preselect the first). Done during render rather than in an effect
+  // (react.dev/learn/you-might-not-need-an-effect) so the reset lands before
+  // the opened modal first paints.
+  const [prevOpen, setPrevOpen] = useState(false)
+  const [prevAccountsData, setPrevAccountsData] = useState(accountsData)
+  if (open !== prevOpen || accountsData !== prevAccountsData) {
+    setPrevOpen(open)
+    setPrevAccountsData(accountsData)
+    if (open) {
+      setAmount('')
+      setAmountError('')
+      setConfirmOpen(false)
+      setWithdrawalId('')
+      setStep('form')
+      setQuote(null)
+      setPendingWithdrawal(null)
+      setSelectedAccountId(bankAccounts[0]?.id ?? cryptoAccounts[0]?.id ?? '')
+    }
+  }
 
   const navigate = useNavigate()
 
@@ -199,7 +208,8 @@ const Withdraw = ({
     },
   })
 
-  const winningBalance = toMajorUnits(wallet?.winnings ?? 0)
+  // Only winnings can be withdrawn; deposits have to be bet first.
+  const winningBalance = withdrawableBalance(wallet)
 
   const validateAmount = () => {
     const numeric = Number(amount)
@@ -214,7 +224,7 @@ const Withdraw = ({
       return null
     }
     if (numeric > winningBalance) {
-      setAmountError('Amount exceeds your winning balance')
+      setAmountError('Amount exceeds your withdrawable balance')
       return null
     }
     if (!selectedAccountId) {
@@ -350,15 +360,19 @@ const Withdraw = ({
           </div>
         ) : (
           <div className='flex flex-col gap-4'>
-            <p className='text-sm font-semibold text-neutral-10'>
-              Winning Balance:{' '}
-              <span className='text-black'>
-                {formatCurrency(
-                  toMajorUnits(wallet?.winnings ?? 0),
-                  wallet?.currency,
-                )}
-              </span>
-            </p>
+            <div className='flex flex-col gap-1'>
+              <p className='text-sm font-semibold text-neutral-10'>
+                Withdrawable:{' '}
+                <span className='text-black'>
+                  {formatCurrency(winningBalance, wallet?.currency)}
+                </span>
+              </p>
+              <p className='text-xs text-neutral-10'>
+                Only winnings can be withdrawn — deposits have to be bet first.
+                The withdrawal fee is taken from this balance on top of the
+                amount you request.
+              </p>
+            </div>
             <div className='flex flex-col gap-1.5'>
               <span className='text-xs font-medium text-neutral-10'>
                 Withdraw to
