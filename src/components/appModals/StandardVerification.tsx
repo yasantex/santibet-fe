@@ -13,6 +13,11 @@ import KycDocumentUpload, {
 import { useSantiBetMutation } from '../../data_layer/utils'
 import { showSuccessToast } from '../../utils/toastUtils'
 import { kycStatusBadge } from '../../utils/status'
+import {
+  isAdult,
+  latestAdultBirthDate,
+  UNDERAGE_MESSAGE,
+} from '../../utils/age'
 import type { KycStatusResponse } from '../../types/types'
 
 type KycPayload = {
@@ -107,6 +112,7 @@ const StandardVerification = ({
     },
 
     onSubmit: async (vals) => {
+      if (!isAdult(vals.dateOfBirth)) return
       try {
         await postVerify(vals)
       } catch {
@@ -125,7 +131,12 @@ const StandardVerification = ({
   }
 
   const totalSteps = method === 'upload' ? UPLOAD_STEPS : MANUAL_STEPS.length
-  const stepComplete = MANUAL_STEPS[step]?.every((f) => values[f].trim())
+  // 18+ only: an under-age date of birth can't be submitted.
+  const dobError =
+    values.dateOfBirth && !isAdult(values.dateOfBirth) ? UNDERAGE_MESSAGE : ''
+  const stepComplete =
+    MANUAL_STEPS[step]?.every((f) => values[f].trim()) &&
+    !(MANUAL_STEPS[step]?.includes('dateOfBirth') && dobError)
   const isLastStep = step === MANUAL_STEPS.length - 1
 
   const manualSecondary =
@@ -260,11 +271,14 @@ const StandardVerification = ({
                 <DateInput
                   value={values.dateOfBirth}
                   onChange={(date) => setFieldValue('dateOfBirth', date ?? '')}
+                  maxDate={latestAdultBirthDate()}
+                  minDate={new Date(1900, 0, 1)}
                   placeholder='Date of birth'
                   errors={
-                    errors.dateOfBirth && touched.dateOfBirth
+                    dobError ||
+                    (errors.dateOfBirth && touched.dateOfBirth
                       ? errors.dateOfBirth
-                      : ''
+                      : '')
                   }
                   containerClassName='w-full'
                 />

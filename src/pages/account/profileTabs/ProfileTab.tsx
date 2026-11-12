@@ -7,6 +7,7 @@ import { showSuccessToast, showWarningToast } from '../../../utils/toastUtils'
 import { FormInput } from '../../../components/globals/FormInput'
 import DateInput from '../../../components/globals/DateInput'
 import { UpdateProfileSchema } from '../../../utils/validations'
+import { latestAdultBirthDate } from '../../../utils/age'
 import { setUser } from '../../../redux/userSlice'
 import { useDispatch } from 'react-redux'
 import useAccountSuspended from '../../../hooks/useAccountSuspended'
@@ -145,7 +146,9 @@ const ProfileTab = ({ user, refetch }: ProfileTabProps) => {
           <h2 className='text-sm text-neutral-10 mb-0.5'>Date of birth</h2>
           <DateInput
             value={(values.dateOfBirth ?? '') as unknown as string}
-            onChange={(date) => setFieldValue('dateOfBirth', date)}
+            onChange={(date) => setFieldValue('dateOfBirth', date, true)}
+            maxDate={latestAdultBirthDate()}
+            minDate={new Date(1900, 0, 1)}
             placeholder='select date of birth'
             errors={
               errors.dateOfBirth && touched.dateOfBirth

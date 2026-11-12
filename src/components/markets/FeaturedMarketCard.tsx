@@ -20,10 +20,10 @@ import type {
 import { chartTimeLabel, useMarketCharts } from '../../data_layer/markets'
 import { LINE_COLORS, mergeSeries } from '../../utils/eventChart'
 import { useCountdown } from '../../hooks/useCountdown'
+import { useOddsFormat } from '../../hooks/useOddsFormat'
 import { formatNairaCompact, formatSharePrice } from '../../utils/functions'
 import {
   categoryIcon,
-  chanceLabel,
   marketDisplayTitle,
   siblingShortLabels,
 } from '../../utils/marketDisplay'
@@ -80,6 +80,7 @@ const FeaturedMarketCard = ({
   onSelectOutcome,
   controls,
 }: FeaturedMarketCardProps) => {
+  const { format, chanceLabel } = useOddsFormat()
   const markets = useMemo(() => {
     const tradeable = event.markets.filter((m) => m.yes)
     const open = tradeable.filter((m) => m.status === 'open')
@@ -254,7 +255,7 @@ const FeaturedMarketCard = ({
                 {chanceLabel(lead.yes)}
               </span>
               <span className='text-sm font-semibold text-placeholder'>
-                chance
+                {format === 'odds' ? 'odds' : 'chance'}
               </span>
             </div>
           )}
