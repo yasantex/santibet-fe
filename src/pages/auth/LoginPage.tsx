@@ -28,6 +28,7 @@ import type {
 } from '../../types/passkey.types'
 import {
   browserPromptErrorMessage,
+  clearPasskeyOfferPending,
   isChallengeError,
   markPasskeyOfferPending,
   passkeyApiMessage,
@@ -175,6 +176,9 @@ const LoginPage = () => {
 
   // A brand-new account goes straight to its profile to finish setting up.
   const handleAuthSuccess = (data: AuthResponse, isNewAccount = false) => {
+    // Only a password sign-in queues the passkey offer (right after this
+    // runs), so a stale one never reaches a new or differently signed-in user.
+    clearPasskeyOfferPending()
     if (data?.mfaRequired) {
       const params = new URLSearchParams({ authToken: data?.challengeId ?? '' })
       if (redirectTo) params.set(AUTH_REDIRECT_PARAM, redirectTo)
@@ -259,9 +263,10 @@ const LoginPage = () => {
             handleMutationError(error)
           },
           onSuccess: (data) => {
-            // Offer "Add a passkey for next time" once they land in the app.
-            if (supportsPasskeys) markPasskeyOfferPending()
             handleAuthSuccess(data)
+            // Offer "Add a passkey for next time" once they land in the app.
+            // Returning players only — new accounts set one up from Security.
+            if (supportsPasskeys) markPasskeyOfferPending()
           },
         },
       },

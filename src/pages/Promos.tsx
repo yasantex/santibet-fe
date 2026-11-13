@@ -88,13 +88,15 @@ const Promos = () => {
             one comes with a bonus.
           </p>
           {!user && (
-            <Button
+            // Plain button: the shared Button forces black text in dark
+            // mode, which vanished on this black pill.
+            <button
               type='button'
-              text='Sign up now'
-              size='medium'
               onClick={() => authNavigate('/signup', '/bonuses')}
-              className='mt-2 w-fit! bg-[#000000]! px-6 text-white!'
-            />
+              className='mt-2 h-10 w-fit cursor-pointer rounded-full bg-[#000000] px-6 text-sm font-semibold text-[#ffffff] transition-opacity hover:opacity-80'
+            >
+              Sign up now
+            </button>
           )}
         </div>
       </section>

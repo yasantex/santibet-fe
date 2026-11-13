@@ -89,6 +89,16 @@ export const markPasskeyOfferPending = () => {
   }
 }
 
+/** Drop a queued offer, e.g. one left over from an earlier sign-in in this
+ *  tab. New accounts never get the offer — they add passkeys from Security. */
+export const clearPasskeyOfferPending = () => {
+  try {
+    sessionStorage.removeItem(OFFER_PENDING_KEY)
+  } catch {
+    // Nothing stored.
+  }
+}
+
 export const isPasskeyOfferPending = () => {
   try {
     return (
