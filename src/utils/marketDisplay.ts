@@ -1,4 +1,5 @@
 import { formatSharePrice } from './functions'
+import { formatOdds, outcomeOdds } from './odds'
 import type { EventTeam, UiMarket } from '../types/market.types'
 
 const foldName = (s: string) =>
@@ -211,7 +212,7 @@ export const isPoolMarket = (market: { executionModel?: string | null }) =>
 /**
  * What an outcome button shows: the share price ("₦63"), or on a pool market —
  * which has no share price — its chance ("54%") or, if the user switched the
- * odds format, its current odds ("×1.68"). Never both. A share price
+ * odds format, its current odds ("1.68x"). Never both. A share price
  * already reads as a percentage (₦63 = 63%), so it's left as is.
  */
 /** How a pool market's outcomes are priced: payout odds or implied chance. */
@@ -229,9 +230,7 @@ export const outcomePriceLabel = (
 ): string => {
   if (!isPoolMarket(market)) return formatSharePrice(outcome.cents)
   if (format === 'percent') return `${outcome.percent}%`
-  const odds =
-    outcome.decimalOdds ?? (outcome.price > 0 ? 1 / outcome.price : 0)
-  return odds > 0 ? `×${odds.toFixed(2)}` : '—'
+  return formatOdds(outcomeOdds(outcome))
 }
 
 /** Badge text for a market's status ("settled" reads as "Resolved"). */
@@ -466,7 +465,7 @@ export const CARD_HOVER_SOFT =
 
 /**
  * An outcome's chance in the user's odds format: "58%" ("<1%" rather than a
- * misleading "0%" for long shots, as percent is rounded), or "×1.73" when
+ * misleading "0%" for long shots, as percent is rounded), or "1.73x" when
  * they picked decimal odds. Read it through `useOddsFormat().chanceLabel` so
  * it follows the menu.
  */
@@ -475,10 +474,7 @@ export const chanceLabel = (
   format: OddsFormat = 'percent',
 ) => {
   const price = outcome?.price ?? 0
-  if (format === 'odds') {
-    const odds = outcome?.decimalOdds ?? (price > 0 ? 1 / price : 0)
-    return odds > 0 ? `×${odds.toFixed(2)}` : '—'
-  }
+  if (format === 'odds') return formatOdds(outcomeOdds(outcome))
   const pct = price * 100
   return pct > 0 && pct < 1 ? '<1%' : `${Math.round(pct)}%`
 }

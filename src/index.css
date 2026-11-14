@@ -71,25 +71,29 @@ body {
   --color-surface-base: #ddf1e4;
   --color-black: #000000;
   --color-text-black: #000000;
-  --color-neutral-10: #7F7F7F;
+  /* Light-theme text colours clear WCAG AA (4.5:1) on white AND on the grey
+     card surface (#e4e5e3) and pastel tints (SB-049). The old values were
+     #7F7F7F 3.2:1, #22c55e 1.8:1, #ff6347 2.3:1 and #ff8000 2.0:1 on cards.
+     Dark mode keeps its own values (see .dark). */
+  --color-neutral-10: #5f6360;
   --font-outfit: 'Outfit', sans-serif;
   --background: #ffffff;
-  --color-error: #ff6347;
+  --color-error: #c0261a;
   --color-error-bg: #fff0ed;
   --color-surface-error: #fff0ed;
-  --color-border-error: #ff6347;
+  --color-border-error: #c0261a;
   --color-border: #e4e5e3;
   --color-hover: #eaeaea;
   --color-surface-hover: #9aa09c;
-  --color-success: #22c55e;
+  --color-success: #14703a;
   --color-surface-success: #eefcf3;
   --color-brand-green: #c6f135;
   --color-card: #e4e5e3;
-  --color-warning: #ff8000;
+  --color-warning: #a34a08;
   --color-success-bg: #eefcf3;
   --color-error-bg: #fff0ed;
   --color-glass: #e4e5e3;
-  --color-placeholder: #6b706d;
+  --color-placeholder: #5f6360;
   --color-market-success: #ecf9f1;
   --color-market-error: #fcebeb;
   --color-market-warning: #fdf1e5;
@@ -133,6 +137,11 @@ body {
   --color-surface-base: #12301f;
   --color-surface-hover: #2c3330;
   --color-plain: #22262a;
+  /* Status colours: the bright originals read well on dark surfaces. */
+  --color-success: #22c55e;
+  --color-error: #ff6347;
+  --color-border-error: #ff6347;
+  --color-warning: #ff8000;
 }
 
 /* Brand green is light in both themes, so whatever sits on it stays dark —

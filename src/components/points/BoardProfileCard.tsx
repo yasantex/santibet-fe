@@ -92,8 +92,8 @@ const BoardProfileCard = () => {
         </span>
         <span className='text-xs text-neutral-10'>
           {optedIn
-            ? 'Only your handle is ever shown — never your name or number.'
-            : 'Boards are opt-in. Pick a handle to appear — only your handle is shown, never your name or number.'}
+            ? 'Only your handle is ever shown, never your name or number.'
+            : 'Boards are opt-in. Pick a handle to appear. Only your handle is shown, never your name or number.'}
         </span>
       </div>
 

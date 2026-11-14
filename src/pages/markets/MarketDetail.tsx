@@ -49,6 +49,7 @@ import type { ChartMode, ChartPoint, UiOutcome } from '../../types/market.types'
 import { useCategoryCrumbs } from '../../hooks/useCategoryCrumbs'
 import PageNav from '../../components/globals/PageNav'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
+import OddsFormatMenu from '../../components/markets/OddsFormatMenu'
 import Seo from '../../seo/Seo'
 import { toDescription } from '../../seo/seoUtils'
 
@@ -71,7 +72,7 @@ const MarketDetail = () => {
   const [userPickedMode, setUserPickedMode] = useState(false)
   // Sports markets take a single bet or a combo leg; null = not picked yet.
   const [sportsMode, setSportsMode] = useState<'single' | 'combo' | null>(null)
-  const { priceLabel } = useOddsFormat()
+  const { priceLabel, chanceLabel, format: oddsFormat } = useOddsFormat()
 
   const eventId = searchParams.get('event') ?? undefined
   // Markets the stream can't push live prices for; poll those instead.
@@ -415,13 +416,17 @@ const MarketDetail = () => {
             <div className='flex flex-wrap items-center justify-between gap-2'>
               <div className='flex items-baseline gap-2'>
                 <span className='text-2xl font-bold text-black'>
-                  {selectedOutcome?.percent ?? 0}%
+                  {chanceLabel(selectedOutcome)}
                 </span>
                 <span className='text-sm text-neutral-10'>
                   {selectedOutcome?.label}
+                  {oddsFormat === 'odds' ? ' · odds' : ' · chance'}
                 </span>
               </div>
-              <ChartRangeTabs value={chartMode} onChange={pickChartMode} />
+              <div className='flex items-center gap-2'>
+                <ChartRangeTabs value={chartMode} onChange={pickChartMode} />
+                <OddsFormatMenu />
+              </div>
             </div>
             <div className='h-56 w-full'>
               {chartData.length > 1 ? (

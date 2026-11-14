@@ -12,6 +12,8 @@ import {
   isBonusPosition,
   isPoolPosition,
 } from '../../utils/functions'
+import { useOddsFormat } from '../../hooks/useOddsFormat'
+import { formatOdds, oddsFromPrice } from '../../utils/odds'
 import { POSITION_GRID, type PositionRow as Row } from './positionRows'
 
 const Cell = ({
@@ -29,8 +31,30 @@ const Cell = ({
   </div>
 )
 
+/** "from → to", or just "from" when there's no current figure. */
+const MoveLine = ({
+  from,
+  to,
+  className = '',
+}: {
+  from: string
+  to: string | null
+  className?: string
+}) => (
+  <span className={`flex items-center gap-1 ${className}`}>
+    {from}
+    {to && (
+      <>
+        <HugeiconsIcon icon={ArrowRight02Icon} size={12} />
+        {to}
+      </>
+    )}
+  </span>
+)
+
 const PositionRow = ({ row }: { row: Extract<Row, { kind: 'position' }> }) => {
   const { position } = row
+  const { format: oddsFormat } = useOddsFormat()
   const pool = isPoolPosition(position)
   const outcomeLabel = position.outcomeLabel ?? ''
   const avg = Number(position.avgPrice) || 0
@@ -77,16 +101,21 @@ const PositionRow = ({ row }: { row: Extract<Row, { kind: 'position' }> }) => {
 
       <Cell label='Odds: Bought → Now' className='text-neutral-10'>
         {pool ? (
-          '—'
+          '-'
         ) : (
-          <span className='flex items-center gap-1'>
-            {formatSharePrice(avg)}
-            {now > 0 && (
-              <>
-                <HugeiconsIcon icon={ArrowRight02Icon} size={12} />
-                {formatSharePrice(now)}
-              </>
-            )}
+          // The user's format leads and the other reads underneath, so the
+          // share price and its decimal odds are both on screen (SB-042).
+          <span className='flex flex-col'>
+            <MoveLine
+              from={oddsFormat === 'odds' ? formatOdds(oddsFromPrice(avg)) : formatSharePrice(avg)}
+              to={now > 0 ? (oddsFormat === 'odds' ? formatOdds(oddsFromPrice(now)) : formatSharePrice(now)) : null}
+              className='text-black'
+            />
+            <MoveLine
+              from={oddsFormat === 'odds' ? formatSharePrice(avg) : formatOdds(oddsFromPrice(avg))}
+              to={now > 0 ? (oddsFormat === 'odds' ? formatSharePrice(now) : formatOdds(oddsFromPrice(now))) : null}
+              className='text-xs'
+            />
           </span>
         )}
       </Cell>
@@ -99,7 +128,7 @@ const PositionRow = ({ row }: { row: Extract<Row, { kind: 'position' }> }) => {
       <Cell label='Cash Out Value'>
         {row.value == null ? (
           <span className='flex flex-col'>
-            <span className='font-semibold text-black'>—</span>
+            <span className='font-semibold text-black'>-</span>
             <span className='text-xs text-neutral-10'>Settles at close</span>
           </span>
         ) : (
@@ -156,7 +185,7 @@ const ComboRow = ({ row }: { row: Extract<Row, { kind: 'combo' }> }) => {
             {row.title}
           </span>
           <div className='flex min-w-0 items-center gap-2'>
-            <OutcomeChip label={`×${Number(combo.combinedOdds).toFixed(2)}`} />
+            <OutcomeChip label={formatOdds(combo.combinedOdds)} />
             <span className='truncate text-xs text-neutral-10'>
               {combo.legs
                 .map((l) => l.outcomeLabel ?? l.market?.title ?? '')
@@ -167,7 +196,7 @@ const ComboRow = ({ row }: { row: Extract<Row, { kind: 'combo' }> }) => {
         </div>
       </div>
       <Cell label='Odds: Bought → Now' className='text-neutral-10'>
-        —
+        -
       </Cell>
       <Cell label='Stake' className='text-neutral-10'>
         {formatCurrency(row.traded)}
@@ -177,7 +206,7 @@ const ComboRow = ({ row }: { row: Extract<Row, { kind: 'combo' }> }) => {
       </Cell>
       <Cell label='Cash Out Value'>
         <span className='flex flex-col'>
-          <span className='font-semibold text-black'>—</span>
+          <span className='font-semibold text-black'>-</span>
           <span className='text-xs text-neutral-10'>
             {combo.legs.filter((l) => l.status === 'WON').length}/
             {combo.legs.length} legs won

@@ -54,7 +54,7 @@ export const useOddsFormat = () => {
     [format],
   )
 
-  // An outcome's chance ("58%") or, in decimal mode, its odds ("×1.73").
+  // An outcome's chance ("58%") or, in decimal mode, its odds ("1.73x").
   const chanceLabel = useCallback(
     (outcome: Parameters<typeof formatChance>[0]) =>
       formatChance(outcome, format),

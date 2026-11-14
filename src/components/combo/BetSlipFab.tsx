@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { TicketStarIcon } from '@hugeicons/core-free-icons'
 import { useComboSlip } from '../../hooks/useComboSlip'
 import { FAB_STACK_CLASS, useSupport } from '../../support/supportContext'
+import { formatOdds } from '../../utils/odds'
 
 /** Sports browsing surfaces where a combo can be built. */
 const isSportsSurface = (pathname: string) =>
@@ -50,7 +51,7 @@ const BetSlipFab = ({ onClick }: { onClick: () => void }) => {
           {empty
             ? 'Tap outcomes to start'
             : combinedOdds > 0
-              ? `×${combinedOdds.toFixed(2)} odds`
+              ? `${formatOdds(combinedOdds)} odds`
               : `${legCount} selection${legCount > 1 ? 's' : ''}`}
         </span>
       </span>

@@ -13,6 +13,7 @@ import {
 import TeamLogo from '../markets/TeamLogo'
 import type { UiMarket } from '../../types/market.types'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
+import { formatOdds } from '../../utils/odds'
 
 /**
  * Right-rail panel on a SPORTS market detail page. Instead of the TradePanel
@@ -82,7 +83,7 @@ const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
           {combo.legCount} selection{combo.legCount > 1 ? 's' : ''} in your bet
           slip
           {combo.combinedOdds > 0
-            ? ` · ×${combo.combinedOdds.toFixed(2)}`
+            ? ` · ${formatOdds(combo.combinedOdds)}`
             : ''}
         </p>
       ) : (

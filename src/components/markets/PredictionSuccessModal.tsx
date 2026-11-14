@@ -205,7 +205,7 @@ const PredictionSuccessModal = ({
         <div className='flex flex-col gap-2'>
           {isBonus ? (
             <p className='text-center text-xs text-neutral-10'>
-              Bonus bets can’t be cashed out — this one settles when the market
+              Bonus bets can’t be cashed out. This one settles when the market
               resolves.
             </p>
           ) : pool ? (

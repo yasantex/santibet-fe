@@ -18,7 +18,7 @@
 
 export const REFERRAL_PARAM = 'ref'
 export const REFERRAL_HINT =
-  'Got a code from a friend or partner? Enter it now — it can’t be added later.'
+  'Got a code from a friend or partner? Enter it now. It can’t be added later.'
 
 const REFERRAL_STORAGE_KEY = 'santibet_referral_code'
 const AFFILIATE_STORAGE_KEY = 'santibet_affiliate_code'

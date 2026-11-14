@@ -39,6 +39,8 @@ const VerifyEmail = ({
           }
         },
         onSuccess: () => {
+          // Already on the code step means this was a resend.
+          if (step === 'otp') showSuccessToast('Code resent')
           setStep('otp')
         },
       },
@@ -176,6 +178,21 @@ const VerifyEmail = ({
             loading={isPending}
             disabled={isPending}
           />
+
+          {!isPhone && (
+            <p className='text-xs text-center text-neutral-10'>
+              Can’t find it? Check your spam or junk folder, and mark the email
+              as “Not spam” so the next one lands in your inbox.
+            </p>
+          )}
+          <button
+            type='button'
+            onClick={() => inputForm.submitForm()}
+            disabled={isRequesting}
+            className='text-sm text-center text-neutral-10 cursor-pointer hover:text-black underline underline-offset-3 disabled:opacity-50 disabled:no-underline'
+          >
+            {isRequesting ? 'Sending…' : 'Didn’t get a code? Resend'}
+          </button>
         </form>
       )}
     </ModalComponent>

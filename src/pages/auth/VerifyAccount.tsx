@@ -119,6 +119,12 @@ const VerifyAccountPage = () => {
           ? `We sent a code to ${user?.phone ?? 'your phone number'}.`
           : `We sent a code to ${user?.email ?? 'your email address'}.`}
       </p>
+      {type !== 'phone' && (
+        <p className='text-xs text-center text-neutral-10'>
+          Can’t find it? Check your spam or junk folder, and mark the email as
+          “Not spam” so the next one lands in your inbox.
+        </p>
+      )}
 
       <form
         onSubmit={handleSubmit}
