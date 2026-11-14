@@ -117,6 +117,7 @@ const AccountProfile = () => {
             refetchKyc={refetchKyc}
             profile={profile}
             onGoToProfile={() => setActiveTab('profile')}
+            onProfileUpdated={refetch}
           />
         ))}
 

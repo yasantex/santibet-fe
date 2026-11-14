@@ -51,7 +51,7 @@ const BadgeCelebration = () => {
           </h2>
           <p className='text-sm text-neutral-10'>
             {fresh.length === 1
-              ? `${fresh[0].name} — ${fresh[0].description}`
+              ? `${fresh[0].name}: ${fresh[0].description}`
               : fresh.map((b) => b.name).join(', ')}
           </p>
         </div>

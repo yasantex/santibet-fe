@@ -31,7 +31,7 @@ const SuspendedBanner = () => {
         className='shrink-0 text-warning'
       />
       <span className='flex-1'>
-        <span className='font-semibold'>Account suspended — viewing only.</span>{' '}
+        <span className='font-semibold'>Account suspended: viewing only.</span>{' '}
         <span className='text-neutral-10'>
           You can browse, but changes are disabled.{' '}
           {chatAvailable ? (

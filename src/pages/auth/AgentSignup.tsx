@@ -22,7 +22,7 @@ import {
 } from '../../utils/validations'
 
 const CODE_LENGTH = 6
-const ASK_AGENT = 'ask the agent to send a new one.'
+const ASK_AGENT = 'Ask the agent to send a new one.'
 
 // Errors that belong to one field are shown under it; the rest go in a
 // banner above the form.
@@ -37,9 +37,9 @@ const describeError = (error: unknown): FormError | BannerError => {
   if (code === 'AGENT_CODE_INVALID')
     return { field: 'code', message: 'That code is not right' }
   if (code === 'AGENT_CODE_EXPIRED')
-    return { message: `Code expired — ${ASK_AGENT}` }
+    return { message: `Code expired. ${ASK_AGENT}` }
   if (code === 'AGENT_CODE_ATTEMPTS' || status === 429)
-    return { message: `Too many tries — ${ASK_AGENT}` }
+    return { message: `Too many tries. ${ASK_AGENT}` }
   if (code === 'WEAK_PASSWORD')
     return {
       field: 'password',
@@ -51,7 +51,7 @@ const describeError = (error: unknown): FormError | BannerError => {
     return {
       message: (
         <>
-          This number already has an account —{' '}
+          This number already has an account.{' '}
           <Link
             to='/signin'
             className='font-semibold underline underline-offset-3'

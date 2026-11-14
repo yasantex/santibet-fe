@@ -294,7 +294,7 @@ const CashOutButton = ({
                 )}
                 <Row
                   label='You get now'
-                  value={proceeds != null ? formatCurrency(proceeds) : '—'}
+                  value={proceeds != null ? formatCurrency(proceeds) : '-'}
                 />
                 {result != null && (
                   <Row

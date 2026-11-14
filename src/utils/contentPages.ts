@@ -66,7 +66,7 @@ export const KNOWN_CONTENT_PAGES: KnownContentPage[] = [
   {
     slug: 'new-member-bonus',
     route: '/terms/new-member-bonus',
-    title: '₦1,010 Free Deposit — Terms & Conditions',
+    title: '₦1,010 Free Deposit: Terms & Conditions',
     label: 'New member bonus terms',
     fallbackFile: '/contents/new-member-bonus.md',
     hideFromFooter: true,
@@ -74,7 +74,7 @@ export const KNOWN_CONTENT_PAGES: KnownContentPage[] = [
   {
     slug: '1000-bonus',
     route: '/terms/1000-bonus',
-    title: '100% First Deposit Bonus — Terms & Conditions',
+    title: '100% First Deposit Bonus: Terms & Conditions',
     label: 'First deposit bonus terms',
     fallbackFile: '/contents/1000-bonus.md',
     hideFromFooter: true,

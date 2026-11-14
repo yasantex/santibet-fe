@@ -368,7 +368,7 @@ const Withdraw = ({
                 </span>
               </p>
               <p className='text-xs text-neutral-10'>
-                Only winnings can be withdrawn — deposits have to be bet first.
+                Only winnings can be withdrawn. Deposits have to be bet first.
                 The withdrawal fee is taken from this balance on top of the
                 amount you request.
               </p>

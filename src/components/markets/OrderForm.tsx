@@ -39,6 +39,7 @@ import { BONUS_KYC_CODE } from '../../utils/bonus'
 import { KYC_PATH } from '../../utils/authRedirect'
 import type { FundedBy } from '../../types/bonus.types'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
+import { formatOdds, priceAndOdds } from '../../utils/odds'
 
 const QUICK_ADDS = [100, 200, 500, 1000]
 
@@ -84,7 +85,7 @@ const OrderForm = ({
   submitText = 'Place prediction',
   onPlaced,
 }: OrderFormProps) => {
-  const { priceLabel } = useOddsFormat()
+  const { priceLabel, format: oddsFormat } = useOddsFormat()
   const authNavigate = useAuthNavigate()
   const navigate = useNavigate()
   const location = useLocation()
@@ -684,11 +685,20 @@ const OrderForm = ({
 
       {/* Summary */}
       <div className='flex flex-col gap-1.5 border-t border-border/60 pt-3 text-sm'>
+        {outcome && (
+          <div className='flex justify-between gap-3'>
+            <span className='shrink-0 text-neutral-10'>Your pick</span>
+            <span className='min-w-0 truncate text-right font-semibold text-black'>
+              <span className='uppercase'>{outcome.label}</span>
+              {!isPool && ` @ ${formatSharePrice(price)}`}
+            </span>
+          </div>
+        )}
         {!isPool && (
           <div className='flex justify-between'>
             <span className='text-neutral-10'>Price per share</span>
             <span className='font-semibold text-black'>
-              {formatSharePrice(price)}
+              {priceAndOdds(formatSharePrice(price), decimalOdds)}
             </span>
           </div>
         )}
@@ -697,8 +707,9 @@ const OrderForm = ({
             {isPool ? 'Est. odds' : 'Odds'}
           </span>
           <span className='font-semibold text-black'>
-            {decimalOdds > 0 ? decimalOdds.toFixed(2) : '—'}
-            {!isPool && (
+            {formatOdds(decimalOdds)}
+            {/* Percent mode adds the chance; decimal mode is odds only. */}
+            {!isPool && oddsFormat === 'percent' && (
               <span className='font-normal text-neutral-10'>
                 {' '}
                 · {chance}% chance
@@ -726,7 +737,7 @@ const OrderForm = ({
             <span
               className={`font-semibold ${amountValid ? 'text-success' : 'text-black'} ${bonusSlip.quoteLoading ? 'opacity-60' : ''}`}
             >
-              {amountValid ? formatCurrency(bonusSlip.creditOnWin) : '—'}
+              {amountValid ? formatCurrency(bonusSlip.creditOnWin) : '-'}
             </span>
           </div>
         ) : (
@@ -737,7 +748,7 @@ const OrderForm = ({
                 {outcome?.label ?? 'it'} wins
               </span>
               <span className='font-semibold text-black'>
-                {amountValid ? formatCurrency(Math.max(payout, 0)) : '—'}
+                {amountValid ? formatCurrency(Math.max(payout, 0)) : '-'}
               </span>
             </div>
             <div className='flex justify-between'>
@@ -750,7 +761,7 @@ const OrderForm = ({
                   {formatCurrency(Math.abs(profit))}
                 </span>
               ) : (
-                <span className='font-semibold text-black'>—</span>
+                <span className='font-semibold text-black'>-</span>
               )}
             </div>
           </>

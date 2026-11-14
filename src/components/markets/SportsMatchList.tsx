@@ -85,7 +85,7 @@ const Cell = ({
   if (!picks?.length)
     return (
       <div className='hidden items-center justify-center text-xs text-neutral-10 md:flex'>
-        —
+        -
       </div>
     )
   const outcomes = picks.map((p) => p.outcome)

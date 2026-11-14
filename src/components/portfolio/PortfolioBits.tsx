@@ -40,10 +40,11 @@ export const OutcomeChip = ({
       : 'bg-hover text-black'
   return (
     <span
+      title={`Your pick: ${label}${price ? ` @ ${price}` : ''}`}
       className={`max-w-40 truncate rounded px-1.5 py-0.5 text-xs font-semibold ${tone}`}
     >
       {label}
-      {price && ` ${price}`}
+      {price && ` @ ${price}`}
     </span>
   )
 }

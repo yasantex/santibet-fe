@@ -118,7 +118,7 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
         </main>
         {!pool && (
           <div className='flex flex-wrap items-center gap-2 text-sm'>
-            <Chip label='Avg' value={formatSharePrice(avgPrice)} />
+            <Chip label='Your pick @' value={formatSharePrice(avgPrice)} />
             {isOpen && currentPrice > 0 && (
               <Chip label='Now' value={formatSharePrice(currentPrice)} />
             )}
@@ -144,13 +144,13 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
         ) : (
           <div className='flex items-center gap-2.5'>
             <span>
-              {isOpen ? 'Value' : 'Payout'}{' '}
+              {isOpen ? 'Cash Out Value' : 'Payout'}{' '}
               {formatCurrency(String(isOpen ? (value ?? 0) : payout), currency)}
             </span>
             <span
               className={`text-sm font-bold ${isProfit ? 'text-success' : 'text-error'}`}
             >
-              {isOpen && 'Unrealized '}
+              {isOpen && 'Live P/L '}
               {isProfit ? '+' : '-'}
               {formatCurrency(String(Math.abs(pnl)), currency)}
             </span>

@@ -72,8 +72,8 @@ export const referralRewardStatusConfig: StatusConfig[] = [
 ]
 
 export const referralRewardStatusHint: Record<ReferralRewardStatus, string> = {
-  PENDING: 'Owed to you — not sent yet.',
-  SENDING: 'Airtime sent — waiting for the network to confirm.',
+  PENDING: 'Owed to you, not sent yet.',
+  SENDING: 'Airtime sent. Waiting for the network to confirm.',
   PAID: 'Done.',
   FAILED: 'We couldn’t send this. Please contact support.',
   CANCELLED: 'The referral was rejected.',
@@ -144,8 +144,8 @@ export const resolveBadgeIcon = (
 export const HANDLE_PATTERN = /^[A-Za-z0-9_]{3,20}$/
 
 export const handleErrorMessage = (code?: string) => {
-  if (code === 'HANDLE_TAKEN') return 'That handle is already taken — try another.'
-  if (code === 'HANDLE_RESERVED') return 'That handle isn’t available — try another.'
+  if (code === 'HANDLE_TAKEN') return 'That handle is already taken. Try another.'
+  if (code === 'HANDLE_RESERVED') return 'That handle isn’t available. Try another.'
   return undefined
 }
 

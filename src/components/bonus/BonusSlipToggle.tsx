@@ -65,11 +65,11 @@ const BonusSlipToggle = ({ slip }: { slip: BonusSlip }) => {
         </p>
       ) : slip.marketBlockedReason ? (
         <p className='rounded-md bg-warning/10 px-2.5 py-2 text-xs font-medium text-warning'>
-          {slip.marketBlockedReason} — this bet will use your cash balance.
+          {slip.marketBlockedReason}. This bet will use your cash balance.
         </p>
       ) : slip.marketOrdersOnly ? (
         <p className='text-xs text-neutral-10'>
-          Bonus bets are placed at the current price — switch to Market to use
+          Bonus bets are placed at the current price. Switch to Market to use
           your bonus.
         </p>
       ) : slip.active ? (

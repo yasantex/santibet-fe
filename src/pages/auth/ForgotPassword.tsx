@@ -58,7 +58,7 @@ const ForgotPassword = () => {
       <h1 className='text-black font-bold text-center'>Reset your password</h1>
       <p className='text-sm text-center text-neutral-10'>
         Enter the email address or phone number you registered on SantiBet.
-        We&apos;ll send a one-time reset code there — by email or SMS.
+        We&apos;ll send a one-time reset code there by email or SMS.
       </p>
 
       <form

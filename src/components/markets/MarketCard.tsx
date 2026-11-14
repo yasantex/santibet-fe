@@ -31,7 +31,7 @@ const OutcomeRow = ({
   outcome?: UiOutcome
   /** "₦63", or the odds on a pool market. */
   priceLabel: string
-  /** The chance ("58%") or odds ("×1.73") beside the label; null hides it
+  /** The chance ("58%") or odds ("1.73x") beside the label; null hides it
    *  (a pool market in decimal mode already shows its odds on the button). */
   chance: string | null
   tone: OutcomeTone

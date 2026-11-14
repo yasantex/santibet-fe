@@ -116,7 +116,7 @@ const BadgeGrid = ({ badges, isLoading, isError }: BadgeGridProps) => {
   if (!badges?.length) {
     return (
       <p className='rounded-2xl border border-border bg-card p-6 text-center text-sm text-neutral-10'>
-        No badges yet — they’ll appear here as they’re introduced.
+        No badges yet. They’ll appear here as they’re introduced.
       </p>
     )
   }
