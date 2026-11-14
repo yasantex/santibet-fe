@@ -223,7 +223,7 @@ const LiveMarkets = () => {
           </div>
         </div>
         <p className='-mt-3 text-sm text-neutral-10'>
-          In-play markets you can trade right now — short-duration crypto and
+          In-play markets you can trade right now: short-duration crypto and
           live events.
         </p>
 
@@ -312,7 +312,7 @@ const LiveMarkets = () => {
                 : activeGroup
                   ? `No live ${activeSub?.value ?? activeGroup.label} right now.`
                   : 'Nothing in-play right now.'}{' '}
-              Check back soon — new rounds open continuously.
+              Check back soon. New rounds open continuously.
             </p>
             <button
               type='button'

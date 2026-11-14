@@ -68,7 +68,7 @@ const ProgressLine = ({ bonus }: { bonus: CurrentBonus }) => {
             still to bet
           </>
         ) : (
-          'Playthrough complete — settling'
+          'Playthrough complete, settling'
         )}
       </span>
       <span className='font-semibold text-black'>
@@ -152,7 +152,7 @@ const BonusCard = ({ bonus, compact = false }: BonusCardProps) => {
           />
           <p className='flex-1 text-xs text-black'>
             Verify your identity to start using your bonus. Your credit is
-            waiting — it can be bet as soon as your ID is approved.
+            waiting and can be bet as soon as your ID is approved.
           </p>
           <Button
             type='button'

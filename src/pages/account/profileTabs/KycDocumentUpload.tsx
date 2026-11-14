@@ -1,14 +1,17 @@
 import { useState } from 'react'
-import { isAxiosError } from 'axios'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons'
 import CustomSelector from '../../../components/globals/CustomSelector'
 import FilePicker from '../../../components/globals/FilePicker'
 import SuspendedHint from '../../../components/globals/SuspendedHint'
 import { StepScreen } from '../../../components/globals/Stepper'
 import { useSantiBetMutation } from '../../../data_layer/utils'
 import useAccountSuspended from '../../../hooks/useAccountSuspended'
-import { showSuccessToast, showWarningToast } from '../../../utils/toastUtils'
+import { showSuccessToast } from '../../../utils/toastUtils'
+import { checkIdImageReadable, kycErrorMessage } from '../../../utils/kyc'
 import type { BaseApiResponse } from '../../../types/types'
 
+/** Steps this component renders: ID type, ID photo, selfie. */
 export const UPLOAD_STEPS = 3
 
 const documentTypeOptions = [
@@ -18,23 +21,51 @@ const documentTypeOptions = [
   { label: "Voter's Card", value: 'VOTERS_CARD' },
 ]
 
+/** What reviewers need to see. Shown before the player picks a file. */
+const ID_CHECKLIST = [
+  'A valid, unexpired government-issued ID',
+  'Your full name, photo, date of birth and ID number clearly visible',
+  'The same name you entered in the previous step',
+  'All four corners in frame, in focus, with no glare or cover',
+  'JPG, PNG, WEBP or PDF, up to 5 MB',
+]
+
+const Checklist = ({ items }: { items: string[] }) => (
+  <ul className='flex flex-col gap-1.5 rounded-lg bg-card p-3'>
+    {items.map((item) => (
+      <li key={item} className='flex items-start gap-2 text-xs text-neutral-10'>
+        <HugeiconsIcon
+          icon={CheckmarkCircle02Icon}
+          size={14}
+          className='mt-px shrink-0 text-success'
+        />
+        {item}
+      </li>
+    ))}
+  </ul>
+)
+
 type KycDocumentUploadProps = {
+  /** 0-based step within the upload flow. */
   step: number
   onStepChange: (step: number) => void
-  onCancel: () => void
+  /** Leave the upload flow from its first step (back to the name step). */
+  onBack: () => void
   onSubmitted: () => void
 }
 
 const KycDocumentUpload = ({
   step,
   onStepChange,
-  onCancel,
+  onBack,
   onSubmitted,
 }: KycDocumentUploadProps) => {
   const suspended = useAccountSuspended()
   const [documentType, setDocumentType] = useState('')
   const [idFile, setIdFile] = useState<File | null>(null)
   const [selfie, setSelfie] = useState<File | null>(null)
+  // Shown inline on the last step, so the player can fix it and resubmit.
+  const [submitError, setSubmitError] = useState('')
 
   const { mutateAsync: uploadDocument, isPending } = useSantiBetMutation<
     BaseApiResponse,
@@ -44,16 +75,16 @@ const KycDocumentUpload = ({
     headers: { 'Content-Type': 'multipart/form-data' },
     mutationOptions: {
       onError: (error) => {
-        if (isAxiosError(error)) {
-          const errorData = error.response?.data
-          showWarningToast(errorData?.message)
-        } else {
-          showWarningToast(error.message)
-        }
+        setSubmitError(
+          kycErrorMessage(
+            error,
+            'We couldn’t upload your documents. Check the files and try again.',
+          ),
+        )
       },
-      onSuccess: (data) => {
+      onSuccess: () => {
         showSuccessToast(
-          data?.message ?? 'Documents submitted — we’ll review them shortly',
+          'Documents submitted. We’ll review them and let you know the result.',
         )
         onSubmitted()
       },
@@ -62,6 +93,7 @@ const KycDocumentUpload = ({
 
   const handleSubmit = async () => {
     if (!documentType || !idFile) return
+    setSubmitError('')
 
     const body = new FormData()
     body.append('type', documentType)
@@ -71,15 +103,11 @@ const KycDocumentUpload = ({
     try {
       await uploadDocument(body)
     } catch {
-      // Already surfaced via the mutation's onError toast above.
+      // Shown inline via onError above.
     }
   }
 
-  // First step offers "Not now" (close), later steps step back.
-  const secondary =
-    step === 0
-      ? { secondaryText: 'Not now', onSecondary: onCancel }
-      : { secondaryText: 'Back', onSecondary: () => onStepChange(step - 1) }
+  const back = () => (step === 0 ? onBack() : onStepChange(step - 1))
 
   if (step === 0) {
     return (
@@ -88,7 +116,8 @@ const KycDocumentUpload = ({
         subtitle='Choose a valid government-issued ID.'
         continueDisabled={!documentType}
         onContinue={() => onStepChange(1)}
-        {...secondary}
+        secondaryText='Back'
+        onSecondary={back}
       >
         <CustomSelector
           options={documentTypeOptions}
@@ -97,6 +126,8 @@ const KycDocumentUpload = ({
           placeholder='Select ID type'
           containerClassName='w-full'
         />
+        <p className='text-xs font-medium text-black'>Before you upload</p>
+        <Checklist items={ID_CHECKLIST} />
       </StepScreen>
     )
   }
@@ -105,12 +136,18 @@ const KycDocumentUpload = ({
     return (
       <StepScreen
         title='Upload your ID'
-        subtitle='A clear photo or scan — all four corners visible, no glare.'
+        subtitle='A clear photo or scan of the whole document. Blurry, cropped or edited images are rejected.'
         continueDisabled={!idFile}
         onContinue={() => onStepChange(2)}
-        {...secondary}
+        secondaryText='Back'
+        onSecondary={back}
       >
-        <FilePicker label='ID document' file={idFile} onChange={setIdFile} />
+        <FilePicker
+          label='ID document'
+          file={idFile}
+          onChange={setIdFile}
+          validate={checkIdImageReadable}
+        />
       </StepScreen>
     )
   }
@@ -118,13 +155,26 @@ const KycDocumentUpload = ({
   return (
     <StepScreen
       title='Add a selfie'
-      subtitle='Optional — a selfie holding your ID speeds up the review. We usually review within 24 hours.'
-      continueText='Submit for review'
+      subtitle='Optional. A selfie holding your ID speeds up the review. We usually review within 24 hours.'
+      continueText={isPending ? 'Uploading…' : 'Submit for review'}
       loading={isPending}
       continueDisabled={suspended}
       onContinue={handleSubmit}
-      footer={suspended && <SuspendedHint className='text-center' />}
-      {...secondary}
+      footer={
+        <>
+          {submitError && (
+            <p
+              role='alert'
+              className='rounded-lg bg-error-bg px-3 py-2.5 text-xs font-medium text-error'
+            >
+              {submitError}
+            </p>
+          )}
+          {suspended && <SuspendedHint className='text-center' />}
+        </>
+      }
+      secondaryText='Back'
+      onSecondary={back}
     >
       <FilePicker
         label='Selfie holding your ID'
@@ -132,6 +182,7 @@ const KycDocumentUpload = ({
         accept={['image/jpeg', 'image/png', 'image/webp']}
         file={selfie}
         onChange={setSelfie}
+        validate={checkIdImageReadable}
       />
     </StepScreen>
   )

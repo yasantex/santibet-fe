@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useFormik } from 'formik'
-import { isAxiosError } from 'axios'
 import ModalComponent, { type ModalProps } from '../globals/ModalComponent'
 import { Button } from '../globals/Button'
 import { FormInput } from '../globals/FormInput'
@@ -14,19 +13,28 @@ import { useSantiBetMutation } from '../../data_layer/utils'
 import { showSuccessToast } from '../../utils/toastUtils'
 import { kycStatusBadge } from '../../utils/status'
 import {
+  idNumberError,
+  kycErrorMessage,
+  normalizeIdNumber,
+} from '../../utils/kyc'
+import {
   isAdult,
   latestAdultBirthDate,
   UNDERAGE_MESSAGE,
 } from '../../utils/age'
-import type { KycStatusResponse } from '../../types/types'
+import type { KycStatusResponse, UserData } from '../../types/types'
 
 type KycPayload = {
   idType: string
   idNumber: string
   firstName: string
+  /** Optional; sent only when filled in. */
+  middleName: string
   lastName: string
   dateOfBirth: string
 }
+
+type NamePayload = { firstName: string; lastName: string }
 
 const idTypeOptions = [
   { label: 'BVN', value: 'BVN' },
@@ -40,17 +48,25 @@ const SUBMITTABLE_STATUSES = ['NOT_STARTED', 'REJECTED', 'MORE_INFO_REQUIRED']
 
 type VerifyMethod = 'idNumber' | 'upload'
 
-// Manual flow: ID → name → date of birth. Each step lists the fields it gates.
+// Both flows start by capturing the name exactly as it is on the ID, so the
+// document can be checked against it (SB-009). Then the ID-number flow asks
+// for the ID and date of birth; the upload flow for the document.
+// Each step lists the fields it gates.
 const MANUAL_STEPS: (keyof KycPayload)[][] = [
-  ['idType', 'idNumber'],
   ['firstName', 'lastName'],
+  ['idType', 'idNumber'],
   ['dateOfBirth'],
 ]
+const NAME_STEP = 0
 
 type StandardVerificationProps = ModalProps & {
   kycStatus: KycStatusResponse | undefined
   kycLoading: boolean
   refetchKyc: () => void
+  /** Prefills the name and date of birth. */
+  profile?: UserData | null
+  /** Called after the name step saves a corrected name to the profile. */
+  onProfileUpdated?: () => void
 }
 
 const StandardVerification = ({
@@ -59,6 +75,8 @@ const StandardVerification = ({
   kycStatus,
   kycLoading,
   refetchKyc,
+  profile,
+  onProfileUpdated,
 }: StandardVerificationProps) => {
   const [method, setMethod] = useState<VerifyMethod>('idNumber')
   const [step, setStep] = useState(0)
@@ -77,22 +95,30 @@ const StandardVerification = ({
     path: '/kyc/verify',
     mutationOptions: {
       onError: (error) => {
-        setFailureMessage(
-          (isAxiosError(error) ? error.response?.data?.message : null) ??
-            error.message ??
-            '',
-        )
+        setFailureMessage(kycErrorMessage(error))
       },
       onSuccess: (data) => {
         refetchKyc()
         if (data?.status === 'APPROVED') {
           showSuccessToast('You’re verified')
         } else {
-          setFailureMessage(data?.rejectionReason ?? '')
+          setFailureMessage(
+            data?.rejectionReason
+              ? kycErrorMessage(data.rejectionReason)
+              : '',
+          )
         }
       },
     },
   })
+
+  // The name on the ID is saved to the profile, so the backend can match the
+  // submitted document against it.
+  const [nameError, setNameError] = useState('')
+  const { mutateAsync: patchName, isPending: savingName } = useSantiBetMutation<
+    UserData,
+    NamePayload
+  >({ path: '/auth/me', method: 'PATCH' })
 
   const {
     values,
@@ -103,23 +129,56 @@ const StandardVerification = ({
     handleBlur,
     setFieldValue,
   } = useFormik<KycPayload>({
+    // Refills once the profile loads; typing isn't lost after that.
+    enableReinitialize: true,
     initialValues: {
       idType: '',
       idNumber: '',
-      firstName: '',
-      lastName: '',
-      dateOfBirth: '',
+      firstName: profile?.firstName ?? '',
+      middleName: '',
+      lastName: profile?.lastName ?? '',
+      dateOfBirth: profile?.dateOfBirth?.slice(0, 10) ?? '',
     },
 
-    onSubmit: async (vals) => {
+    onSubmit: async ({ middleName, ...vals }) => {
       if (!isAdult(vals.dateOfBirth)) return
       try {
-        await postVerify(vals)
+        await postVerify({
+          ...vals,
+          idNumber: normalizeIdNumber(vals.idNumber),
+          firstName: vals.firstName.trim(),
+          lastName: vals.lastName.trim(),
+          // Not in the API schema yet; harmless until the backend reads it.
+          ...(middleName.trim() ? { middleName: middleName.trim() } : {}),
+        } as KycPayload)
       } catch {
         // Already surfaced via the failure modal (see onError above).
       }
     },
   })
+
+  // Saves a corrected name before moving on from the name step.
+  const confirmName = async () => {
+    const firstName = values.firstName.trim()
+    const lastName = values.lastName.trim()
+    setNameError('')
+    if (
+      firstName === (profile?.firstName ?? '').trim() &&
+      lastName === (profile?.lastName ?? '').trim()
+    ) {
+      setStep(NAME_STEP + 1)
+      return
+    }
+    try {
+      await patchName({ firstName, lastName })
+      onProfileUpdated?.()
+      setStep(NAME_STEP + 1)
+    } catch (error) {
+      setNameError(
+        kycErrorMessage(error, 'We couldn’t save your name. Try again.'),
+      )
+    }
+  }
 
   // Label of the picked ID type ("BVN", "Voter's Card") for field hints.
   const idTypeLabel =
@@ -130,13 +189,17 @@ const StandardVerification = ({
     setStep(0)
   }
 
-  const totalSteps = method === 'upload' ? UPLOAD_STEPS : MANUAL_STEPS.length
+  const totalSteps =
+    method === 'upload' ? 1 + UPLOAD_STEPS : MANUAL_STEPS.length
   // 18+ only: an under-age date of birth can't be submitted.
   const dobError =
     values.dateOfBirth && !isAdult(values.dateOfBirth) ? UNDERAGE_MESSAGE : ''
+  // Format check per ID type (NIN and BVN are 11 digits, etc.).
+  const idError = idNumberError(values.idType, values.idNumber)
   const stepComplete =
     MANUAL_STEPS[step]?.every((f) => values[f].trim()) &&
-    !(MANUAL_STEPS[step]?.includes('dateOfBirth') && dobError)
+    !(MANUAL_STEPS[step]?.includes('dateOfBirth') && dobError) &&
+    !(MANUAL_STEPS[step]?.includes('idNumber') && idError)
   const isLastStep = step === MANUAL_STEPS.length - 1
 
   const manualSecondary =
@@ -151,6 +214,55 @@ const StandardVerification = ({
     onContinue: () => (isLastStep ? submitForm() : setStep(step + 1)),
     ...manualSecondary,
   }
+
+  // Shared first step of both flows.
+  const nameStep = (
+    <StepScreen
+      title='What’s your name?'
+      subtitle='Enter it exactly as it appears on your ID, including the spelling.'
+      continueDisabled={
+        !values.firstName.trim() || !values.lastName.trim() || savingName
+      }
+      loading={savingName}
+      onContinue={confirmName}
+      secondaryText='Not now'
+      onSecondary={handleClose}
+      footer={
+        nameError && (
+          <p role='alert' className='text-xs font-medium text-error'>
+            {nameError}
+          </p>
+        )
+      }
+    >
+      <FormInput
+        type='text'
+        name='firstName'
+        value={values.firstName}
+        placeholder='First name'
+        onChange={handleChange}
+        onBlur={handleBlur}
+        errors={errors.firstName && touched.firstName ? errors.firstName : ''}
+      />
+      <FormInput
+        type='text'
+        name='middleName'
+        value={values.middleName}
+        placeholder='Middle name (if on your ID)'
+        onChange={handleChange}
+        onBlur={handleBlur}
+      />
+      <FormInput
+        type='text'
+        name='lastName'
+        value={values.lastName}
+        placeholder='Last name (surname)'
+        onChange={handleChange}
+        onBlur={handleBlur}
+        errors={errors.lastName && touched.lastName ? errors.lastName : ''}
+      />
+    </StepScreen>
+  )
 
   return (
     <>
@@ -167,9 +279,17 @@ const StandardVerification = ({
           <div className='flex w-full flex-col gap-3'>
             {kycStatus?.rejectionReason &&
               kycStatus.status !== 'NOT_STARTED' && (
-                <p className='rounded-lg bg-error-bg px-3 py-2.5 text-xs font-medium text-error'>
-                  {kycStatus.rejectionReason}
-                </p>
+                <div className='flex flex-col gap-0.5 rounded-lg bg-error-bg px-3 py-2.5 text-xs text-error'>
+                  <span className='font-semibold'>
+                    {kycStatus.status === 'MORE_INFO_REQUIRED'
+                      ? 'We need a bit more from you'
+                      : 'Your last submission wasn’t approved'}
+                  </span>
+                  <span>{kycErrorMessage(kycStatus.rejectionReason)}</span>
+                  <span className='text-neutral-10'>
+                    Fix the issue above and submit again.
+                  </span>
+                </div>
               )}
 
             {/* Method can only be switched before the flow is underway. */}
@@ -199,14 +319,16 @@ const StandardVerification = ({
 
             <Stepper steps={totalSteps} current={step} className='my-2' />
 
-            {method === 'upload' ? (
+            {step === NAME_STEP ? (
+              nameStep
+            ) : method === 'upload' ? (
               <KycDocumentUpload
-                step={step}
-                onStepChange={setStep}
-                onCancel={handleClose}
+                step={step - 1}
+                onStepChange={(s) => setStep(s + 1)}
+                onBack={() => setStep(NAME_STEP)}
                 onSubmitted={refetchKyc}
               />
-            ) : step === 0 ? (
+            ) : step === 1 ? (
               <StepScreen title='Which ID will you use?' {...manualStepProps}>
                 <CustomSelector
                   options={idTypeOptions}
@@ -219,6 +341,11 @@ const StandardVerification = ({
                   type='text'
                   name='idNumber'
                   value={values.idNumber}
+                  inputMode={
+                    values.idType === 'NIN' || values.idType === 'BVN'
+                      ? 'numeric'
+                      : undefined
+                  }
                   placeholder={
                     values.idType
                       ? `Enter ${idTypeLabel} number`
@@ -226,40 +353,7 @@ const StandardVerification = ({
                   }
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  errors={
-                    errors.idNumber && touched.idNumber ? errors.idNumber : ''
-                  }
-                />
-              </StepScreen>
-            ) : step === 1 ? (
-              <StepScreen
-                title='What’s your name?'
-                subtitle={`Enter it exactly as it appears on ${idTypeLabel}.`}
-                {...manualStepProps}
-              >
-                <FormInput
-                  type='text'
-                  name='firstName'
-                  value={values.firstName}
-                  placeholder='Legal first name'
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  errors={
-                    errors.firstName && touched.firstName
-                      ? errors.firstName
-                      : ''
-                  }
-                />
-                <FormInput
-                  type='text'
-                  name='lastName'
-                  value={values.lastName}
-                  placeholder='Legal last name'
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  errors={
-                    errors.lastName && touched.lastName ? errors.lastName : ''
-                  }
+                  errors={touched.idNumber ? idError : ''}
                 />
               </StepScreen>
             ) : (
@@ -294,11 +388,19 @@ const StandardVerification = ({
             </span>
             {kycStatus?.status === 'PENDING' && (
               <p className='text-xs text-placeholder'>
-                We’re reviewing your details
+                Submitted
                 {kycStatus.submittedAt
-                  ? ` (submitted ${new Date(kycStatus.submittedAt).toLocaleDateString()})`
+                  ? ` on ${new Date(kycStatus.submittedAt).toLocaleDateString()}`
                   : ''}
-                . You’ll be notified once it’s done.
+                . We’re checking your details and usually finish within 24
+                hours. We’ll notify you when it’s done; there’s nothing else
+                you need to do.
+              </p>
+            )}
+            {kycStatus?.status === 'APPROVED' && (
+              <p className='text-xs text-placeholder'>
+                Your identity is verified
+                {kycStatus.legalName ? ` as ${kycStatus.legalName}` : ''}.
               </p>
             )}
           </div>
@@ -328,7 +430,9 @@ const StandardVerification = ({
             size='large'
             onClick={() => {
               setFailureMessage(null)
-              changeMethod('upload')
+              // The name is already captured: go straight to the document.
+              setMethod('upload')
+              setStep(NAME_STEP + 1)
             }}
           />
           <Button
@@ -337,9 +441,9 @@ const StandardVerification = ({
             variation='plain'
             size='large'
             onClick={() => {
-              // Back to the start so the ID number can be re-checked.
+              // Back to the ID step so the number can be re-checked.
               setFailureMessage(null)
-              setStep(0)
+              setStep(NAME_STEP + 1)
             }}
           />
         </div>

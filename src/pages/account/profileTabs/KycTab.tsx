@@ -12,6 +12,8 @@ type KycTabProps = {
   refetchKyc: () => void
   profile: UserData | null | undefined
   onGoToProfile: () => void
+  /** Re-reads the profile after the KYC name step saves a name. */
+  onProfileUpdated?: () => void
 }
 
 const KycTab = ({
@@ -20,6 +22,7 @@ const KycTab = ({
   refetchKyc,
   profile,
   onGoToProfile,
+  onProfileUpdated,
 }: KycTabProps) => {
   const [kycModalOpen, setKycModalOpen] = useState(false)
   const badge = kycStatusBadge(kycStatus?.status)
@@ -68,7 +71,7 @@ const KycTab = ({
               </span>
             </div>
             <p className='text-xs text-placeholder'>
-              Email or phone — confirmed automatically when you sign up.
+              Email or phone, confirmed automatically when you sign up.
             </p>
             <div className='grid grid-cols-2 gap-3 rounded-lg p-3'>
               <div>
@@ -164,6 +167,8 @@ const KycTab = ({
         kycStatus={kycStatus}
         kycLoading={kycLoading}
         refetchKyc={refetchKyc}
+        profile={profile}
+        onProfileUpdated={onProfileUpdated}
       />
     </div>
   )

@@ -205,6 +205,7 @@ const AccountPortfolio = () => {
         summary={summary}
         cash={spendableBalance(wallet)}
         withdrawable={wallet ? withdrawableBalance(wallet) : undefined}
+        bonus={wallet ? toMajorUnits(wallet.bonus ?? 0) : undefined}
         openStake={openStake}
         loading={summaryLoading}
         onDeposit={() => handleModalOpen('deposit')}

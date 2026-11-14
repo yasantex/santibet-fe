@@ -44,7 +44,7 @@ const TradePanel = ({
       <div>
         <p className='text-xs text-neutral-10'>{market.title}</p>
         <p className='text-sm font-semibold text-black'>
-          {outcome?.label ?? '—'}
+          {outcome?.label ?? '-'}
         </p>
       </div>
 

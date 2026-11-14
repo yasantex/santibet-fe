@@ -16,7 +16,11 @@ import { Button } from '../../../components/globals/Button'
 import { FormInput } from '../../../components/globals/FormInput'
 import AddPasskeyModal from '../../../components/appModals/auth/AddPasskeyModal'
 import { showSuccessToast, showWarningToast } from '../../../utils/toastUtils'
-import { PASSKEYS_QUERY_KEY, passkeyErrorCode } from '../../../utils/passkeys'
+import {
+  PASSKEYS_QUERY_KEY,
+  passkeyErrorCode,
+  passkeyPitch,
+} from '../../../utils/passkeys'
 import type { Passkey, PasskeyListResponse } from '../../../types/passkey.types'
 
 const formatDate = (iso: string) =>
@@ -238,7 +242,7 @@ const PasskeysSection = () => {
         <div>
           <h3 className='text-sm font-medium text-black'>Passkeys</h3>
           <p className='text-xs text-neutral-500 dark:text-neutral-400'>
-            Sign in with Face ID, fingerprint or your device PIN.
+            {passkeyPitch()}
           </p>
         </div>
         {supported && (

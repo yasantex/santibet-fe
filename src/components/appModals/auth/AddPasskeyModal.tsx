@@ -3,7 +3,7 @@ import ModalComponent, { type ModalProps } from '../../globals/ModalComponent'
 import { Button } from '../../globals/Button'
 import { FormInput } from '../../globals/FormInput'
 import usePasskeyRegistration from '../../../hooks/usePasskeyRegistration'
-import { defaultPasskeyName } from '../../../utils/passkeys'
+import { defaultPasskeyName, passkeyPitch } from '../../../utils/passkeys'
 
 type AddPasskeyModalProps = ModalProps & {
   cancelText?: string
@@ -13,7 +13,7 @@ const AddPasskeyModal = ({
   open,
   handleClose,
   title = 'Add a passkey',
-  subtitle = 'Sign in with Face ID, fingerprint or your device PIN instead of a password.',
+  subtitle = passkeyPitch(),
   cancelText = 'Cancel',
 }: AddPasskeyModalProps) => {
   const { register, isRegistering } = usePasskeyRegistration()

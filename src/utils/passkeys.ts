@@ -108,3 +108,48 @@ export const markPasskeyOfferShown = () => {
     // Nothing to persist to; the offer simply may show again.
   }
 }
+
+// --- Device-aware wording (SB-048) ---------------------------------------
+// Passkey copy names the unlock method the player's own device uses, so a
+// phone never sees desktop wording ("Windows Hello", "security key") and
+// vice versa.
+
+/** True on a phone or tablet browser, including iPadOS in desktop mode. */
+export const isMobileWeb = () => {
+  const ua = navigator.userAgent
+  return (
+    /Android|iPhone|iPad|iPod|Mobile/.test(ua) ||
+    (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+  )
+}
+
+/** How this device unlocks a passkey, e.g. "Face ID or Touch ID". */
+export const passkeyUnlockMethod = () => {
+  const ua = navigator.userAgent
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1))
+    return 'Face ID or Touch ID'
+  if (/Android/.test(ua)) return 'your fingerprint, face or screen lock'
+  if (/Mac OS X|Macintosh/.test(ua)) return 'Touch ID or your Mac password'
+  if (/Windows/.test(ua)) return 'Windows Hello (face, fingerprint or PIN)'
+  return 'your device’s screen lock'
+}
+
+/** One line saying what a passkey does on this device. */
+export const passkeyPitch = () =>
+  `Sign in with ${passkeyUnlockMethod()} instead of a password.`
+
+/**
+ * Whether this device can create a passkey by itself (a built-in
+ * authenticator). Without one the browser falls back to "use another device"
+ * QR flows, which make no sense to offer unprompted.
+ */
+export const hasPlatformAuthenticator = async (): Promise<boolean> => {
+  try {
+    return (
+      (await window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.()) ??
+      false
+    )
+  } catch {
+    return false
+  }
+}

@@ -84,7 +84,7 @@ export const StatusBadge: React.FC<{
   statusConfig: StatusConfig[]
 }> = ({ value, statusConfig }) => {
   const config = statusConfig.find((s) => s.value === value)
-  if (!config) return <span className='text-neutral-10 text-xs'>—</span>
+  if (!config) return <span className='text-neutral-10 text-xs'>-</span>
 
   return (
     <span

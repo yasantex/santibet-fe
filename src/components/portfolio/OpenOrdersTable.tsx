@@ -83,7 +83,7 @@ const OpenOrdersTable = ({ orders }: { orders: Bet[] }) => {
               </div>
             </div>
             <span className='text-sm text-neutral-10'>
-              {shares > 0 ? `${Math.round((filled / shares) * 100)}%` : '—'}
+              {shares > 0 ? `${Math.round((filled / shares) * 100)}%` : '-'}
             </span>
             <span className='text-sm font-semibold text-black'>
               {formatCurrency(toMajorUnits(bet.stake.amount))}

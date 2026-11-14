@@ -18,6 +18,7 @@ import { outcomeLabelClass } from '../utils/marketDisplay'
 import { showSuccessToast, showWarningToast } from '../utils/toastUtils'
 import type { Bet } from '../types/bet.types'
 import type { ComboStatus, ComboTicket } from '../types/combo.types'
+import { formatOdds } from '../utils/odds'
 
 /** A single bet, or a combo ticket, merged into one newest-first list. */
 type OrderListItem =
@@ -187,7 +188,7 @@ const ComboOrderRow = ({ combo }: { combo: ComboTicket }) => {
           {formatCurrency(toMajorUnits(combo.stake.amount), combo.stake.currency)}
         </p>
         <p className='text-xs text-neutral-10'>
-          ×{Number(combo.combinedOdds).toFixed(2)} ·{' '}
+          {formatOdds(combo.combinedOdds)} ·{' '}
           {settled
             ? `${formatCurrency(toMajorUnits(combo.payout?.amount ?? 0), combo.stake.currency)} returned`
             : `${formatCurrency(

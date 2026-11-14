@@ -300,7 +300,7 @@ const Milestones = ({ data }: { data: ReferralProgress }) => {
                     {m.friendCount} {m.friendCount === 1 ? 'friend' : 'friends'}
                   </span>
                   <span className='text-right text-sm font-bold text-success'>
-                    {perks.join(' + ') || '—'}
+                    {perks.join(' + ') || '-'}
                   </span>
                 </div>
                 {!m.reached && (
@@ -415,7 +415,7 @@ const ReferEarn = () => {
             Referrals aren’t running right now
           </span>
           <span className='text-sm text-neutral-10'>
-            Check back soon — we’ll let you know when you can invite friends
+            Check back soon. We’ll let you know when you can invite friends
             and earn.
           </span>
         </div>

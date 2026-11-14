@@ -107,7 +107,7 @@ const MarketInfoTabs = ({
                       ? 'Combo'
                       : t.amount != null
                         ? formatNairaCompact(t.amount)
-                        : '—'}
+                        : '-'}
                   </span>
                   <span className='text-right text-neutral-10'>
                     {tradeTimeLabel(t.ts)}
