@@ -28,13 +28,14 @@ import type {
 } from '../../types/passkey.types'
 import {
   browserPromptErrorMessage,
+  clearPasskeyOfferPending,
   isChallengeError,
   markPasskeyOfferPending,
   passkeyApiMessage,
   passkeyErrorCode,
 } from '../../utils/passkeys'
 import {
-  // startGoogleOAuth, // Google sign-in is off for now (see the button below)
+  startGoogleOAuth,
   getGoogleOAuthCodeVerifier,
   removeGoogleOAuthCodeVerifier,
 } from '../../utils/googleAuth'
@@ -50,7 +51,7 @@ import {
   clearRememberedAuthRedirect,
   getRememberedAuthRedirect,
   getSafeRedirect,
-  // rememberAuthRedirect, // used by the Google button, off for now
+  rememberAuthRedirect,
 } from '../../utils/authRedirect'
 import {
   REFERRAL_HINT,
@@ -175,6 +176,9 @@ const LoginPage = () => {
 
   // A brand-new account goes straight to its profile to finish setting up.
   const handleAuthSuccess = (data: AuthResponse, isNewAccount = false) => {
+    // Only a password sign-in queues the passkey offer (right after this
+    // runs), so a stale one never reaches a new or differently signed-in user.
+    clearPasskeyOfferPending()
     if (data?.mfaRequired) {
       const params = new URLSearchParams({ authToken: data?.challengeId ?? '' })
       if (redirectTo) params.set(AUTH_REDIRECT_PARAM, redirectTo)
@@ -259,9 +263,10 @@ const LoginPage = () => {
             handleMutationError(error)
           },
           onSuccess: (data) => {
-            // Offer "Add a passkey for next time" once they land in the app.
-            if (supportsPasskeys) markPasskeyOfferPending()
             handleAuthSuccess(data)
+            // Offer "Add a passkey for next time" once they land in the app.
+            // Returning players only — new accounts set one up from Security.
+            if (supportsPasskeys) markPasskeyOfferPending()
           },
         },
       },
@@ -491,10 +496,6 @@ const LoginPage = () => {
       </p>
       {step === 'identifier' && (
         <>
-          {/* Google sign-in is off for now: /auth/google still creates
-              accounts while sign-ups are closed (campaign-player-login).
-              The callback handling below stays, so restoring this button
-              is all it takes.
           <Button
             type='button'
             text='Continue with Google'
@@ -510,7 +511,6 @@ const LoginPage = () => {
               })
             }}
           />
-          */}
           {/* Sign-in only: a passkey can't create an account. */}
           {supportsPasskeys && pathname === '/signin' && (
             <Button
@@ -529,14 +529,11 @@ const LoginPage = () => {
               onClick={handlePasskeySignIn}
             />
           )}
-          {/* Only when there's a button above it (Google is off for now). */}
-          {supportsPasskeys && pathname === '/signin' && (
-            <div className='flex items-center w-full gap-2.5 mt-2.5 text-sm text-neutral-10'>
-              <span className='flex-1 h-px bg-border' />
-              OR
-              <span className='flex-1 h-px bg-border' />
-            </div>
-          )}
+          <div className='flex items-center w-full gap-2.5 mt-2.5 text-sm text-neutral-10'>
+            <span className='flex-1 h-px bg-border' />
+            OR
+            <span className='flex-1 h-px bg-border' />
+          </div>
           <form
             onSubmit={identifierForm.handleSubmit}
             className='w-full flex flex-col my-5 gap-5'
