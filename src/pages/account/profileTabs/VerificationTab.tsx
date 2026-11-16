@@ -24,7 +24,7 @@ const VerificationTab = ({
           </p>
         </div>
         <div className='flex items-center justify-between rounded-lg bg-card p-4'>
-          <p className='text-sm text-black'>{profile?.phone ?? '—'}</p>
+          <p className='text-sm text-black'>{profile?.phone ?? '-'}</p>
           {profile?.phoneVerified ? (
             <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
               Verified
@@ -52,7 +52,7 @@ const VerificationTab = ({
           </p>
         </div>
         <div className='flex items-center justify-between rounded-lg bg-card p-4'>
-          <p className='text-sm text-black'>{profile?.email ?? '—'}</p>
+          <p className='text-sm text-black'>{profile?.email ?? '-'}</p>
           {profile?.emailVerified ? (
             <span className='w-fit rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
               Verified

@@ -6,7 +6,7 @@ import type { OddsFormat } from '../../utils/marketDisplay'
 
 const OPTIONS: { value: OddsFormat; label: string; example: string }[] = [
   { value: 'percent', label: 'Percentage', example: '58%' },
-  { value: 'odds', label: 'Odds', example: '×1.73' },
+  { value: 'odds', label: 'Decimal odds', example: '1.73x' },
 ]
 
 /** Toolbar icon for switching how outcome prices read: chance or odds. */

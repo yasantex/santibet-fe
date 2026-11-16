@@ -8,6 +8,7 @@ import {
 } from '../../utils/functions'
 import type { ComboTicket, ComboTicketStatus } from '../../types/bet.types'
 import { CARD_HOVER_SOFT } from '../../utils/marketDisplay'
+import { formatOdds, oddsFromPrice } from '../../utils/odds'
 
 const STATUS_META: Record<ComboTicketStatus, { label: string; className: string }> = {
   OPEN: { label: 'In progress', className: 'bg-warning/10 text-warning' },
@@ -78,7 +79,7 @@ const ComboCard = ({ combo }: { combo: ComboTicket }) => {
               </MarketTitleLink>
               {Number(leg.price) > 0 && (
                 <span className='shrink-0 text-xs font-semibold text-neutral-10'>
-                  ×{(1 / Number(leg.price)).toFixed(2)}
+                  {formatOdds(oddsFromPrice(leg.price))}
                 </span>
               )}
             </li>
@@ -93,7 +94,7 @@ const ComboCard = ({ combo }: { combo: ComboTicket }) => {
         </div>
         <div className='flex flex-col rounded-md bg-surface-hover px-3 py-2'>
           <span className='text-xs text-black/60'>Odds</span>
-          <span className='font-bold text-black'>×{odds.toFixed(2)}</span>
+          <span className='font-bold text-black'>{formatOdds(odds)}</span>
         </div>
         <div className='flex flex-col rounded-md bg-surface-hover px-3 py-2'>
           <span className='text-xs text-black/60'>

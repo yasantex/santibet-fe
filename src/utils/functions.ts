@@ -2,6 +2,7 @@ import type { MarketCardVM, OutcomeVM, RawMarket } from '../types/market.types'
 import type { FormatDateTimeOptions } from '../types/types'
 import type { WalletBalance } from '../types/wallet.types'
 import type { Bet, BetPosition } from '../types/bet.types'
+import { formatOdds } from './odds'
 
 export function getInitials(first: string, last: string): string {
   return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase()
@@ -54,11 +55,11 @@ export const isPoolPosition = (position: BetPosition): boolean =>
 export const isPoolBet = (bet: Bet): boolean =>
   bet.executionModel ? bet.executionModel === 'PARIMUTUEL' : (bet.estimated ?? false)
 
-/** "₦63" a share, or a pool bet's odds ("×1.79"). */
+/** "₦63" a share, or a pool bet's odds ("1.79x"). */
 export const betPriceLabel = (bet: Bet): string =>
   isPoolBet(bet)
     ? Number(bet.odds) > 0
-      ? `×${Number(bet.odds).toFixed(2)}`
+      ? formatOdds(bet.odds)
       : 'Pool'
     : formatSharePrice(Number(bet.price))
 

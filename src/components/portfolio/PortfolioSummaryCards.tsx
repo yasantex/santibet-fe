@@ -11,6 +11,7 @@ import { formatCurrency, toMajorUnits } from '../../utils/functions'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
 import { SUSPENDED_CTA_HINT } from '../../utils/constants'
 import type { PortfolioSummary } from '../../types/bet.types'
+import { WALLET_LABELS } from '../../utils/walletLabels'
 
 const HIDE_KEY = 'portfolioHidden'
 const MASK = '••••••'
@@ -33,6 +34,8 @@ type PortfolioSummaryCardsProps = {
   cash: number
   /** The part of `cash` that can be withdrawn (winnings), in naira. */
   withdrawable?: number
+  /** Bonus credit in naira; shown apart, never added to cash. */
+  bonus?: number
   /** Stake on live bets in naira, split by funding; undefined while loading. */
   openStake?: { cash: number; bonus: number }
   loading: boolean
@@ -44,6 +47,7 @@ const PortfolioSummaryCards = ({
   summary,
   cash,
   withdrawable,
+  bonus,
   openStake,
   loading,
   onDeposit,
@@ -94,9 +98,9 @@ const PortfolioSummaryCards = ({
           <div className='flex min-w-0 flex-col gap-1'>
             <span
               className='text-sm text-neutral-10'
-              title='Cash available to bet plus the cash staked on your live bets. Bonus bets are not included.'
+              title={WALLET_LABELS.totalBalanceHint}
             >
-              Total Balance
+              {WALLET_LABELS.totalBalance}
             </span>
             <div className='flex items-center gap-2'>
               {openStake ? (
@@ -130,13 +134,26 @@ const PortfolioSummaryCards = ({
             )}
           </div>
           <div className='flex shrink-0 flex-col items-end gap-1 text-right'>
-            <span className='text-xs text-neutral-10'>Available to bet</span>
+            <span
+              className='text-xs text-neutral-10'
+              title={WALLET_LABELS.balanceHint}
+            >
+              {WALLET_LABELS.balance} · {WALLET_LABELS.balanceHint.toLowerCase()}
+            </span>
             <span className='text-lg font-bold text-black md:text-2xl'>
               {show(formatCurrency(cash))}
             </span>
             {withdrawable != null && (
               <span className='text-xs text-neutral-10'>
-                {show(formatCurrency(withdrawable))} withdrawable
+                {show(formatCurrency(withdrawable))} {WALLET_LABELS.withdrawable}
+              </span>
+            )}
+            {bonus != null && bonus > 0 && (
+              <span
+                className='text-xs text-success'
+                title={WALLET_LABELS.bonusHint}
+              >
+                {show(formatCurrency(bonus))} {WALLET_LABELS.bonus.toLowerCase()}
               </span>
             )}
           </div>

@@ -5,6 +5,7 @@ import {
   toMajorUnits,
 } from '../../utils/functions'
 import type { Bet, BetPosition, ComboTicket } from '../../types/bet.types'
+import { formatOdds } from '../../utils/odds'
 
 export type ActivityKind =
   | 'buy'
@@ -123,7 +124,7 @@ const comboActivity = (c: ComboTicket): Activity[] => {
     title: `Combo · ${c.legs.length} legs`,
     imageUrl: c.legs[0]?.market?.imageUrl,
     settled: true,
-    outcomeLabel: `×${Number(c.combinedOdds).toFixed(2)}`,
+    outcomeLabel: formatOdds(c.combinedOdds),
   }
   const stake = toMajorUnits(c.stake.amount)
   const items: Activity[] = [

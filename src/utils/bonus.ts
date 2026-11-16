@@ -51,7 +51,7 @@ export const bonusStatusMeta: Record<
 
 /** One plain sentence per ended bonus — never the internal `endedReason`. */
 export const bonusEndedCopy: Partial<Record<BonusStatus, string>> = {
-  COMPLETED: 'Terms met — the bonus was paid out to your cash balance.',
+  COMPLETED: 'Terms met. The bonus was paid out to your cash balance.',
   LOST: 'The bonus credit was used up.',
   FORFEITED: 'Ended when you made a deposit.',
   EXPIRED: 'The bonus expired before its terms were met.',
@@ -124,7 +124,7 @@ export const bonusRuleLines = (bonus: CurrentBonus) => {
     'Bonus bets are placed at the current price and can’t be cashed out.',
     bonus.payoutMode === 'BALANCE'
       ? 'Wins go back to your bonus balance.'
-      : 'A win adds only the profit to your locked winnings — the stake is used up.',
+      : 'A win adds only the profit to your locked winnings. The stake is used up.',
   ]
   if (rules.minStakeKobo) {
     lines.push(`The smallest bonus bet is ${formatKobo(rules.minStakeKobo)}.`)

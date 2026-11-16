@@ -640,7 +640,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
           <p className='text-sm text-left text-neutral-10'>
             Transfer the <span className='font-bold'>EXACT</span> amount to
             the account below. We&apos;ll credit your wallet automatically as
-            soon as it arrives — no need to stay on this screen.
+            soon as it arrives. No need to stay on this screen.
           </p>
 
           <div className='flex flex-col gap-2.5 rounded-lg border border-border p-4'>
@@ -695,7 +695,7 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
           <p className='text-sm text-left text-neutral-10'>
             We opened the Kudipal checkout in a new tab. Finish your payment
             there and we&apos;ll credit your wallet automatically as soon as
-            it&apos;s confirmed — no need to stay on this screen.
+            it&apos;s confirmed. No need to stay on this screen.
           </p>
 
           <div className='flex items-center justify-between gap-3 rounded-lg border border-border p-4'>
@@ -914,13 +914,13 @@ const Deposit = ({ open, handleClose }: ModalProps) => {
               <div className='flex items-center justify-center gap-2 text-xs text-neutral-10'>
                 <span className='h-1.5 w-1.5 animate-pulse rounded-full bg-brand-green' />
                 {cryptoProgress?.status === 'SUCCESSFUL'
-                  ? 'Deposit confirmed — crediting your balance…'
+                  ? 'Deposit confirmed. Crediting your balance…'
                   : cryptoProgress?.status === 'PENDING'
                     ? `Deposit detected${
                         cryptoProgress.amount
                           ? ` (${cryptoProgress.amount} ${cryptoProgress.currency ?? ''})`
                           : ''
-                      } — confirming on the network…`
+                      }. Confirming on the network…`
                     : 'Waiting for your deposit to arrive…'}
               </div>
 

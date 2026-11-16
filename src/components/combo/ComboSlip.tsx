@@ -30,6 +30,7 @@ import type { WalletBalance } from '../../types/wallet.types'
 import type { ComboLeg } from '../../types/combo.types'
 import { useCurrentBonus } from '../../data_layer/bonuses'
 import { shortOutcomeLabel, teamsFromTitle } from '../../utils/teamNames'
+import { formatOdds } from '../../utils/odds'
 
 const QUICK_ADDS = [100, 500, 1000, 2000]
 
@@ -83,16 +84,16 @@ const LegRow = ({
         ) : livePrice != null ? (
           <span className='flex items-center gap-1 text-xs font-semibold'>
             <span className='text-neutral-10 line-through'>
-              ×{legOdds(leg.price).toFixed(2)}
+              {formatOdds(legOdds(leg.price))}
             </span>
             {/* Higher odds = lower price. */}
             <span className={livePrice < leg.price ? 'text-success' : 'text-error'}>
-              {livePrice < leg.price ? '↑' : '↓'} ×{legOdds(livePrice).toFixed(2)}
+              {livePrice < leg.price ? '↑' : '↓'} {formatOdds(legOdds(livePrice))}
             </span>
           </span>
         ) : (
           <span className='text-xs font-semibold text-neutral-10'>
-            ×{legOdds(leg.price).toFixed(2)}
+            {formatOdds(legOdds(leg.price))}
           </span>
         )}
       </div>
@@ -358,7 +359,7 @@ const ComboSlip = ({
       setError(
         isAxiosError(err)
           ? (err.response?.data?.message ??
-            'Could not place your combo. Odds may have moved — try again.')
+            'Could not place your combo. Odds may have moved. Try again.')
           : 'Could not place your combo.',
       )
     }
@@ -427,7 +428,7 @@ const ComboSlip = ({
             </p>
             <p className='text-xs text-neutral-10'>
               Tap a sports outcome to bet on it. Add picks from more games to
-              make a combo — every pick has to win for a combo to pay out.
+              make a combo. Every pick has to win for a combo to pay out.
             </p>
             <div className='flex gap-2'>
               <Button
@@ -500,7 +501,7 @@ const ComboSlip = ({
                   Total odds
                 </span>
                 <span className='text-lg font-bold text-black'>
-                  ×{totalOdds.toFixed(2)}
+                  {formatOdds(totalOdds)}
                 </span>
               </div>
 
@@ -524,7 +525,7 @@ const ComboSlip = ({
               </div>
               {bonus && (
                 <p className='-mt-1 text-xs text-neutral-10'>
-                  Combo bets use cash only — bonus credit can’t be used here.
+                  Combo bets use cash only. Bonus credit can’t be used here.
                 </p>
               )}
               <div className='flex items-center rounded-lg border-2 border-black px-3 py-2.5'>

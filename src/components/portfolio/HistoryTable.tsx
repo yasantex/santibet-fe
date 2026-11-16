@@ -85,7 +85,7 @@ const HistoryTable = ({ items }: { items: Activity[] }) => (
             }`}
           >
             {a.value == null
-              ? '—'
+              ? '-'
               : `${a.value > 0 ? '+' : '-'}${formatCurrency(Math.abs(a.value))}`}
           </span>
           <span className='hidden text-sm text-neutral-10 md:block'>

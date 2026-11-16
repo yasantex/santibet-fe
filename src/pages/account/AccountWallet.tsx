@@ -36,6 +36,7 @@ import { Link } from 'react-router'
 import BonusCard from '../../components/bonus/BonusCard'
 import { useCurrentBonus } from '../../data_layer/bonuses'
 import { formatKobo, koboToNumber } from '../../utils/bonus'
+import { WALLET_LABELS } from '../../utils/walletLabels'
 
 type TransactionFilterValues = Record<'type' | 'status', string[]>
 
@@ -162,8 +163,14 @@ const AccountWallet = () => {
           ) : (
             <div className='flex flex-col gap-4 p-4 border-b border-border/40'>
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-placeholder'>
-                  Available Balance
+                <span
+                  className='text-sm text-placeholder'
+                  title={WALLET_LABELS.balanceHint}
+                >
+                  {WALLET_LABELS.balance}
+                  <span className='ml-1.5 text-xs text-neutral-10'>
+                    {WALLET_LABELS.balanceHint.toLowerCase()}
+                  </span>
                 </span>
                 <button
                   type='button'
@@ -191,7 +198,7 @@ const AccountWallet = () => {
                 {visible
                   ? formatCurrency(withdrawableBalance(wallet), wallet?.currency)
                   : '••••••'}{' '}
-                withdrawable
+                {WALLET_LABELS.withdrawable}
               </span>
 
               <div className='flex flex-row items-center gap-2.5'>
@@ -226,7 +233,9 @@ const AccountWallet = () => {
             (bonusBalance > 0 || bonusLocked > 0) && (
               <div className='flex items-center justify-between gap-3 border-b border-border/40 p-4'>
                 <div className='flex flex-col'>
-                  <span className='text-sm text-placeholder'>Bonus</span>
+                  <span className='text-sm text-placeholder'>
+                    {WALLET_LABELS.bonus}
+                  </span>
                   <span className='text-base font-bold text-black'>
                     {formatKobo(bonusBalance)}
                     {bonusLocked > 0 && (

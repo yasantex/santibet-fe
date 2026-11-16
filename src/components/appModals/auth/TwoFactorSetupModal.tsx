@@ -186,7 +186,7 @@ const TwoFactorSetupModal = ({
             />
             <p className='text-sm text-center text-neutral-10'>
               Two-factor authentication is now enabled. Save these recovery
-              codes somewhere safe — each one can only be used once if you lose
+              codes somewhere safe. Each one can only be used once if you lose
               access to your authenticator.
             </p>
           </div>

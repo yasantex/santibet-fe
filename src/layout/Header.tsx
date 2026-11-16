@@ -47,6 +47,7 @@ import { useSignUpHidden } from '../data_layer/authOptions'
 import { useUnreadNotificationCount } from '../data_layer/notifications'
 import { formatCurrency, scrollToTop, toMajorUnits } from '../utils/functions'
 import type { WalletBalance } from '../types/wallet.types'
+import { WALLET_LABELS } from '../utils/walletLabels'
 
 const CategoryRow = () => {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -378,6 +379,7 @@ const Header = () => {
             <div className='flex items-center gap-1.5'>
               <Link
                 to='/account-wallet'
+                title={WALLET_LABELS.balanceHint}
                 className='shrink-0 flex flex-col items-center gap-px rounded-md px-3 text-xs font-semibold text-black py-1 hover:bg-hover/70'
               >
                 <span>
@@ -386,9 +388,11 @@ const Header = () => {
                         toMajorUnits(wallet.total ?? 0),
                         wallet.currency,
                       )
-                    : '—'}
+                    : '-'}
                 </span>
-                <span className='text-[10px] text-neutral-10'>Balance</span>
+                <span className='text-[10px] text-neutral-10'>
+                  {WALLET_LABELS.balance}
+                </span>
               </Link>
               {/* Bonus credit sits apart from cash — never added to it. */}
               {wallet && Number(wallet.bonus ?? 0) + Number(wallet.bonusLocked ?? 0) > 0 && (
@@ -399,7 +403,9 @@ const Header = () => {
                   <span>
                     {formatCurrency(toMajorUnits(wallet.bonus ?? 0), wallet.currency)}
                   </span>
-                  <span className='text-[10px] text-neutral-10'>Bonus</span>
+                  <span className='text-[10px] text-neutral-10'>
+                    {WALLET_LABELS.bonus}
+                  </span>
                 </Link>
               )}
               <span
