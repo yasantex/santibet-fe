@@ -6,6 +6,7 @@ import {
   findTeam,
   isPoolMarket,
   marketDisplayTitle,
+  stripCategoryPrefix,
   outcomeTone,
   TONE_STYLES,
   CARD_HOVER,
@@ -263,7 +264,7 @@ const MarketCard = ({
       </div>
 
       <h3 className='line-clamp-2 min-h-11 text-base leading-snug font-bold text-black'>
-        {marketDisplayTitle(market)}
+        {stripCategoryPrefix(marketDisplayTitle(market), market.category)}
       </h3>
       <div className='flex flex-1 flex-col justify-end gap-2'>
         {isBinary ? (

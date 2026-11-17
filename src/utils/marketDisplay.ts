@@ -167,6 +167,23 @@ export const categoryIcon = (category?: string) =>
   categoryIcons[category ?? ''] ?? '🎯'
 
 /**
+ * Drop a leading "<category>:" from a title, since the card already shows the
+ * category beside its icon ("Dota 2: LEGION vs Aurora (BO3)" → "LEGION vs
+ * Aurora (BO3)"). Leaves the title alone if nothing would remain.
+ */
+export const stripCategoryPrefix = (title: string, category?: string) => {
+  const cat = (category ?? '').trim().toLowerCase()
+  if (!cat || !title) return title
+  const t = title.trimStart()
+  if (!t.toLowerCase().startsWith(cat)) return title
+  const rest = t.slice(cat.length)
+  const m = rest.match(/^\s*[:\-–—|]\s*/)
+  if (!m) return title
+  const out = rest.slice(m[0].length).trim()
+  return out || title
+}
+
+/**
  * Display title for a market card: prefix the parent event so generic market
  * names read in context ("Hamburger SV vs 1. FC Köln: Match Winner"). Skips the
  * prefix when the event title is absent, identical, or already the start of the
