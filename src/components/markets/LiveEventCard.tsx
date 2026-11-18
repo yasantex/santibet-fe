@@ -9,6 +9,7 @@ import {
   groupedChoices,
   isMultiChoiceEvent,
   marketDisplayTitle,
+  stripCategoryPrefix,
   outcomeTone,
   TONE_STYLES,
   CARD_HOVER,
@@ -72,7 +73,7 @@ const MultiChoiceCard = ({
           </span>
         )}
         <span className='line-clamp-2 text-base leading-snug font-bold text-black group-hover:underline'>
-          {event.title}
+          {stripCategoryPrefix(event.title, event.category)}
         </span>
       </Link>
 
@@ -117,6 +118,10 @@ const MultiChoiceCard = ({
     </div>
   )
 }
+
+const normTitle = (s: string) =>
+  s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+const sameTitle = (a = '', b = '') => normTitle(a) === normTitle(b)
 
 const LiveEventCard = ({
   event,
@@ -223,7 +228,7 @@ const LiveEventCard = ({
           to={eventHref}
           className='line-clamp-2 min-h-10 text-left text-base font-bold leading-snug text-black hover:underline'
         >
-          {event.title}
+          {stripCategoryPrefix(event.title, event.category)}
         </Link>
       ) : (
         <button
@@ -234,9 +239,12 @@ const LiveEventCard = ({
           {/* A rolling crypto round's market title already names the coin and
               window ("Will Bitcoin be higher in 5 minutes?"), so prefixing the
               event title ("Bitcoin 5 minutes — Up or Down") repeats it. */}
-          {market.durationSeconds
-            ? market.title
-            : marketDisplayTitle({ title: market.title, eventTitle: event.title })}
+          {stripCategoryPrefix(
+              market.durationSeconds
+                ? market.title
+                : marketDisplayTitle({ title: market.title, eventTitle: event.title }),
+              event.category,
+            )}
         </button>
       )}
 
@@ -251,8 +259,9 @@ const LiveEventCard = ({
         )
       )}
 
-      {/* Not grouped: say which market the buttons belong to. */}
-      {multi && !grouped && (
+      {/* Not grouped: say which market the buttons belong to — unless its
+          title just repeats the event's (esports match-winner markets). */}
+      {multi && !grouped && !sameTitle(market.title, event.title) && (
         <span className='-mb-1.5 text-xs font-semibold text-neutral-10'>
           {market.title}
         </span>
