@@ -3,6 +3,7 @@ import { useDebounce } from 'use-debounce'
 import { useBetQuote } from '../data_layer/bets'
 import { useBonusEligibility, useCurrentBonus } from '../data_layer/bonuses'
 import { toMajorUnits, toMinorUnits } from '../utils/functions'
+import { bonusReasonText } from '../utils/bonus'
 import type { BetType } from '../types/bet.types'
 import type { BonusEligibilityOutcome } from '../types/bonus.types'
 import type { UiMarket, UiOutcome } from '../types/market.types'
@@ -67,8 +68,9 @@ const useBonusSlip = ({
   // disabled and the bet goes in as cash. Holds the server's reason.
   const marketBlockedReason =
     eligibility?.outcomes.length && eligibility.outcomes.every((o) => !o.eligible)
-      ? (eligibility.outcomes.find((o) => o.reason)?.reason ??
-        "This market can't use bonus credit")
+      ? (eligibility.outcomes
+          .map((o) => bonusReasonText(o.code, o.reason))
+          .find(Boolean) ?? "This market can't use bonus credit")
       : null
 
   /** Bonus rules apply to this slip. */
@@ -79,7 +81,8 @@ const useBonusSlip = ({
     if (!active || !outcomeId) return null
     const entry = eligibilityById.get(outcomeId)
     return entry && !entry.eligible
-      ? (entry.reason ?? "This option can't use bonus credit")
+      ? (bonusReasonText(entry.code, entry.reason) ??
+        "This option can't use bonus credit")
       : null
   }
 

@@ -1,4 +1,9 @@
-import { LiveStreaming02Icon, SatelliteIcon, Search01Icon } from '@hugeicons/core-free-icons'
+import {
+  LiveStreaming02Icon,
+  SatelliteIcon,
+  Search01Icon,
+  Ticket01Icon,
+} from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Button } from '../components/globals/Button'
 import { useAppSelector } from '../utils/hooks'
@@ -6,7 +11,7 @@ import { useLocation, useNavigate } from 'react-router'
 import useAuthNavigate from '../hooks/useAuthNavigate'
 import { useLiveBets } from '../data_layer/markets'
 import useAccountSuspended from '../hooks/useAccountSuspended'
-import { SUSPENDED_CTA_HINT } from '../utils/constants'
+import { MY_BETS_PATH, SUSPENDED_CTA_HINT } from '../utils/constants'
 
 type MobileBottomNavProps = {
   onOpenDeposit: () => void
@@ -25,6 +30,7 @@ const MobileBottomNav = ({
 
   const isMarketsActive = pathname === '/'
   const isLiveActive = pathname === '/live'
+  const isMyBetsActive = pathname === MY_BETS_PATH
 
   // Same approximation as the desktop nav's "Live 81" badge — one page of
   // the live feed, not a dedicated count endpoint.
@@ -68,6 +74,26 @@ const MobileBottomNav = ({
         >
           Live
           {liveCount > 0 && <span className='text-error'>{liveCount}</span>}
+        </span>
+      </button>
+      <button
+        type='button'
+        onClick={() =>
+          user ? navigate(MY_BETS_PATH) : authNavigate('/signin', MY_BETS_PATH)
+        }
+        className='flex flex-1 flex-col items-center gap-1 py-1 text-xs'
+      >
+        <HugeiconsIcon
+          icon={Ticket01Icon}
+          size={20}
+          className={isMyBetsActive ? 'text-brand-green' : 'text-black'}
+        />
+        <span
+          className={`whitespace-nowrap ${
+            isMyBetsActive ? 'text-brand-green font-medium' : 'text-black'
+          }`}
+        >
+          My Bets
         </span>
       </button>
 

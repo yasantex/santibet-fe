@@ -394,3 +394,6 @@ export const ACCOUNT_SUSPENDED_CODE = 'ACCOUNT_SUSPENDED'
 export const ACCOUNT_SUSPENDED_MESSAGE =
   "Your account is suspended. You can browse, but you can't make changes right now. Contact support."
 export const SUSPENDED_CTA_HINT = 'Disabled while your account is suspended'
+
+/** My Bets lives on the portfolio page; `?tab=open|pending|settled` opens a tab. */
+export const MY_BETS_PATH = '/account-portfolio'

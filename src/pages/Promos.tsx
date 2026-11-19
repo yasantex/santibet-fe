@@ -12,7 +12,12 @@ import { useAppSelector } from '../utils/hooks'
 import useAuthNavigate from '../hooks/useAuthNavigate'
 import { useBonuses, useBonusOffer } from '../data_layer/bonuses'
 import { useReferrals } from '../data_layer/points'
-import { bonusStatusMeta } from '../utils/bonus'
+import {
+  bonusStatusMeta,
+  COMBO_CASH_ONLY_COPY,
+  NEW_MEMBER_WINNINGS_COPY,
+  PROFIT_BONUS_WINNINGS_COPY,
+} from '../utils/bonus'
 import type { BonusSummary, BonusType } from '../types/bonus.types'
 
 type Promo = {
@@ -24,6 +29,8 @@ type Promo = {
   description: string
   /** Who qualifies, in one line. */
   eligibility: string
+  /** How a winning bonus bet is paid (approved wording). */
+  winnings: string
   /** Full terms. */
   termsHref: string
   cta: string
@@ -47,6 +54,7 @@ const PROMOS: Promo[] = [
     description:
       'Get ₦1,010 credited to your SantiBet account when you sign up.',
     eligibility: 'New SantiBet accounts, one per person and device.',
+    winnings: NEW_MEMBER_WINNINGS_COPY,
     termsHref: '/terms/new-member-bonus',
     cta: 'View my bonus',
     to: '/bonuses',
@@ -60,6 +68,7 @@ const PROMOS: Promo[] = [
     description:
       'Make your first deposit and receive an additional ₦1,000 bonus.',
     eligibility: 'Your first deposit only, with the bonus box ticked.',
+    winnings: PROFIT_BONUS_WINNINGS_COPY,
     termsHref: '/terms/1000-bonus',
     cta: 'Deposit',
     to: '/account-wallet',
@@ -74,6 +83,7 @@ const PROMOS: Promo[] = [
     description:
       'Invite your friends to SantiBet. You get ₦200, and your friend gets ₦200 when they meet the qualifying requirements.',
     eligibility: 'Friends who sign up with your link and qualify.',
+    winnings: PROFIT_BONUS_WINNINGS_COPY,
     termsHref: '/terms',
     cta: 'Invite friends',
     to: '/refer-earn',
@@ -218,6 +228,10 @@ const Promos = () => {
                 <span className='font-semibold text-black'>Who qualifies: </span>
                 {promo.eligibility}
               </p>
+              <p className='text-xs text-neutral-10'>
+                <span className='font-semibold text-black'>Winnings: </span>
+                {promo.winnings}
+              </p>
               <Link
                 to={promo.termsHref}
                 className='w-fit text-xs font-semibold text-black underline underline-offset-2'
@@ -235,6 +249,25 @@ const Promos = () => {
             />
           </article>
         ))}
+      </section>
+
+      <section className='flex flex-col gap-2 rounded-2xl border border-border bg-card p-5 md:p-6'>
+        <h2 className='text-base font-semibold text-black'>
+          How bonus bets work
+        </h2>
+        <ul className='flex list-disc flex-col gap-1.5 pl-5 text-sm leading-relaxed text-neutral-10'>
+          <li>
+            <span className='font-semibold text-black'>New Member Bonus: </span>
+            {NEW_MEMBER_WINNINGS_COPY}
+          </li>
+          <li>
+            <span className='font-semibold text-black'>
+              Deposit and referral bonus:{' '}
+            </span>
+            {PROFIT_BONUS_WINNINGS_COPY}
+          </li>
+          <li>{COMBO_CASH_ONLY_COPY}</li>
+        </ul>
       </section>
 
       <p className='text-xs text-placeholder'>
