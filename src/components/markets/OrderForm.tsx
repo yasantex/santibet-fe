@@ -35,7 +35,7 @@ import useMarketOpen from '../../hooks/useMarketOpen'
 import useBonusSlip from '../../hooks/useBonusSlip'
 import BonusSlipToggle from '../bonus/BonusSlipToggle'
 import { shortOutcomeLabel, teamsFromTitle } from '../../utils/teamNames'
-import { BONUS_KYC_CODE } from '../../utils/bonus'
+import { BONUS_KYC_CODE, bonusReasonText } from '../../utils/bonus'
 import { KYC_PATH } from '../../utils/authRedirect'
 import type { FundedBy } from '../../types/bonus.types'
 import { useOddsFormat } from '../../hooks/useOddsFormat'
@@ -452,7 +452,7 @@ const OrderForm = ({
           )
           return
         }
-        const message = data?.message ?? fallback
+        const message = bonusReasonText(data?.code, data?.message) ?? fallback
         // Surface the minimum-bet rejection inline with a one-tap fill, reading
         // the structured minimum from the API error `details`. Two shapes:
         // STAKE_BELOW_MINIMUM → minimumStakeMinor (kobo); the venue floor

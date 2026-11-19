@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { GiftIcon } from '@hugeicons/core-free-icons'
 import type { BonusSlip } from '../../hooks/useBonusSlip'
-import { formatKobo } from '../../utils/bonus'
+import { bonusWinningsCopy, formatKobo } from '../../utils/bonus'
 import { KYC_PATH } from '../../utils/authRedirect'
 
 /**
@@ -65,7 +65,8 @@ const BonusSlipToggle = ({ slip }: { slip: BonusSlip }) => {
         </p>
       ) : slip.marketBlockedReason ? (
         <p className='rounded-md bg-warning/10 px-2.5 py-2 text-xs font-medium text-warning'>
-          {slip.marketBlockedReason}. This bet will use your cash balance.
+          {slip.marketBlockedReason.replace(/\.$/, '')}. This bet will use
+          your cash balance.
         </p>
       ) : slip.marketOrdersOnly ? (
         <p className='text-xs text-neutral-10'>
@@ -74,9 +75,7 @@ const BonusSlipToggle = ({ slip }: { slip: BonusSlip }) => {
         </p>
       ) : slip.active ? (
         <p className='text-xs text-neutral-10'>
-          {slip.creditsTo === 'LOCKED_WINNINGS'
-            ? 'A win adds the profit to your locked winnings. Bonus bets can’t be cashed out.'
-            : 'A win goes back to your bonus balance. Bonus bets can’t be cashed out.'}
+          {bonusWinningsCopy(slip.creditsTo)}
         </p>
       ) : null}
     </div>

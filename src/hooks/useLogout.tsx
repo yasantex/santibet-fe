@@ -28,18 +28,19 @@ const useLogout = () => {
   const handleLogout = async () => {
     try {
       await apiLogoutAll()
-      clearAllCookies()
       // clearUser() clears the persisted user slice on the next redux-persist
       // write — purging the whole store here would also wipe favorites and
-      // saved categories, which aren't tied to the session.
+      // saved categories, which aren't tied to the session. User first, then
+      // cookies: "saved user, no token" is what triggers a session restore.
       dispatch(clearUser())
+      clearAllCookies()
       queryClient.clear()
       showSuccessToast('Logged out successfully')
       navigate('/')
     } catch (error) {
       console.error(error)
-      clearAllCookies()
       dispatch(clearUser())
+      clearAllCookies()
       showSuccessToast('Logged out successfully')
       navigate('/')
     }

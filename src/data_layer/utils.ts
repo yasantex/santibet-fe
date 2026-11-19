@@ -152,18 +152,55 @@ const clearAuthenticatedSession = () => {
     secure: import.meta.env.PROD,
   }
 
-  cookies.remove('token', removeOptions)
-  cookies.remove('sb_rt', removeOptions)
   // clearUser() resets the in-memory user slice; redux-persist re-persists
   // that on the next state change. `persistor.purge()` would instead wipe
   // the *entire* persisted store (favorites, saved categories, etc.) since
   // there's no per-slice persist config here — this only needs to clear
-  // the session, not every other locally-saved preference.
+  // the session, not every other locally-saved preference. User before
+  // cookies: "saved user, no token" is what triggers a session restore.
   store.dispatch(clearUser())
+  cookies.remove('token', removeOptions)
+  cookies.remove('sb_rt', removeOptions)
 }
 
 const isSessionRevokedError = (error: unknown) =>
   axios.isAxiosError(error) && error.response?.data?.code === 'SESSION_REVOKED'
+
+/** The server turned the refresh token down (expired, revoked, missing) —
+ *  as opposed to a network blip or 5xx, where the session may still be good. */
+const isRefreshRejected = (error: unknown) =>
+  isSessionRevokedError(error) ||
+  (axios.isAxiosError(error) &&
+    // Suspension is read-only, not signed out (see the interceptor below).
+    !isAccountSuspendedError(error) &&
+    [400, 401, 403].includes(error.response?.status ?? 0))
+
+export type RestoreResult = 'restored' | 'signed-out' | 'unreachable'
+
+/**
+ * Gets a fresh access token from the refresh token. Used when the access
+ * token cookie is gone or about to expire while the user is still saved —
+ * e.g. a phone tab left open for a while, or Safari clearing script-set
+ * cookies early. A rejected refresh signs the user out cleanly, so the app is
+ * never left half signed in.
+ */
+export const restoreSession = async (): Promise<RestoreResult> => {
+  try {
+    const tokens = await refreshAuthToken()
+    if (!tokens?.accessToken) {
+      clearAuthenticatedSession()
+      return 'signed-out'
+    }
+    persistRefreshedTokens(tokens)
+    return 'restored'
+  } catch (error) {
+    if (isRefreshRejected(error)) {
+      clearAuthenticatedSession()
+      return 'signed-out'
+    }
+    return 'unreachable'
+  }
+}
 
 const isAccountSuspendedError = (error: unknown) =>
   axios.isAxiosError(error) &&
@@ -239,7 +276,9 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest)
         }
       } catch (refreshError) {
-        if (isSessionRevokedError(refreshError)) {
+        // Any rejected refresh ends the session; only network/5xx failures
+        // keep it, since the refresh token may still be good.
+        if (isRefreshRejected(refreshError)) {
           clearAuthenticatedSession()
         }
         return Promise.reject(refreshError)

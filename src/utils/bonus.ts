@@ -94,6 +94,42 @@ export const bonusEventMeta: Record<
   INELIGIBLE: { label: 'Not eligible', sign: 0, hidden: true },
 }
 
+// ---------- Approved player copy (Testing Round 1, items 4–6) ----------
+// Keep these word-for-word with the bonus T&Cs; the FAQ (admin-managed) must
+// carry the same text.
+
+/** New Member Bonus: how a winning bonus bet is paid. */
+export const NEW_MEMBER_WINNINGS_COPY =
+  'Wins go back to your bonus balance. Reach ₦10,101 and we pay you ₦1,010 in cash.'
+
+/** Deposit and referral bonus: how a winning bonus bet is paid. */
+export const PROFIT_BONUS_WINNINGS_COPY =
+  'Your bonus stake is not returned. Profit from a winning bonus bet becomes cash once you have bet the full bonus once, within 14 days.'
+
+/** Combo bets never take bonus credit. */
+export const COMBO_CASH_ONLY_COPY =
+  'Combo bets use cash only. Bonus credit applies to single YES/NO bets only.'
+
+/** Shown when bonus credit would back both sides of a market. */
+export const BONUS_ONE_SIDE_COPY =
+  'Bonus credit can back only one side of a market. Use cash to bet on the other side.'
+
+/** API code for backing both sides of a market while a bonus is live. */
+export const BONUS_OPPOSITE_SIDE_CODE = 'BONUS_OPPOSITE_SIDE'
+
+/** Player text for a bonus refusal: approved wording where we have it,
+ *  otherwise the server's reason. */
+export const bonusReasonText = (
+  code: string | null | undefined,
+  reason: string | null | undefined,
+) => (code === BONUS_OPPOSITE_SIDE_CODE ? BONUS_ONE_SIDE_COPY : reason)
+
+/** How a win on this bonus is paid, by where the bonus credits wins. */
+export const bonusWinningsCopy = (creditsTo: 'BONUS_BALANCE' | 'LOCKED_WINNINGS') =>
+  creditsTo === 'LOCKED_WINNINGS'
+    ? PROFIT_BONUS_WINNINGS_COPY
+    : NEW_MEMBER_WINNINGS_COPY
+
 /** 422 codes from `POST /bets` and the eligibility check. */
 export const BONUS_KYC_CODE = 'BONUS_PENDING_KYC'
 export const isBonusErrorCode = (code?: string | null) =>
@@ -120,11 +156,12 @@ export const bonusRuleLines = (bonus: CurrentBonus) => {
     rules.allowLive
       ? 'Live markets are allowed.'
       : "Live (in-play) markets can't use bonus.",
-    "You can't back both sides of a market, with bonus or your own cash.",
+    BONUS_ONE_SIDE_COPY,
     'Bonus bets are placed at the current price and can’t be cashed out.',
-    bonus.payoutMode === 'BALANCE'
-      ? 'Wins go back to your bonus balance.'
-      : 'A win adds only the profit to your locked winnings. The stake is used up.',
+    bonusWinningsCopy(
+      bonus.payoutMode === 'PROFIT_LOCKED' ? 'LOCKED_WINNINGS' : 'BONUS_BALANCE',
+    ),
+    COMBO_CASH_ONLY_COPY,
   ]
   if (rules.minStakeKobo) {
     lines.push(`The smallest bonus bet is ${formatKobo(rules.minStakeKobo)}.`)

@@ -6,6 +6,7 @@ import { useModalControl } from '../hooks/useModalControl'
 import Footer from './Footer'
 import Header from './Header'
 import SuspendedBanner from '../components/globals/SuspendedBanner'
+import VerifyReminderBanner from '../components/globals/VerifyReminderBanner'
 import { Outlet } from 'react-router'
 import PasskeyOffer from '../components/appModals/auth/PasskeyOffer'
 import ComboSlipMount from '../components/combo/ComboSlipMount'
@@ -15,12 +16,14 @@ import SupportLauncher from '../components/support/SupportLauncher'
 import BadgeCelebration from '../components/points/BadgeCelebration'
 import BonusGrantedModal from '../components/bonus/BonusGrantedModal'
 import useReferralCapture from '../hooks/useReferralCapture'
+import useSessionGuard from '../hooks/useSessionGuard'
 import RouteSeo from '../seo/RouteSeo'
 
 const AppLayout = () => {
   const { modal, modalOpen, handleModalOpen, handleModalClose } =
     useModalControl()
   useReferralCapture()
+  useSessionGuard()
 
   useEffect(() => {
     const hasConsent = localStorage.getItem(COOKIE_CONSENT_KEY)
@@ -45,6 +48,7 @@ const AppLayout = () => {
         <div className='flex w-full flex-1 flex-col '>
           <Header />
           <SuspendedBanner />
+          <VerifyReminderBanner />
           <main className='w-full flex-1 bg-white pb-20'>
             <Outlet />
           </main>
