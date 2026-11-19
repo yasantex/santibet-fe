@@ -18,6 +18,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import ConfirmWithdrawal from './ConfirmWithdrawal'
 import { useNavigate } from 'react-router'
 import { KYC_PATH } from '../../utils/authRedirect'
+import useVerificationStatus, {
+  VERIFY_CONTACT_PATH,
+} from '../../hooks/useVerificationStatus'
 import {
   formatCurrency,
   toMajorUnits,
@@ -116,6 +119,23 @@ const Withdraw = ({
   }
 
   const navigate = useNavigate()
+
+  // Phone, email and ID must all be verified before any withdrawal. The server
+  // enforces this too; checking here saves the player filling in the form.
+  const verification = useVerificationStatus(open)
+  const verifySteps = [
+    {
+      label: 'Phone number',
+      done: verification.phoneVerified,
+      to: VERIFY_CONTACT_PATH,
+    },
+    { label: 'Email', done: verification.emailVerified, to: VERIFY_CONTACT_PATH },
+    { label: 'ID (KYC)', done: verification.kycApproved, to: KYC_PATH },
+  ]
+  const goVerify = (to: string) => {
+    handleClose()
+    navigate(to)
+  }
 
   // 403 KYC_REQUIRED — e.g. `reason: BONUS_CASH`: cash released by a bonus can
   // only be withdrawn after KYC. Send the player to verify.
@@ -284,7 +304,51 @@ const Withdraw = ({
         title={step === 'quote' ? 'Confirm Withdrawal Quote' : 'Withdraw Funds'}
         className='max-w-125! w-[90%]!'
       >
-        {!hasWithdrawalAccount ? (
+        {verification.loading ? (
+          <div className='flex justify-center py-8'>
+            <span className='h-6 w-6 animate-spin rounded-full border-2 border-brand-green border-t-transparent' />
+          </div>
+        ) : !verification.canWithdraw ? (
+          <div className='flex flex-col gap-4'>
+            <p className='text-sm text-neutral-10'>
+              Verify your phone number, email and ID before your first
+              withdrawal.
+            </p>
+            <ul className='flex flex-col gap-2'>
+              {verifySteps.map((item) => (
+                <li
+                  key={item.label}
+                  className='flex items-center justify-between gap-3 rounded-lg border border-border p-3'
+                >
+                  <span className='text-sm font-semibold text-black'>
+                    {item.label}
+                  </span>
+                  {item.done ? (
+                    <span className='rounded-full bg-surface-success px-2.5 py-0.5 text-xs font-semibold text-success'>
+                      Verified
+                    </span>
+                  ) : (
+                    <button
+                      type='button'
+                      onClick={() => goVerify(item.to)}
+                      className='cursor-pointer text-sm font-semibold text-black underline underline-offset-2'
+                    >
+                      Verify now
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <Button
+              type='button'
+              text='Close'
+              variation='plain'
+              size='large'
+              className='w-full'
+              onClick={handleDone}
+            />
+          </div>
+        ) : !hasWithdrawalAccount ? (
           <div className='flex flex-col items-center gap-3 py-4'>
             <p className='text-sm text-left text-neutral-10'>
               You need a withdrawal account before you can withdraw. Add one

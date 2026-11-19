@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   FilterHorizontalIcon,
@@ -47,10 +48,10 @@ import type { Bet, BetPosition } from '../../types/bet.types'
 import type { WalletBalance } from '../../types/wallet.types'
 
 type PortfolioTab = 'POSITIONS' | 'OPEN' | 'HISTORY'
-const TABS: { key: PortfolioTab; label: string }[] = [
-  { key: 'POSITIONS', label: 'Active Bets' },
-  { key: 'OPEN', label: 'Pending Orders' },
-  { key: 'HISTORY', label: 'History/Settled Bets' },
+const TABS: { key: PortfolioTab; label: string; param: string }[] = [
+  { key: 'POSITIONS', label: 'Open', param: 'open' },
+  { key: 'OPEN', label: 'Pending Orders', param: 'pending' },
+  { key: 'HISTORY', label: 'Settled', param: 'settled' },
 ]
 
 const flatten = <T,>(pages?: ({ data?: T[] } | undefined)[]) =>
@@ -61,7 +62,22 @@ const cutoffOf = (times: number[], hasNextPage?: boolean) =>
   hasNextPage && times.length ? Math.min(...times) : -Infinity
 
 const AccountPortfolio = () => {
-  const [activeTab, setActiveTab] = useState<PortfolioTab>('POSITIONS')
+  // `?tab=open|pending|settled` picks the tab, so nav links and shares can
+  // land on one directly.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab: PortfolioTab =
+    TABS.find((t) => t.param === searchParams.get('tab'))?.key ?? 'POSITIONS'
+  const setActiveTab = (key: PortfolioTab) => {
+    const param = TABS.find((t) => t.key === key)?.param ?? 'open'
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('tab', param)
+        return next
+      },
+      { replace: true },
+    )
+  }
   const [search, setSearch] = useState('')
   const [positionSort, setPositionSort] = useState<PositionSort>('value')
   const [historySort, setHistorySort] = useState<HistorySort>('newest')
@@ -197,7 +213,7 @@ const AccountPortfolio = () => {
         : 'No activity of this type yet.'
       : activeTab === 'OPEN'
         ? 'No pending orders.'
-        : 'No active bets yet.'
+        : 'No open bets yet.'
 
   return (
     <main className='mx-auto flex w-full flex-col gap-6'>
@@ -270,7 +286,7 @@ const AccountPortfolio = () => {
           loading={isLoading}
           error={
             isError
-              ? `We couldn’t load your ${activeTab === 'HISTORY' ? 'history' : activeTab === 'OPEN' ? 'pending orders' : 'active bets'} right now.`
+              ? `We couldn’t load your ${activeTab === 'HISTORY' ? 'history' : activeTab === 'OPEN' ? 'pending orders' : 'open bets'} right now.`
               : null
           }
           empty={emptyText}

@@ -3,11 +3,13 @@ import type { NavigateFunction } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   LogoutSquare01Icon,
+  Ticket01Icon,
   User02FreeIcons,
 } from '@hugeicons/core-free-icons'
 import {
   appearanceOptions,
   generalMenuItems,
+  MY_BETS_PATH,
   type AppearanceOption,
 } from '../../utils/constants'
 import { ProfileAvatar } from './ReusedText'
@@ -76,6 +78,16 @@ const ProfileDropdownMenu = ({
           >
             <HugeiconsIcon icon={User02FreeIcons} size={20} />
             <p className='text-sm text-black font-semibold'>My Profile</p>
+          </div>
+          <div
+            onClick={() => {
+              navigate(MY_BETS_PATH)
+              close()
+            }}
+            className='flex gap-2.5 text-black items-center hover:bg-hover p-2 cursor-pointer'
+          >
+            <HugeiconsIcon icon={Ticket01Icon} size={20} />
+            <p className='text-sm text-black font-semibold'>My Bets</p>
           </div>
           <div className='h-px bg-border my-1' />
         </>
