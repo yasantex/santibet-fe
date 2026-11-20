@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowRight02Icon } from '@hugeicons/core-free-icons'
+import { ArrowDown01Icon, ArrowRight02Icon } from '@hugeicons/core-free-icons'
+import ComboLegs from './ComboLegs'
 import CashOutButton from '../markets/CashOutButton'
 import ShareBetButton from '../markets/ShareBetButton'
 import MarketTitleLink from '../markets/MarketTitleLink'
@@ -64,6 +66,12 @@ const PositionRow = ({ row }: { row: Extract<Row, { kind: 'position' }> }) => {
       ? Number(position.contracts)
       : (Number(position.shares) || 0) / 100
   const pnlPct = row.pnl != null && row.traded > 0 ? (row.pnl / row.traded) * 100 : null
+  // Pool bets have no share price: their odds are the estimated payout over
+  // the stake, and move until the market closes.
+  const poolOdds = pool && row.traded > 0 && row.toWin > 0 ? row.toWin / row.traded : 0
+  const poolChance = poolOdds > 0 ? 100 / poolOdds : 0
+  const poolChanceText =
+    poolChance > 0 && poolChance < 1 ? '<1%' : `${Math.round(poolChance)}%`
 
   return (
     <div
@@ -101,7 +109,19 @@ const PositionRow = ({ row }: { row: Extract<Row, { kind: 'position' }> }) => {
 
       <Cell label='Odds: Bought → Now' className='text-neutral-10'>
         {pool ? (
-          '-'
+          poolOdds > 0 ? (
+            <span className='flex flex-col'>
+              <span className='text-black'>
+                {oddsFormat === 'odds' ? formatOdds(poolOdds) : poolChanceText}
+              </span>
+              <span className='text-xs'>
+                {oddsFormat === 'odds' ? poolChanceText : formatOdds(poolOdds)}{' '}
+                · est.
+              </span>
+            </span>
+          ) : (
+            '-'
+          )
         ) : (
           // The user's format leads and the other reads underneath, so the
           // share price and its decimal odds are both on screen (SB-042).
@@ -172,31 +192,49 @@ const PositionRow = ({ row }: { row: Extract<Row, { kind: 'position' }> }) => {
   )
 }
 
+// Tap a combo to see every leg: its market, pick and odds.
 const ComboRow = ({ row }: { row: Extract<Row, { kind: 'combo' }> }) => {
   const { combo } = row
+  const [expanded, setExpanded] = useState(false)
   return (
     <div
-      className={`grid grid-cols-3 items-center gap-x-3 gap-y-3 rounded-xl bg-card p-3 md:gap-y-0 ${POSITION_GRID}`}
+      role='button'
+      tabIndex={0}
+      aria-expanded={expanded}
+      onClick={() => setExpanded((e) => !e)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          setExpanded((x) => !x)
+        }
+      }}
+      className={`grid cursor-pointer grid-cols-3 items-center gap-x-3 gap-y-3 rounded-xl bg-card p-3 transition-colors hover:bg-hover/40 ${expanded ? '' : 'md:gap-y-0'} ${POSITION_GRID}`}
     >
       <div className='col-span-3 flex min-w-0 items-center gap-3 md:col-span-1'>
         <MarketThumb imageUrl={combo.legs[0]?.market?.imageUrl} title='Combo' />
         <div className='flex min-w-0 flex-col gap-1'>
-          <span className='truncate text-sm font-semibold text-black'>
-            {row.title}
+          <span className='flex items-center gap-1 text-sm font-semibold text-black'>
+            <span className='truncate'>{row.title}</span>
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              size={16}
+              className={`shrink-0 text-neutral-10 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            />
           </span>
           <div className='flex min-w-0 items-center gap-2'>
-            <OutcomeChip label={formatOdds(combo.combinedOdds)} />
             <span className='truncate text-xs text-neutral-10'>
-              {combo.legs
-                .map((l) => l.outcomeLabel ?? l.market?.title ?? '')
-                .filter(Boolean)
-                .join(' · ')}
+              {expanded
+                ? 'Tap to hide picks'
+                : combo.legs
+                    .map((l) => l.outcomeLabel ?? l.market?.title ?? '')
+                    .filter(Boolean)
+                    .join(' · ')}
             </span>
           </div>
         </div>
       </div>
-      <Cell label='Odds: Bought → Now' className='text-neutral-10'>
-        -
+      <Cell label='Combined odds' className='text-black'>
+        {formatOdds(combo.combinedOdds)}
       </Cell>
       <Cell label='Stake' className='text-neutral-10'>
         {formatCurrency(row.traded)}
@@ -214,6 +252,11 @@ const ComboRow = ({ row }: { row: Extract<Row, { kind: 'combo' }> }) => {
         </span>
       </Cell>
       <div className='hidden md:block' />
+      {expanded && (
+        <div className='col-span-3 md:col-span-6'>
+          <ComboLegs combo={combo} />
+        </div>
+      )}
     </div>
   )
 }

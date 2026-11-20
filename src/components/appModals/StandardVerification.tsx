@@ -373,7 +373,7 @@ const StandardVerification = ({
         open={open}
         handleClose={close}
         title='Standard verification'
-        subtitle='Verify your identity to unlock withdrawals.'
+        subtitle='Needed for withdrawals of ₦500,000 or more.'
         className='max-w-125! w-[90%]!'
       >
         {kycLoading ? (

@@ -3,6 +3,7 @@ import {
   toMajorUnits,
 } from '../../utils/functions'
 import type { BetPosition, ComboTicket } from '../../types/bet.types'
+import { marketLabel } from './betDisplay'
 
 export type PositionSort = 'value' | 'traded' | 'toWin' | 'pnl' | 'newest'
 
@@ -62,7 +63,8 @@ const toPositionRows = (positions: BetPosition[], combos: ComboTicket[]): Positi
       kind: 'position',
       id: position.id,
       at: new Date(position.openedAt).getTime() || 0,
-      title: position.market?.title ?? 'Market',
+      // "Arsenal vs Chelsea · Match Winner": the market alone is ambiguous.
+      title: marketLabel(position.market),
       position,
       traded: staked,
       toWin: estPayout ?? 0,
@@ -86,7 +88,10 @@ const matches = (row: PositionRow, q: string) => {
   const haystack =
     row.kind === 'combo'
       ? row.combo.legs
-          .map((l) => `${l.market?.title ?? ''} ${l.outcomeLabel ?? ''}`)
+          .map(
+            (l) =>
+              `${l.market?.eventTitle ?? ''} ${l.market?.title ?? ''} ${l.outcomeLabel ?? ''}`,
+          )
           .join(' ')
       : `${row.title} ${row.position.outcomeLabel ?? ''}`
   return haystack.toLowerCase().includes(q)
