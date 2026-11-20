@@ -23,30 +23,38 @@ export const ScoreBoard = ({
   /** Event teams, for a crest beside each competitor. */
   teams?: EventTeam[] | null
 }) => {
-  const meta = [state.status, state.period, state.clock]
+  // "1H · 11'". A bare "Live" status is dropped: the card already has a LIVE
+  // badge.
+  const meta = [
+    state.status?.trim().toLowerCase() === 'live' ? null : state.status,
+    state.period,
+    state.clock,
+  ]
     .filter(Boolean)
     .join(' · ')
+  // The clock sits on its own line above the scores, so long team names on
+  // a narrow card can't push it out of the card.
   return (
-    <div className='flex items-center justify-between gap-3 rounded-lg bg-hover/50 px-3 py-2'>
+    <div className='flex min-w-0 flex-col gap-1 rounded-lg bg-hover/50 px-3 py-2'>
+      {meta && (
+        <span className='truncate text-[11px] font-semibold text-error uppercase'>
+          {meta}
+        </span>
+      )}
       <div className='flex flex-col gap-0.5'>
         {(state.scores ?? []).map((s) => (
           <div
             key={s.competitor}
-            className='flex items-center justify-between gap-6 text-sm'
+            className='flex items-center justify-between gap-3 text-sm'
           >
             <span className='flex min-w-0 items-center gap-2 font-medium text-black'>
               <TeamLogo team={findTeam(teams, s.competitor)} size={16} />
               <span className='truncate'>{s.competitor}</span>
             </span>
-            <span className='font-bold text-black'>{s.score}</span>
+            <span className='shrink-0 font-bold text-black'>{s.score}</span>
           </div>
         ))}
       </div>
-      {meta && (
-        <span className='shrink-0 text-xs font-semibold text-error uppercase'>
-          {meta}
-        </span>
-      )}
     </div>
   )
 }

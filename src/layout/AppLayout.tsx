@@ -6,7 +6,6 @@ import { useModalControl } from '../hooks/useModalControl'
 import Footer from './Footer'
 import Header from './Header'
 import SuspendedBanner from '../components/globals/SuspendedBanner'
-import VerifyReminderBanner from '../components/globals/VerifyReminderBanner'
 import { Outlet } from 'react-router'
 import PasskeyOffer from '../components/appModals/auth/PasskeyOffer'
 import ComboSlipMount from '../components/combo/ComboSlipMount'
@@ -48,7 +47,6 @@ const AppLayout = () => {
         <div className='flex w-full flex-1 flex-col '>
           <Header />
           <SuspendedBanner />
-          <VerifyReminderBanner />
           <main className='w-full flex-1 bg-white pb-20'>
             <Outlet />
           </main>
