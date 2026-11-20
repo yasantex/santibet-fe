@@ -89,6 +89,52 @@ export const kycErrorMessage = (
   return message
 }
 
+export type KycFailure = {
+  title: string
+  message: string
+  /**
+   * True when the details weren't the problem (service down, no connection,
+   * rate limit), so "Try again" resubmits as-is instead of asking for edits.
+   */
+  retryable: boolean
+}
+
+/** A failed ID-number check, explained so the player knows what to do next. */
+export const kycVerifyFailure = (error: unknown): KycFailure => {
+  if (isAxiosError(error)) {
+    const status = error.response?.status
+    if (!error.response)
+      return {
+        title: 'You’re offline',
+        message:
+          'We couldn’t reach the server. Check your internet connection and try again.',
+        retryable: true,
+      }
+    if (status === 429)
+      return {
+        title: 'Too many attempts',
+        message:
+          'For your security we’ve paused ID checks for a few minutes. You can upload a photo of your ID instead.',
+        retryable: false,
+      }
+    if (status && status >= 500)
+      return {
+        title: 'ID verification temporarily unavailable',
+        message:
+          'ID number verification can’t be completed at the moment. Please try again later, or upload a photo of your ID instead.',
+        retryable: true,
+      }
+  }
+  return {
+    title: 'We couldn’t verify your ID',
+    message: kycErrorMessage(
+      error,
+      'The details you entered don’t match the records for this ID. Check your name, ID number and date of birth, or upload a photo of your ID instead.',
+    ),
+    retryable: false,
+  }
+}
+
 /** Smallest side, in pixels, a photo of an ID can have and still be read. */
 const MIN_ID_IMAGE_SIDE = 400
 

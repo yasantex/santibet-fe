@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useFormik } from 'formik'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { AlertCircleIcon } from '@hugeicons/core-free-icons'
 import ModalComponent, { type ModalProps } from '../globals/ModalComponent'
 import { Button } from '../globals/Button'
 import { FormInput } from '../globals/FormInput'
@@ -15,7 +17,9 @@ import { kycStatusBadge } from '../../utils/status'
 import {
   idNumberError,
   kycErrorMessage,
+  kycVerifyFailure,
   normalizeIdNumber,
+  type KycFailure,
 } from '../../utils/kyc'
 import {
   isAdult,
@@ -48,10 +52,10 @@ const SUBMITTABLE_STATUSES = ['NOT_STARTED', 'REJECTED', 'MORE_INFO_REQUIRED']
 
 type VerifyMethod = 'idNumber' | 'upload'
 
-// Both flows start by capturing the name exactly as it is on the ID, so the
-// document can be checked against it (SB-009). Then the ID-number flow asks
-// for the ID and date of birth; the upload flow for the document.
-// Each step lists the fields it gates.
+// Both flows confirm the name exactly as it is on the ID, so it can be
+// checked against the ID (SB-009). The ID-number flow asks for it first, then
+// the ID and date of birth; the upload flow goes straight to the document and
+// shows the name on its first screen. Each step lists the fields it gates.
 const MANUAL_STEPS: (keyof KycPayload)[][] = [
   ['firstName', 'lastName'],
   ['idType', 'idNumber'],
@@ -80,9 +84,11 @@ const StandardVerification = ({
 }: StandardVerificationProps) => {
   const [method, setMethod] = useState<VerifyMethod>('idNumber')
   const [step, setStep] = useState(0)
-  // Set when an ID-number check fails — opens a prompt pointing the user to
-  // the document upload instead. Holds the API's reason, if it gave one.
-  const [failureMessage, setFailureMessage] = useState<string | null>(null)
+  // Set when an ID-number check fails. Replaces the steps with a screen that
+  // says what went wrong and offers the document upload instead.
+  const [failure, setFailure] = useState<KycFailure | null>(null)
+  // Upload flow: the name shows as a summary until the player edits it.
+  const [editingName, setEditingName] = useState(false)
   const badge = kycStatusBadge(kycStatus?.status)
   const canSubmit = SUBMITTABLE_STATUSES.includes(kycStatus?.status ?? '')
 
@@ -95,18 +101,14 @@ const StandardVerification = ({
     path: '/kyc/verify',
     mutationOptions: {
       onError: (error) => {
-        setFailureMessage(kycErrorMessage(error))
+        setFailure(kycVerifyFailure(error))
       },
       onSuccess: (data) => {
         refetchKyc()
         if (data?.status === 'APPROVED') {
           showSuccessToast('You’re verified')
         } else {
-          setFailureMessage(
-            data?.rejectionReason
-              ? kycErrorMessage(data.rejectionReason)
-              : '',
-          )
+          setFailure(kycVerifyFailure(data?.rejectionReason ?? ''))
         }
       },
     },
@@ -157,28 +159,34 @@ const StandardVerification = ({
     },
   })
 
-  // Saves a corrected name before moving on from the name step.
-  const confirmName = async () => {
+  // Saves a corrected name to the profile. Resolves false if that failed.
+  const saveName = async () => {
     const firstName = values.firstName.trim()
     const lastName = values.lastName.trim()
     setNameError('')
     if (
       firstName === (profile?.firstName ?? '').trim() &&
       lastName === (profile?.lastName ?? '').trim()
-    ) {
-      setStep(NAME_STEP + 1)
-      return
-    }
+    )
+      return true
     try {
       await patchName({ firstName, lastName })
       onProfileUpdated?.()
-      setStep(NAME_STEP + 1)
+      return true
     } catch (error) {
       setNameError(
         kycErrorMessage(error, 'We couldn’t save your name. Try again.'),
       )
+      setEditingName(true)
+      return false
     }
   }
+
+  const confirmName = async () => {
+    if (await saveName()) setStep(NAME_STEP + 1)
+  }
+
+  const nameIncomplete = !values.firstName.trim() || !values.lastName.trim()
 
   // Label of the picked ID type ("BVN", "Voter's Card") for field hints.
   const idTypeLabel =
@@ -187,10 +195,16 @@ const StandardVerification = ({
   const changeMethod = (m: VerifyMethod) => {
     setMethod(m)
     setStep(0)
+    setFailure(null)
+    setNameError('')
   }
 
-  const totalSteps =
-    method === 'upload' ? 1 + UPLOAD_STEPS : MANUAL_STEPS.length
+  const close = () => {
+    setFailure(null)
+    handleClose()
+  }
+
+  const totalSteps = method === 'upload' ? UPLOAD_STEPS : MANUAL_STEPS.length
   // 18+ only: an under-age date of birth can't be submitted.
   const dobError =
     values.dateOfBirth && !isAdult(values.dateOfBirth) ? UNDERAGE_MESSAGE : ''
@@ -204,7 +218,7 @@ const StandardVerification = ({
 
   const manualSecondary =
     step === 0
-      ? { secondaryText: 'Not now', onSecondary: handleClose }
+      ? { secondaryText: 'Not now', onSecondary: close }
       : { secondaryText: 'Back', onSecondary: () => setStep(step - 1) }
 
   const manualStepProps = {
@@ -215,26 +229,8 @@ const StandardVerification = ({
     ...manualSecondary,
   }
 
-  // Shared first step of both flows.
-  const nameStep = (
-    <StepScreen
-      title='What’s your name?'
-      subtitle='Enter it exactly as it appears on your ID, including the spelling.'
-      continueDisabled={
-        !values.firstName.trim() || !values.lastName.trim() || savingName
-      }
-      loading={savingName}
-      onContinue={confirmName}
-      secondaryText='Not now'
-      onSecondary={handleClose}
-      footer={
-        nameError && (
-          <p role='alert' className='text-xs font-medium text-error'>
-            {nameError}
-          </p>
-        )
-      }
-    >
+  const nameFields = (
+    <>
       <FormInput
         type='text'
         name='firstName'
@@ -261,6 +257,113 @@ const StandardVerification = ({
         onBlur={handleBlur}
         errors={errors.lastName && touched.lastName ? errors.lastName : ''}
       />
+    </>
+  )
+
+  const fullName = [values.firstName, values.middleName, values.lastName]
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .join(' ')
+
+  // Upload flow: the name on the ID, confirmed on the first upload screen.
+  const uploadNameIntro = (
+    <div className='flex flex-col gap-2.5'>
+      {editingName || nameIncomplete ? (
+        <>
+          <p className='text-xs font-medium text-black'>
+            Name exactly as it appears on this ID
+          </p>
+          {nameFields}
+        </>
+      ) : (
+        <div className='flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2.5'>
+          <div className='min-w-0'>
+            <p className='text-[11px] text-placeholder'>Name on your ID</p>
+            <p className='truncate text-sm font-medium text-black'>
+              {fullName}
+            </p>
+          </div>
+          <button
+            type='button'
+            onClick={() => setEditingName(true)}
+            className='shrink-0 text-xs font-semibold text-black underline underline-offset-2'
+          >
+            Edit
+          </button>
+        </div>
+      )}
+      {nameError && (
+        <p role='alert' className='text-xs font-medium text-error'>
+          {nameError}
+        </p>
+      )}
+    </div>
+  )
+
+  // Replaces the steps after a failed ID-number check.
+  const failureScreen = failure && (
+    <div className='flex w-full flex-col gap-3'>
+      <div className='flex gap-3 rounded-lg bg-error-bg p-3'>
+        <HugeiconsIcon
+          icon={AlertCircleIcon}
+          size={20}
+          className='mt-px shrink-0 text-error'
+        />
+        <div className='flex flex-col gap-1'>
+          <p className='text-sm font-semibold text-error'>{failure.title}</p>
+          <p className='text-xs text-error'>{failure.message}</p>
+        </div>
+      </div>
+      <Button
+        type='button'
+        text='Upload a photo of your ID'
+        variation='primary'
+        size='large'
+        className='mt-2'
+        onClick={() => changeMethod('upload')}
+      />
+      <Button
+        type='button'
+        text={failure.retryable ? 'Try again' : 'Edit my details'}
+        variation='plain'
+        size='large'
+        loading={isPending}
+        disabled={isPending}
+        onClick={() => {
+          setFailure(null)
+          if (failure.retryable) {
+            // Details weren't the problem: resubmit them as they are.
+            submitForm()
+          } else {
+            // Back to the ID step so the number can be corrected.
+            setStep(NAME_STEP + 1)
+          }
+        }}
+      />
+    </div>
+  )
+
+  // First step of the ID-number flow.
+  const nameStep = (
+    <StepScreen
+      title='What’s your name?'
+      subtitle='Enter it exactly as it appears on your ID, including the spelling.'
+      continueDisabled={
+        !values.firstName.trim() || !values.lastName.trim() || savingName
+      }
+      loading={savingName}
+      onContinue={confirmName}
+      secondaryText='Not now'
+      onSecondary={close}
+      footer={
+        nameError && (
+          <p role='alert' className='text-xs font-medium text-error'>
+            {nameError}
+          </p>
+        )
+      }
+    >
+      {nameFields}
     </StepScreen>
   )
 
@@ -268,7 +371,7 @@ const StandardVerification = ({
     <>
       <ModalComponent
         open={open}
-        handleClose={handleClose}
+        handleClose={close}
         title='Standard verification'
         subtitle='Verify your identity to unlock withdrawals.'
         className='max-w-125! w-[90%]!'
@@ -277,7 +380,8 @@ const StandardVerification = ({
           <div className='h-11 w-full animate-pulse rounded-lg bg-neutral-10/20' />
         ) : canSubmit ? (
           <div className='flex w-full flex-col gap-3'>
-            {kycStatus?.rejectionReason &&
+            {!failure &&
+              kycStatus?.rejectionReason &&
               kycStatus.status !== 'NOT_STARTED' && (
                 <div className='flex flex-col gap-0.5 rounded-lg bg-error-bg px-3 py-2.5 text-xs text-error'>
                   <span className='font-semibold'>
@@ -293,7 +397,7 @@ const StandardVerification = ({
               )}
 
             {/* Method can only be switched before the flow is underway. */}
-            {step === 0 && (
+            {step === 0 && !failure && (
               <div className='flex items-center gap-1 rounded-full bg-hover p-1'>
                 {(
                   [
@@ -317,17 +421,25 @@ const StandardVerification = ({
               </div>
             )}
 
-            <Stepper steps={totalSteps} current={step} className='my-2' />
+            {!failure && (
+              <Stepper steps={totalSteps} current={step} className='my-2' />
+            )}
 
-            {step === NAME_STEP ? (
-              nameStep
+            {failure ? (
+              failureScreen
             ) : method === 'upload' ? (
               <KycDocumentUpload
-                step={step - 1}
-                onStepChange={(s) => setStep(s + 1)}
-                onBack={() => setStep(NAME_STEP)}
+                step={step}
+                onStepChange={setStep}
+                onBack={close}
                 onSubmitted={refetchKyc}
+                intro={uploadNameIntro}
+                onFirstContinue={saveName}
+                firstContinueBlocked={nameIncomplete}
+                firstContinueLoading={savingName}
               />
+            ) : step === NAME_STEP ? (
+              nameStep
             ) : step === 1 ? (
               <StepScreen title='Which ID will you use?' {...manualStepProps}>
                 <CustomSelector
@@ -405,48 +517,6 @@ const StandardVerification = ({
             )}
           </div>
         )}
-      </ModalComponent>
-
-      <ModalComponent
-        open={open && failureMessage !== null}
-        handleClose={() => setFailureMessage(null)}
-        title='Verification failed'
-        subtitle="We couldn't verify your ID number."
-        className='max-w-100! w-[90%]!'
-      >
-        <div className='flex w-full flex-col gap-3'>
-          {failureMessage && (
-            <p className='rounded-lg bg-error-bg px-3 py-2.5 text-xs font-medium text-error'>
-              {failureMessage}
-            </p>
-          )}
-          <p className='text-sm text-neutral-10'>
-            Please verify by uploading a photo of your ID document instead.
-          </p>
-          <Button
-            type='button'
-            text='Upload document'
-            variation='primary'
-            size='large'
-            onClick={() => {
-              setFailureMessage(null)
-              // The name is already captured: go straight to the document.
-              setMethod('upload')
-              setStep(NAME_STEP + 1)
-            }}
-          />
-          <Button
-            type='button'
-            text='Try again'
-            variation='plain'
-            size='large'
-            onClick={() => {
-              // Back to the ID step so the number can be re-checked.
-              setFailureMessage(null)
-              setStep(NAME_STEP + 1)
-            }}
-          />
-        </div>
       </ModalComponent>
     </>
   )
