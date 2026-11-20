@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons'
 import CustomSelector from '../../../components/globals/CustomSelector'
@@ -25,7 +25,7 @@ const documentTypeOptions = [
 const ID_CHECKLIST = [
   'A valid, unexpired government-issued ID',
   'Your full name, photo, date of birth and ID number clearly visible',
-  'The same name you entered in the previous step',
+  'The same name as shown above',
   'All four corners in frame, in focus, with no glare or cover',
   'JPG, PNG, WEBP or PDF, up to 5 MB',
 ]
@@ -49,9 +49,19 @@ type KycDocumentUploadProps = {
   /** 0-based step within the upload flow. */
   step: number
   onStepChange: (step: number) => void
-  /** Leave the upload flow from its first step (back to the name step). */
+  /** Leave the upload flow from its first step. */
   onBack: () => void
   onSubmitted: () => void
+  /** Extra content on the first screen (the name on the ID). */
+  intro?: ReactNode
+  /**
+   * Runs before leaving the first screen; resolve false to stay on it
+   * (e.g. the name couldn't be saved).
+   */
+  onFirstContinue?: () => Promise<boolean>
+  /** Blocks leaving the first screen (e.g. the name is incomplete). */
+  firstContinueBlocked?: boolean
+  firstContinueLoading?: boolean
 }
 
 const KycDocumentUpload = ({
@@ -59,6 +69,10 @@ const KycDocumentUpload = ({
   onStepChange,
   onBack,
   onSubmitted,
+  intro,
+  onFirstContinue,
+  firstContinueBlocked,
+  firstContinueLoading,
 }: KycDocumentUploadProps) => {
   const suspended = useAccountSuspended()
   const [documentType, setDocumentType] = useState('')
@@ -114,9 +128,13 @@ const KycDocumentUpload = ({
       <StepScreen
         title='Which ID are you uploading?'
         subtitle='Choose a valid government-issued ID.'
-        continueDisabled={!documentType}
-        onContinue={() => onStepChange(1)}
-        secondaryText='Back'
+        continueDisabled={!documentType || firstContinueBlocked}
+        loading={firstContinueLoading}
+        onContinue={async () => {
+          if (onFirstContinue && !(await onFirstContinue())) return
+          onStepChange(1)
+        }}
+        secondaryText='Not now'
         onSecondary={back}
       >
         <CustomSelector
@@ -126,6 +144,7 @@ const KycDocumentUpload = ({
           placeholder='Select ID type'
           containerClassName='w-full'
         />
+        {intro}
         <p className='text-xs font-medium text-black'>Before you upload</p>
         <Checklist items={ID_CHECKLIST} />
       </StepScreen>
