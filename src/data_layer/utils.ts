@@ -39,6 +39,8 @@ interface InfiniteQueryProps<TData> {
   params?: QueryParams
   responseType?: 'json' | 'blob' | 'document' | 'formdata' | 'stream' | 'text'
   getNextPageParam: (lastPage: TData) => string | undefined
+  /** Turns a page param into query params; default `{ cursor: pageParam }`. */
+  pageParamToParams?: (pageParam: string | undefined) => QueryParams
 }
 
 interface QueryProps<TData> {
@@ -397,6 +399,7 @@ export const useSantiBetInfiniteQuery = <TData = unknown>({
   params = {},
   responseType = 'json',
   getNextPageParam,
+  pageParamToParams = (pageParam) => ({ cursor: pageParam }),
 }: InfiniteQueryProps<TData>) => {
   const [cookies] = useCookies(['token'])
 
@@ -408,7 +411,7 @@ export const useSantiBetInfiniteQuery = <TData = unknown>({
   }
 
   const fetchData = async (context: { pageParam: string | undefined }) => {
-    const url = `${path}${buildQueryParams({ ...params, cursor: context.pageParam })}`
+    const url = `${path}${buildQueryParams({ ...params, ...pageParamToParams(context.pageParam) })}`
     const config: AxiosRequestConfig = {
       url,
       method: 'GET',

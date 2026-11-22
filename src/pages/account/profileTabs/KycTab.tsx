@@ -80,7 +80,9 @@ const KycTab = ({
               </div>
               <div>
                 <p className='text-[11px] text-placeholder'>Max withdrawal</p>
-                <p className='text-sm font-medium text-black'>500,000</p>
+                <p className='text-sm font-medium text-black'>
+                  Under 500,000
+                </p>
               </div>
             </div>
           </div>
@@ -116,7 +118,8 @@ const KycTab = ({
               </div>
             </div>
             <p className='text-xs text-placeholder'>
-              Government ID, full name and date of birth.
+              Government ID, full name and date of birth. Needed to withdraw
+              ₦500,000 or more.
             </p>
             <div className='grid grid-cols-2 gap-3 rounded-lg p-3'>
               <div>

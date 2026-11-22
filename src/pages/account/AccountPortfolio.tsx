@@ -32,6 +32,8 @@ import {
   ToolbarMenu,
 } from '../../components/portfolio/PortfolioBits'
 import {
+  allCombos,
+  uniqueById,
   useBetPositions,
   useBets,
   usePortfolioSummary,
@@ -54,8 +56,10 @@ const TABS: { key: PortfolioTab; label: string; param: string }[] = [
   { key: 'HISTORY', label: 'Settled', param: 'settled' },
 ]
 
-const flatten = <T,>(pages?: ({ data?: T[] } | undefined)[]) =>
-  (pages ?? []).flatMap((p) => p?.data ?? [])
+// A combos-only page can repeat page one's bets, so each id counts once.
+const flatten = <T extends { id: string }>(
+  pages?: ({ data?: T[] } | undefined)[],
+) => uniqueById(pages)
 
 /** Oldest time on the loaded pages, or -∞ once a list is fully loaded. */
 const cutoffOf = (times: number[], hasNextPage?: boolean) =>
@@ -105,12 +109,10 @@ const AccountPortfolio = () => {
     () => flatten<BetPosition>(positionsQuery.data?.pages),
     [positionsQuery.data],
   )
-  // Combo tickets ride on the first page of each list.
+  // Combos page alongside each list.
   const openCombos = useMemo(
     () =>
-      (positionsQuery.data?.pages[0]?.combos ?? []).filter(
-        (c) => c.status === 'OPEN',
-      ),
+      allCombos(positionsQuery.data?.pages).filter((c) => c.status === 'OPEN'),
     [positionsQuery.data],
   )
   const positionRows = useMemo(
@@ -133,7 +135,7 @@ const AccountPortfolio = () => {
     if (!stakeQuery.data) return undefined
     return openStakeSplit(
       flatten<BetPosition>(stakeQuery.data.pages),
-      stakeQuery.data.pages[0]?.combos ?? [],
+      allCombos(stakeQuery.data.pages),
     )
   }, [summary, stakeQuery.data])
 
@@ -157,7 +159,7 @@ const AccountPortfolio = () => {
     return buildActivity({
       bets,
       settledPositions,
-      combos: betsQuery.data?.pages[0]?.combos ?? [],
+      combos: allCombos(betsQuery.data?.pages),
       betsCutoff: cutoffOf(
         bets.map((b) => t(b.createdAt)),
         betsQuery.hasNextPage,

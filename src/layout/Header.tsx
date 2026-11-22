@@ -45,7 +45,12 @@ import {
 import { usePortfolioSummary } from '../data_layer/bets'
 import { useSignUpHidden } from '../data_layer/authOptions'
 import { useUnreadNotificationCount } from '../data_layer/notifications'
-import { formatCurrency, scrollToTop, toMajorUnits } from '../utils/functions'
+import {
+  formatCurrency,
+  scrollToTop,
+  spendableBalance,
+  toMajorUnits,
+} from '../utils/functions'
 import type { WalletBalance } from '../types/wallet.types'
 import { WALLET_LABELS } from '../utils/walletLabels'
 
@@ -278,10 +283,15 @@ const Header = () => {
   const { events: liveBets } = useLiveBets({ limit: 100 })
   const liveCount = liveBets.length
 
-  // The top bar shows only what the user can spend: Balance (cash) and Bonus.
-  // Total Balance (cash + stakes on live bets) lives on the My Bets page. The
-  // summary is still read here to catch settlements (below).
+  // Total Balance = cash + the CASH staked on live bets: the same figure as
+  // the My Bets summary card. Bonus stakes are left out (never cash). Shown
+  // once the server's `openStake` split is available.
   const { data: portfolio } = usePortfolioSummary()
+  const totalBalance =
+    wallet && portfolio?.openStake
+      ? spendableBalance(wallet) +
+        toMajorUnits(portfolio.openStake.cash.amount)
+      : null
 
   // Backstop for the notification stream: a bet settling or being voided moves
   // a position from open to settled (and pays out or refunds), so when the
@@ -377,6 +387,18 @@ const Header = () => {
           </main>
           {user ? (
             <div className='flex items-center gap-1.5'>
+              {totalBalance != null && (
+                <Link
+                  to='/account-portfolio'
+                  title={WALLET_LABELS.totalBalanceHint}
+                  className='shrink-0 hidden md:flex flex-col items-center gap-px rounded-md px-3 text-xs font-semibold text-black py-1 hover:bg-hover/70'
+                >
+                  <span>{formatCurrency(totalBalance, wallet?.currency)}</span>
+                  <span className='text-[10px] text-neutral-10'>
+                    {WALLET_LABELS.totalBalance}
+                  </span>
+                </Link>
+              )}
               <Link
                 to='/account-wallet'
                 title={WALLET_LABELS.balanceHint}

@@ -109,8 +109,15 @@ export interface Bet {
   rejectCode?: string | null
   rejectReason?: string | null
   filledShares: string | null
-  /** Set once the market settles. */
-  result?: 'WON' | 'LOST' | 'VOID' | null
+  /**
+   * Where the bet ended; null while open. VOID: only the stake came back
+   * (a voided market, or a pool nobody bet against).
+   */
+  result?: 'WON' | 'LOST' | 'VOID' | 'CASHED_OUT' | null
+  /** What the bet actually returned (a refund = the stake); null while open. */
+  payout?: Money | null
+  /** payout − stake: positive won, 0 refunded, negative lost; null while open. */
+  realizedPnl?: Money | null
   /** Pool (parimutuel) bets: potentialReturn floats until close. */
   estimated?: boolean
   market?: MarketSummary | null
@@ -123,8 +130,10 @@ export interface Bet {
 export interface BetListResponse {
   data: Bet[]
   nextCursor: string | null
-  /** Combo tickets — first page only, to be merged in by `createdAt`. */
+  /** Combo tickets, paged on their own: `limit` per page. */
   combos?: ComboTicket[]
+  /** Pass back as `combosCursor` for the next page of combos. */
+  combosNextCursor?: string | null
 }
 
 /** GET /bets/portfolio — totals over every position, ignoring list filters. */
@@ -182,6 +191,8 @@ export interface BetPosition {
   unrealizedPnl?: Money | null
   /** Final P&L once SETTLED or CLOSED; null while still OPEN. */
   realizedPnl?: Money | null
+  /** What the position actually returned; null while open. */
+  payout?: Money | null
   /** Pool (parimutuel) position: no live value until close; potentialReturn
    *  is an estimate. */
   estimated?: boolean
@@ -196,8 +207,10 @@ export interface BetPosition {
 export interface BetPositionListResponse {
   data: BetPosition[]
   nextCursor: string | null
-  /** Combo tickets — first page only, to be merged in by the client. */
+  /** Combo tickets, paged on their own: `limit` per page. */
   combos?: ComboTicket[]
+  /** Pass back as `combosCursor` for the next page of combos. */
+  combosNextCursor?: string | null
 }
 
 /** Read-only estimate of what a position would return if cashed out now. */

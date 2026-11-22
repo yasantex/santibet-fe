@@ -380,7 +380,7 @@ const FeaturedMarketCard = ({
 
       {/* Footer */}
       <div className='flex items-center justify-between gap-3 text-xs text-placeholder'>
-        <span className='flex items-center gap-2'>
+        <span className='flex shrink-0 items-center gap-2 whitespace-nowrap'>
           {formatNairaCompact(volume)} Vol
           {(event.live || lead.live) && <LiveBadge />}
         </span>

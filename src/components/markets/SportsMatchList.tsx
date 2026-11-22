@@ -119,15 +119,22 @@ const MatchRow = ({
   <div className='flex flex-col gap-2 rounded-xl border border-border px-4 py-3 transition-[border-color,box-shadow] duration-200 hover:border-brand-green/60 hover:shadow-[0_4px_16px_-8px_rgba(0,0,0,0.16)]'>
     <div className='flex items-center justify-between gap-3'>
       <div className='flex min-w-0 items-center gap-2 text-xs text-neutral-10'>
+        {/* Time and volume never wrap; only the league gives way. */}
         {match.live ? (
-          <LiveBadge />
+          <LiveBadge className='shrink-0' />
         ) : !hasKickoff(match) ? null : (
-          <span className='rounded-md bg-card px-2 py-0.5 font-semibold text-black'>
+          <span className='shrink-0 whitespace-nowrap rounded-md bg-card px-2 py-0.5 font-semibold text-black'>
             {kickoffLabel(match)}
           </span>
         )}
-        {match.volume > 0 && <span>{formatNairaCompact(match.volume)} Vol</span>}
-        {match.league && <span className='truncate'>· {match.league}</span>}
+        {match.volume > 0 && (
+          <span className='shrink-0 whitespace-nowrap'>
+            {formatNairaCompact(match.volume)} Vol
+          </span>
+        )}
+        {match.league && (
+          <span className='min-w-0 truncate'>· {match.league}</span>
+        )}
       </div>
       <Link
         to={`/events/${match.eventId}`}
@@ -209,16 +216,20 @@ const MatchCard = ({ match, onPick }: { match: SportsMatch; onPick: Handler }) =
       <div className='flex items-center justify-between gap-3 text-xs text-neutral-10'>
         <div className='flex min-w-0 items-center gap-2'>
           {match.live ? (
-            <LiveBadge />
+            <LiveBadge className='shrink-0' />
           ) : hasKickoff(match) ? (
-            <span className='rounded-md bg-hover px-2 py-0.5 font-semibold text-black'>
+            <span className='shrink-0 whitespace-nowrap rounded-md bg-hover px-2 py-0.5 font-semibold text-black'>
               {kickoffDateLabel(match)}
             </span>
           ) : null}
-          {match.league && <span className='truncate'>{match.league}</span>}
+          {match.league && (
+            <span className='min-w-0 truncate'>{match.league}</span>
+          )}
         </div>
         {match.volume > 0 && (
-          <span className='shrink-0'>{formatNairaCompact(match.volume)} Vol.</span>
+          <span className='shrink-0 whitespace-nowrap'>
+            {formatNairaCompact(match.volume)} Vol.
+          </span>
         )}
       </div>
 
