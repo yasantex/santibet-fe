@@ -14,6 +14,8 @@ interface ContentPageViewProps {
   slug: string
   /** Rendered between the title and the body. */
   children?: ReactNode
+  /** Rendered after the body. */
+  footer?: ReactNode
 }
 
 /**
@@ -21,7 +23,11 @@ interface ContentPageViewProps {
  * that predates the API shows its bundled Markdown; any other page says it
  * isn't available yet.
  */
-const ContentPageView = ({ slug, children }: ContentPageViewProps) => {
+const ContentPageView = ({
+  slug,
+  children,
+  footer,
+}: ContentPageViewProps) => {
   const known = findKnownContentPage(slug)
   const page = useContentPage(slug)
 
@@ -86,6 +92,7 @@ const ContentPageView = ({ slug, children }: ContentPageViewProps) => {
       ) : body !== undefined ? (
         <RenderMarkdown usePreWrapper={false}>{body}</RenderMarkdown>
       ) : null}
+      {footer}
     </main>
   )
 }
