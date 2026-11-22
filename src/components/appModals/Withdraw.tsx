@@ -20,6 +20,8 @@ import { useNavigate } from 'react-router'
 import { KYC_PATH } from '../../utils/authRedirect'
 import useVerificationStatus, {
   KYC_WITHDRAWAL_THRESHOLD,
+  VERIFICATION_ITEMS,
+  type VerificationItem,
 } from '../../hooks/useVerificationStatus'
 import {
   formatCurrency,
@@ -53,6 +55,12 @@ const Withdraw = ({
   const [selectedAccountId, setSelectedAccountId] = useState('')
   const [amount, setAmount] = useState('')
   const [amountError, setAmountError] = useState('')
+  // From a 403 VERIFICATION_REQUIRED: what the server says is missing.
+  // Overrides the client's check until the amount changes.
+  const [serverCheck, setServerCheck] = useState<VerificationItem[] | null>(
+    null,
+  )
+  const [threshold, setThreshold] = useState(KYC_WITHDRAWAL_THRESHOLD)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [withdrawalId, setWithdrawalId] = useState('')
   const [step, setStep] = useState<WithdrawStep>('form')
@@ -109,6 +117,7 @@ const Withdraw = ({
     if (open) {
       setAmount('')
       setAmountError('')
+      setServerCheck(null)
       setConfirmOpen(false)
       setWithdrawalId('')
       setStep('form')
@@ -120,15 +129,17 @@ const Withdraw = ({
 
   const navigate = useNavigate()
 
-  // No verification below KYC_WITHDRAWAL_THRESHOLD; at or above it, phone,
-  // email and ID (KYC). The server enforces this too; checking here saves the
-  // player a failed request.
+  // No verification below the threshold (₦500,000 unless the server says
+  // otherwise); at or above it, phone, email and ID (KYC). The server
+  // enforces this too; checking here saves the player a failed request.
   const verification = useVerificationStatus(open)
-  const thresholdText = formatCurrency(KYC_WITHDRAWAL_THRESHOLD, wallet?.currency)
+  const thresholdText = formatCurrency(threshold, wallet?.currency)
   const numericAmount = Number(amount)
-  const missing = Number.isNaN(numericAmount)
-    ? []
-    : verification.missingFor(numericAmount)
+  const missing = serverCheck
+    ? serverCheck
+    : Number.isNaN(numericAmount)
+      ? []
+      : verification.missingFor(numericAmount, threshold)
   const needsVerification = missing.length > 0
   // "phone number, email and ID"
   const missingText =
@@ -140,22 +151,22 @@ const Withdraw = ({
     navigate(to)
   }
 
-  // 403 KYC_REQUIRED — e.g. `reason: BONUS_CASH`: cash released by a bonus can
-  // only be withdrawn after KYC. Send the player to verify.
-  const showKycPrompt = (errorData: { message?: string; reason?: string }) => {
-    showWarningToast(
-      errorData?.message ??
-        (errorData?.reason === 'BONUS_CASH'
-          ? 'Verify your identity to withdraw bonus winnings'
-          : 'Verify your identity to withdraw'),
-      {
-        label: 'Verify identity',
-        onClick: () => {
-          handleClose()
-          navigate(KYC_PATH)
-        },
-      },
+  // 403 VERIFICATION_REQUIRED: `missing` lists what's still needed (EMAIL /
+  // PHONE / KYC) and `threshold` is in kobo. Shown under the amount.
+  const showVerificationRequired = (errorData: {
+    missing?: string[]
+    threshold?: string | number
+  }) => {
+    const serverThreshold = toMajorUnits(errorData.threshold ?? 0)
+    if (serverThreshold > 0) setThreshold(serverThreshold)
+    setServerCheck(
+      (errorData.missing ?? [])
+        .map((code) => VERIFICATION_ITEMS[code])
+        .filter(Boolean),
     )
+    setStep('form')
+    setQuote(null)
+    setPendingWithdrawal(null)
   }
 
   const { mutateAsync: requestWithdrawal, isPending } = useSantiBetMutation<
@@ -180,8 +191,8 @@ const Withdraw = ({
       onError: (error) => {
         if (isAxiosError(error)) {
           const errorData = error.response?.data
-          if (errorData?.code === 'KYC_REQUIRED') {
-            showKycPrompt(errorData)
+          if (errorData?.code === 'VERIFICATION_REQUIRED') {
+            showVerificationRequired(errorData)
             return
           }
           if (errorData?.code === 'AMOUNT_BELOW_MINIMUM' && errorData?.minimum) {
@@ -212,8 +223,8 @@ const Withdraw = ({
       onError: (error) => {
         if (isAxiosError(error)) {
           const errorData = error.response?.data
-          if (errorData?.code === 'KYC_REQUIRED') {
-            showKycPrompt(errorData)
+          if (errorData?.code === 'VERIFICATION_REQUIRED') {
+            showVerificationRequired(errorData)
             return
           }
           if (errorData?.code === 'AMOUNT_BELOW_MINIMUM' && errorData?.minimum) {
@@ -251,7 +262,7 @@ const Withdraw = ({
       return null
     }
     // Explained (with a link to verify) under the amount field.
-    if (verification.missingFor(numeric).length > 0) return null
+    if (missing.length > 0) return null
     if (!selectedAccountId) {
       setAmountError('Select an account')
       return null
@@ -456,6 +467,7 @@ const Withdraw = ({
                 const val = e.target.value.replace(/[^\d.]/g, '')
                 setAmount(val)
                 if (amountError) setAmountError('')
+                setServerCheck(null)
               }}
               onBlur={() => {}}
               errors={amountError}
@@ -464,9 +476,6 @@ const Withdraw = ({
               <div className='-mt-2 flex flex-col gap-1.5 rounded-lg bg-warning/10 px-3 py-2.5 text-xs text-black'>
                 <span className='font-semibold'>
                   Verify your {missingText} to withdraw {thresholdText} or more
-                </span>
-                <span className='text-neutral-10'>
-                  You can withdraw less than {thresholdText} without verifying.
                 </span>
                 <span className='flex flex-wrap gap-x-3 gap-y-1'>
                   {/* Phone and email share one page: one link for both. */}

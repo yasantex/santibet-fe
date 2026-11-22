@@ -7,7 +7,13 @@ import MarketTitleLink from '../components/markets/MarketTitleLink'
 import FilterComponent, {
   type FilterCategory,
 } from '../components/globals/FilterComponent'
-import { useBets, useCancelBet } from '../data_layer/bets'
+import {
+  allCombos,
+  uniqueById,
+  useBets,
+  useCancelBet,
+  type BetState,
+} from '../data_layer/bets'
 import {
   betPriceLabel,
   formatCurrency,
@@ -16,11 +22,7 @@ import {
   toMajorUnits,
 } from '../utils/functions'
 import ComboLegs from '../components/portfolio/ComboLegs'
-import {
-  betResult,
-  isRefundedCombo,
-  marketLabel,
-} from '../components/portfolio/betDisplay'
+import { marketLabel } from '../components/portfolio/betDisplay'
 import { outcomeLabelClass } from '../utils/marketDisplay'
 import { showSuccessToast, showWarningToast } from '../utils/toastUtils'
 import type { Bet } from '../types/bet.types'
@@ -32,27 +34,20 @@ type OrderListItem =
   | { kind: 'bet'; at: string; bet: Bet }
   | { kind: 'combo'; at: string; combo: ComboTicket }
 
-/** A combo's state for the badge and the filter: a stake-only payout is a refund. */
-const comboState = (combo: ComboTicket): ComboStatus =>
-  isRefundedCombo(combo) ? 'VOID' : combo.status
-
 const COMBO_BADGE: Record<ComboStatus, { label: string; className: string }> = {
   OPEN: { label: 'Open', className: 'bg-warning/20 text-warning' },
   WON: { label: 'Won', className: 'bg-success-bg text-success' },
   LOST: { label: 'Lost', className: 'bg-error-bg text-error' },
+  // The API reports a combo that only paid back its stake as VOID.
   VOID: { label: 'Refunded', className: 'bg-hover/60 text-neutral-10' },
 }
 
 type OrderFilters = Record<'status', string[]>
 
 /**
- * What the player means by a bet's state, not the order's fill status:
- * "Open" is every bet still waiting on a result, combos included.
+ * Filtered by the API's `state`: where the bet stands, not how the order
+ * filled. "Open" is every bet still waiting on a result, combos included.
  */
-type BetFilter = 'open' | 'won' | 'lost' | 'refunded' | 'cancelled'
-/** Every state a bet can be in; `settling` has no filter of its own. */
-type BetState = BetFilter | 'settling'
-
 const orderFilterCategories: FilterCategory[] = [
   {
     key: 'status',
@@ -63,48 +58,34 @@ const orderFilterCategories: FilterCategory[] = [
       { label: 'Won', value: 'won' },
       { label: 'Lost', value: 'lost' },
       { label: 'Refunded', value: 'refunded' },
+      { label: 'Cashed out', value: 'cashed_out' },
       { label: 'Cancelled / rejected', value: 'cancelled' },
     ],
   },
 ]
 
-const betFilterOf = (bet: Bet): BetState => {
-  if (
-    bet.status === 'CANCELED' ||
-    bet.status === 'EXPIRED' ||
-    bet.status === 'REJECTED'
-  )
-    return 'cancelled'
-  const result = betResult(bet.result, bet.market)
-  if (result === 'WON') return 'won'
-  if (result === 'LOST') return 'lost'
-  if (result === 'VOID') return 'refunded'
-  // Market settled but this bet's result hasn't come through: not open.
-  if (bet.market?.status === 'SETTLED') return 'settling'
-  return 'open'
-}
-
-const COMBO_FILTER: Record<ComboStatus, BetFilter> = {
-  OPEN: 'open',
-  WON: 'won',
-  LOST: 'lost',
-  VOID: 'refunded',
-}
-
 // The API cancels resting bets only: OPEN and PENDING.
 const isCancelable = (bet: Bet) =>
   bet.status === 'OPEN' || bet.status === 'PENDING'
+
+// Once a bet has a result, that's what the badge shows.
+const RESULT_BADGE: Record<
+  NonNullable<Bet['result']>,
+  { label: string; className: string }
+> = {
+  WON: { label: 'Won', className: 'bg-success-bg text-success' },
+  LOST: { label: 'Lost', className: 'bg-error-bg text-error' },
+  // Only the stake came back (a voided market, or a pool nobody bet against).
+  VOID: { label: 'Refunded', className: 'bg-hover/60 text-neutral-10' },
+  CASHED_OUT: { label: 'Cashed out', className: 'bg-hover/60 text-neutral-10' },
+}
 
 /**
  * The badge says where the bet stands, not the order's fill status: a filled
  * bet still waiting on its result is "Open" (as on combos).
  */
 const betBadge = (bet: Bet): { label: string; className: string } => {
-  const state = betFilterOf(bet)
-  if (state === 'won' || state === 'lost' || state === 'refunded')
-    return RESULT_BADGE[betResult(bet.result, bet.market) ?? 'VOID']
-  if (state === 'settling')
-    return { label: 'Settling', className: 'bg-hover/60 text-neutral-10' }
+  if (bet.result) return RESULT_BADGE[bet.result]
   if (bet.status === 'REJECTED')
     return { label: 'Rejected', className: 'bg-error-bg text-error' }
   if (bet.status === 'EXPIRED')
@@ -115,16 +96,6 @@ const betBadge = (bet: Bet): { label: string; className: string } => {
   if (bet.status === 'OPEN' || bet.status === 'PENDING')
     return { label: 'Waiting to match', className: 'bg-warning/20 text-warning' }
   return { label: 'Open', className: 'bg-warning/20 text-warning' }
-}
-
-// Once the market settles, the result says more than the fill status.
-const RESULT_BADGE: Record<
-  NonNullable<Bet['result']>,
-  { label: string; className: string }
-> = {
-  WON: { label: 'Won', className: 'bg-success-bg text-success' },
-  LOST: { label: 'Lost', className: 'bg-error-bg text-error' },
-  VOID: { label: 'Refunded', className: 'bg-hover/60 text-neutral-10' },
 }
 
 const OrderRow = ({
@@ -184,11 +155,13 @@ const OrderRow = ({
               ? betPriceLabel(bet)
               : priceAndOdds(betPriceLabel(bet), oddsFromPrice(bet.price))}{' '}
             ·{' '}
-            {formatCurrency(
-              toMajorUnits((bet.netReturn ?? bet.potentialReturn).amount),
-              bet.potentialReturn.currency,
-            )}{' '}
-            {bet.estimated ? 'est. payout' : 'payout'}
+            {bet.payout
+              ? // Settled: what it actually returned.
+                `${formatCurrency(toMajorUnits(bet.payout.amount), bet.payout.currency)} returned`
+              : `${formatCurrency(
+                  toMajorUnits((bet.netReturn ?? bet.potentialReturn).amount),
+                  bet.potentialReturn.currency,
+                )} ${bet.estimated ? 'est. payout' : 'payout'}`}
           </p>
         </div>
         {isCancelable(bet) && (
@@ -209,8 +182,7 @@ const OrderRow = ({
 // Tap to list every pick with its market and odds.
 const ComboOrderRow = ({ combo }: { combo: ComboTicket }) => {
   const [expanded, setExpanded] = useState(false)
-  const state = comboState(combo)
-  const badge = COMBO_BADGE[state]
+  const badge = COMBO_BADGE[combo.status]
   const settled = combo.status !== 'OPEN'
   const toggle = () => setExpanded((e) => !e)
   return (
@@ -282,16 +254,14 @@ const Orders = () => {
   const [filters, setFilters] = useState<OrderFilters>({ status: [] })
   const [betToCancel, setBetToCancel] = useState<Bet | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const filter = filters.status[0] as BetFilter | undefined
+  const filter = filters.status[0] as BetState | undefined
 
   // Resting orders get their own section on the unfiltered view so they're
   // never buried under history.
   const openQuery = useBets('OPEN', 50)
-  // Always the full list (the API's status filter is the order's fill status,
-  // and drops combos); the bet filter is applied below. Pages keep loading
-  // while the sentinel is on screen, so a sparse filter still fills up.
+  // Filtered on the server by `state`; combos come with it, paged alongside.
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useBets()
+    useBets(undefined, 20, filter)
 
   const { mutateAsync: cancelBet, isPending: isCancelling } = useCancelBet(
     betToCancel?.id ?? '',
@@ -305,25 +275,21 @@ const Orders = () => {
   const openIds = useMemo(() => new Set(openOrders.map((b) => b.id)), [openOrders])
   const bets = useMemo<Bet[]>(
     () =>
-      (data?.pages ?? [])
-        .flatMap((page) => page.data)
+      uniqueById(data?.pages)
         // Already listed above.
-        .filter((b) => !(showOpenSection && openIds.has(b.id)))
-        .filter((b) => !filter || betFilterOf(b) === filter),
-    [data, showOpenSection, openIds, filter],
+        .filter((b) => !(showOpenSection && openIds.has(b.id))),
+    [data, showOpenSection, openIds],
   )
-  // Combos come on the first page only (unpaginated) — merged in by date.
+  // Combos page separately and are merged in by date.
   const rows = useMemo<OrderListItem[]>(
     () =>
       [
         ...bets.map((bet): OrderListItem => ({ kind: 'bet', at: bet.createdAt, bet })),
-        ...(data?.pages?.[0]?.combos ?? [])
-          .filter((c) => !filter || COMBO_FILTER[comboState(c)] === filter)
-          .map(
-            (combo): OrderListItem => ({ kind: 'combo', at: combo.createdAt, combo }),
-          ),
+        ...allCombos(data?.pages).map(
+          (combo): OrderListItem => ({ kind: 'combo', at: combo.createdAt, combo }),
+        ),
       ].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
-    [bets, data, filter],
+    [bets, data],
   )
 
   useEffect(() => {
