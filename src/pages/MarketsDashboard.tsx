@@ -14,6 +14,7 @@ import {
   useEventsInfinite,
   useLiveBets,
   useLobbyHome,
+  type EventQueryParams,
 } from '../data_layer/markets'
 import { Button } from '../components/globals/Button'
 import { useFavorites } from '../hooks/useFavorites'
@@ -47,11 +48,20 @@ const marketFilterCategories: FilterCategory[] = [
     label: 'Sort by',
     multiple: false,
     options: [
-      { label: 'Most volume', value: 'volume' },
+      { label: 'Trending', value: 'trending' },
+      { label: 'Newest', value: 'newest' },
       { label: 'Closing soon', value: 'closing_soon' },
     ],
   },
 ]
+
+const SORT_PARAMS: NonNullable<EventQueryParams['sort']>[] = [
+  'trending',
+  'newest',
+  'closing_soon',
+]
+const toSortParam = (value?: string) =>
+  SORT_PARAMS.find((s) => s === value)
 
 const MarketsDashboard = () => {
   const navigate = useNavigate()
@@ -71,7 +81,12 @@ const MarketsDashboard = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useEventsInfinite({ limit: 60 })
+  } = useEventsInfinite(
+    // Sorted server-side: the API puts AI markets first, then applies `sort`
+    // within each group, so the grid must not re-sort what it gets back.
+    { limit: 60, sort: toSortParam(filters.sort[0]) },
+    { keepPrevious: true },
+  )
   // Every page loaded so far (grid + category chips); "Load more" appends a page.
   const events = useMemo(
     () => (data?.pages ?? []).flatMap((p) => p.events),
@@ -109,10 +124,9 @@ const MarketsDashboard = () => {
 
   const allMarkets = useMemo<UiMarket[]>(() => {
     const markets = events.flatMap((e) => e.markets)
-    // Prefer tradeable markets, richest volume first.
+    // Prefer tradeable markets, in the order the API returned them.
     const open = markets.filter((m) => m.status !== 'closed' && m.yes)
-    const pool = open.length ? open : markets.filter((m) => m.yes)
-    return [...pool].sort((a, b) => b.volume - a.volume)
+    return open.length ? open : markets.filter((m) => m.yes)
   }, [events])
 
   const categories = useMemo(() => {
@@ -206,16 +220,6 @@ const MarketsDashboard = () => {
     const status = filters.status[0]
     if (status) {
       list = list.filter((m) => m.status === status)
-    }
-
-    const sort = filters.sort[0]
-    if (sort === 'closing_soon') {
-      list = [...list].sort(
-        (a, b) =>
-          new Date(a.closeTime).getTime() - new Date(b.closeTime).getTime(),
-      )
-    } else if (sort === 'volume') {
-      list = [...list].sort((a, b) => b.volume - a.volume)
     }
 
     return list
