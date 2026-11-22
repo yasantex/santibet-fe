@@ -3,7 +3,6 @@ Our support team is here to help with anything related to your SantiBet account,
 ## How to reach us
 
 - Email: info@santibet.com
-- Phone: 0909 880 0662
 - Support hours: Monday to Sunday, 8am to 10pm WAT
 
 ## What to include when you contact us

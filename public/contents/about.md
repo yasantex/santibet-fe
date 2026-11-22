@@ -19,4 +19,4 @@ SantiBet is currently in [pre launch / early access]. Thank you for being here e
 
 ## Contact
 
-Questions about who we are or how SantiBet works? Reach us at info@santibet.com or 0909 880 0662.
+Questions about who we are or how SantiBet works? Reach us at info@santibet.com.

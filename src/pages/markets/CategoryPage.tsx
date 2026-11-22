@@ -265,8 +265,8 @@ const CategoryPage = () => {
       .flatMap((e) => e.markets)
       .filter((m) => !liveCryptoIds.has(m.eventId))
     const open = markets.filter((m) => m.status !== 'closed' && m.yes)
-    const pool = open.length ? open : markets.filter((m) => m.yes)
-    return [...pool].sort((a, b) => b.volume - a.volume)
+    // Keep the API's order: it puts AI markets first, then applies `sort`.
+    return open.length ? open : markets.filter((m) => m.yes)
   }, [data, liveCryptoIds])
 
   // Match on slug (falls back to the name for the raw feed) so admin-created

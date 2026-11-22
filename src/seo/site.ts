@@ -127,7 +127,7 @@ export const STATIC_ROUTES: RouteSeo[] = [
   CONTENT(
     '/contact-us',
     'Contact Us',
-    'Contact SantiBet support by live chat, email or phone for help with ' +
+    'Contact SantiBet support by live chat, email or the contact form for help with ' +
       'your account, deposits, withdrawals or a market.',
     'contact.md',
   ),

@@ -66,3 +66,37 @@ export interface ReportPrefill {
   marketId?: string
   marketTitle?: string
 }
+
+export type ContactTopic =
+  | 'GENERAL'
+  | 'ACCOUNT'
+  | 'PAYMENTS'
+  | 'BETTING'
+  | 'PARTNERSHIP'
+  | 'PRESS'
+  | 'FEEDBACK'
+  | 'OTHER'
+
+/**
+ * POST /contact — the public "Contact us" form. Works signed in or out; with a
+ * session the message is linked to the account. Answered by email from the
+ * backoffice (separate from the Chatwoot reports above).
+ */
+export interface CreateContactMessageRequest {
+  name: string
+  email: string
+  /** Required when `whatsappOptIn` is true. */
+  phone?: string
+  whatsappOptIn: boolean
+  topic: ContactTopic
+  message: string
+  pageUrl?: string
+  /** Spam trap: a field people never see. Bots fill it; real people don't. */
+  website?: string
+}
+
+export interface ContactMessageResponse {
+  /** e.g. "CT-10042". Also emailed to the player as a receipt. */
+  reference: string
+  createdAt: string
+}
