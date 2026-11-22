@@ -22,6 +22,7 @@ import type {
   ComboBetPayload,
   ComboBetResponse,
   ComboQuote,
+  ComboTicket,
 } from '../types/combo.types'
 
 /**
@@ -110,23 +111,78 @@ export const useComboQuote = (
   body: Omit<ComboBetPayload, 'expectedCombinedOdds'> | null,
 ) => useQuoteQuery<ComboQuote, typeof body>('/bets/combo/quote', body, 'combo-quote')
 
-export const useBets = (status?: string, limit = 20) =>
+/** Where a bet stands (`state` on /bets and /bets/positions). */
+export type BetState =
+  | 'open'
+  | 'won'
+  | 'lost'
+  | 'refunded'
+  | 'cancelled'
+  | 'cashed_out'
+
+/**
+ * Bets and combos page separately: the page param carries both cursors as
+ * "betsCursor|combosCursor". Once one list runs out only the other cursor is
+ * sent (bets alone leave combos out; combos alone may repeat bets page one,
+ * so callers de-duplicate by id).
+ */
+const nextPage = (last: {
+  nextCursor: string | null
+  combosNextCursor?: string | null
+}) =>
+  last.nextCursor || last.combosNextCursor
+    ? `${last.nextCursor ?? ''}|${last.combosNextCursor ?? ''}`
+    : undefined
+
+const pageParams = (pageParam: string | undefined) => {
+  const [cursor, combosCursor] = (pageParam ?? '').split('|')
+  return { cursor: cursor || undefined, combosCursor: combosCursor || undefined }
+}
+
+export const useBets = (status?: string, limit = 20, state?: BetState) =>
   useSantiBetInfiniteQuery<BetListResponse>({
     path: '/bets',
-    queryKey: ['bets', { status, limit }],
-    params: { status, limit },
+    queryKey: ['bets', { status, limit, state }],
+    params: { status, limit, state },
     enabled: true,
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    getNextPageParam: nextPage,
+    pageParamToParams: pageParams,
   })
 
-export const useBetPositions = (status?: string, limit = 20, enabled = true) =>
+export const useBetPositions = (
+  status?: string,
+  limit = 20,
+  enabled = true,
+  state?: BetState,
+) =>
   useSantiBetInfiniteQuery<BetPositionListResponse>({
     path: '/bets/positions',
-    queryKey: ['bet-positions', { status, limit }],
-    params: { status, limit },
+    queryKey: ['bet-positions', { status, limit, state }],
+    params: { status, limit, state },
     enabled,
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    getNextPageParam: nextPage,
+    pageParamToParams: pageParams,
   })
+
+/** Every page's items, once each (a combos-only page can repeat bets). */
+export const uniqueById = <T extends { id: string }>(
+  pages: ({ data?: T[] } | undefined)[] | undefined,
+): T[] => {
+  const seen = new Set<string>()
+  return (pages ?? [])
+    .flatMap((p) => p?.data ?? [])
+    .filter((x) => !seen.has(x.id) && (seen.add(x.id), true))
+}
+
+/** Every page's combos, once each. */
+export const allCombos = (
+  pages: ({ combos?: ComboTicket[] } | undefined)[] | undefined,
+): ComboTicket[] => {
+  const seen = new Set<string>()
+  return (pages ?? [])
+    .flatMap((p) => p?.combos ?? [])
+    .filter((c) => !seen.has(c.id) && (seen.add(c.id), true))
+}
 
 /**
  * Headline value and P&L across every position (and the header's portfolio

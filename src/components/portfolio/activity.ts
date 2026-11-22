@@ -7,7 +7,7 @@ import {
 } from '../../utils/functions'
 import type { Bet, BetPosition, ComboTicket } from '../../types/bet.types'
 import { formatOdds } from '../../utils/odds'
-import { isRefundedCombo, isRefundedPosition, marketLabel } from './betDisplay'
+import { marketLabel } from './betDisplay'
 
 export type ActivityKind =
   | 'buy'
@@ -68,12 +68,6 @@ const FILTER_KINDS: Record<Exclude<ActivityFilter, 'all'>, ActivityKind[]> = {
 
 const time = (iso?: string | null) => new Date(iso ?? '').getTime() || 0
 
-/** Whether a single bet is finished: it has a result, or its market does. */
-const isBetFinished = (bet: Bet) =>
-  bet.result != null ||
-  bet.market?.status === 'SETTLED' ||
-  bet.market?.status === 'VOIDED'
-
 /**
  * A bet's row in the settled feed, or null while it's still live: open bets
  * live on the Open tab and unmatched orders on Pending Orders.
@@ -89,7 +83,8 @@ const betActivity = (bet: Bet): Activity | null => {
           ? 'canceled'
           : 'rejected'
   if (kind === 'order') return null
-  if (kind === 'buy' && !isBetFinished(bet)) return null
+  // A bet is finished once the API gives it a result.
+  if (kind === 'buy' && bet.result == null) return null
   return {
     id: `bet-${bet.id}`,
     kind,
@@ -113,16 +108,16 @@ const positionActivity = (p: BetPosition): Activity | null => {
   if (p.status === 'OPEN' || !p.result) return null
   const staked = p.stake ? toMajorUnits(p.stake.amount) : 0
   const pnl = p.realizedPnl ? toMajorUnits(p.realizedPnl.amount) : 0
+  // VOID means only the stake came back (the API reports stake-only "wins"
+  // as VOID).
   const kind: ActivityKind =
     p.result === 'CASHED_OUT'
       ? 'cashout'
-      : isRefundedPosition(p)
-        ? 'refund'
-        : p.result === 'WON'
-          ? 'won'
-          : p.result === 'LOST'
-            ? 'lost'
-            : 'refund'
+      : p.result === 'WON'
+        ? 'won'
+        : p.result === 'LOST'
+          ? 'lost'
+          : 'refund'
   const iso = p.settledAt ?? p.openedAt
   return {
     id: `pos-${p.id}`,
@@ -137,8 +132,14 @@ const positionActivity = (p: BetPosition): Activity | null => {
     outcomeLabel: p.outcomeLabel ?? 'Outcome',
     price: isPoolPosition(p) ? undefined : formatSharePrice(Number(p.avgPrice) || 0),
     probability: isPoolPosition(p) ? undefined : Number(p.avgPrice) || undefined,
-    // Payout = stake back plus the realized profit (or minus the loss).
-    value: kind === 'lost' ? null : kind === 'refund' ? staked : staked + pnl,
+    // What it actually returned; older rows without `payout` fall back to
+    // stake plus the realized profit.
+    value:
+      kind === 'lost'
+        ? null
+        : p.payout
+          ? toMajorUnits(p.payout.amount)
+          : staked + pnl,
   }
 }
 
@@ -168,13 +169,7 @@ const comboActivity = (c: ComboTicket): Activity[] => {
     items.push({
       ...base,
       id: `combo-${c.id}-result`,
-      kind: isRefundedCombo(c)
-        ? 'refund'
-        : c.status === 'WON'
-          ? 'won'
-          : c.status === 'LOST'
-            ? 'lost'
-            : 'refund',
+      kind: c.status === 'WON' ? 'won' : c.status === 'LOST' ? 'lost' : 'refund',
       at: time(c.settledAt),
       iso: c.settledAt,
       value:

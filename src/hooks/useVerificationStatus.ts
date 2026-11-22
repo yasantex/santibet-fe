@@ -12,6 +12,15 @@ export const KYC_WITHDRAWAL_THRESHOLD = 500_000
 /** Where each verification step is done. */
 export const VERIFY_CONTACT_PATH = '/account-profile?tab=verification'
 
+export type VerificationItem = { label: string; to: string }
+
+/** `missing` codes on a 403 VERIFICATION_REQUIRED, as verify links. */
+export const VERIFICATION_ITEMS: Record<string, VerificationItem> = {
+  PHONE: { label: 'phone number', to: VERIFY_CONTACT_PATH },
+  EMAIL: { label: 'email', to: VERIFY_CONTACT_PATH },
+  KYC: { label: 'ID', to: KYC_PATH },
+}
+
 /**
  * Phone, email and ID (KYC) verification for the signed-in user. Reads the
  * same `/auth/me` and `kyc` queries as the profile page, so verifying there
@@ -47,15 +56,18 @@ const useVerificationStatus = (enabled = true) => {
     contactVerified: emailVerified && phoneVerified,
     /**
      * What's still to verify before withdrawing `amount` (naira): nothing
-     * below the threshold; at or above it, phone, email and ID.
+     * below `threshold`; at or above it, phone, email and ID.
      */
-    missingFor: (amount: number): { label: string; to: string }[] =>
-      amount >= KYC_WITHDRAWAL_THRESHOLD
+    missingFor: (
+      amount: number,
+      threshold = KYC_WITHDRAWAL_THRESHOLD,
+    ): VerificationItem[] =>
+      amount >= threshold
         ? [
-            !phoneVerified && { label: 'phone number', to: VERIFY_CONTACT_PATH },
-            !emailVerified && { label: 'email', to: VERIFY_CONTACT_PATH },
-            !kycApproved && !kycUnknown && { label: 'ID', to: KYC_PATH },
-          ].filter((m): m is { label: string; to: string } => !!m)
+            !phoneVerified && VERIFICATION_ITEMS.PHONE,
+            !emailVerified && VERIFICATION_ITEMS.EMAIL,
+            !kycApproved && !kycUnknown && VERIFICATION_ITEMS.KYC,
+          ].filter((m): m is VerificationItem => !!m)
         : [],
   }
 }
