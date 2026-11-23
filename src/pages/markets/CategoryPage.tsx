@@ -5,6 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowDown01Icon,
   FilterIcon,
+  MultiplicationSignIcon,
   Search01Icon,
 } from '@hugeicons/core-free-icons'
 import MarketCard from '../../components/markets/MarketCard'
@@ -661,8 +662,10 @@ const CategoryPage = () => {
         className={`flex min-w-0 flex-1 flex-col gap-5 ${isSports ? 'max-w-5xl' : ''}`}
       >
         <PageNav crumbs={pageCrumbs} />
-        <div className='flex items-center justify-between gap-3'>
-          <h1 className='text-lg font-bold text-black md:text-2xl'>
+        {/* On mobile the open search drops to its own row, so the title
+            keeps the full width instead of wrapping beside it. */}
+        <div className='flex flex-wrap items-center justify-between gap-3'>
+          <h1 className='min-w-0 flex-1 text-lg font-bold text-black md:text-2xl'>
             {active === 'All'
               ? 'Browse markets'
               : (activeLeague ??
@@ -671,28 +674,32 @@ const CategoryPage = () => {
                   : activeLabel))}
           </h1>
 
-          <div className='flex shrink-0 items-center gap-2'>
-            {searchOpen ? (
+          {searchOpen && (
+            <div className='order-last w-full md:order-none md:w-80'>
               <SearchInput
                 searchTerm={searchTerm}
                 handleChange={(e) => setSearchTerm(e.target.value)}
                 placeholder='Search markets'
                 autoFocus
-                containerClassName='max-w-150!'
               />
-            ) : (
-              <button
-                type='button'
-                aria-label={searchOpen ? 'Close search' : 'Search markets'}
-                onClick={() => {
-                  setSearchOpen((v) => !v)
-                  if (searchOpen) setSearchTerm('')
-                }}
-                className={`rounded-full p-2 hover:text-black bg-card text-neutral-10`}
-              >
-                <HugeiconsIcon icon={Search01Icon} size={18} />
-              </button>
-            )}
+            </div>
+          )}
+
+          <div className='flex shrink-0 items-center gap-2'>
+            <button
+              type='button'
+              aria-label={searchOpen ? 'Close search' : 'Search markets'}
+              onClick={() => {
+                setSearchOpen((v) => !v)
+                if (searchOpen) setSearchTerm('')
+              }}
+              className={`rounded-full p-2 hover:text-black bg-card text-neutral-10`}
+            >
+              <HugeiconsIcon
+                icon={searchOpen ? MultiplicationSignIcon : Search01Icon}
+                size={18}
+              />
+            </button>
 
             <Dropdown
               align='end'

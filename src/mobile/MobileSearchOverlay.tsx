@@ -51,7 +51,11 @@ const MobileSearchOverlay = ({
           sections={sections}
           loading={isSearching}
           emptyLabel={query ? `No results for "${query}"` : undefined}
-          onSelect={onSelectResult}
+          onSelect={(result) => {
+            // Picking a result leaves search, so close the overlay too.
+            handleClose()
+            onSelectResult?.(result)
+          }}
         />
       </div>
     </div>,

@@ -75,6 +75,12 @@ interface OrderFormProps {
   onSelectOutcome: (outcome: UiOutcome) => void
   submitText?: string
   onPlaced: (order: PlacedOrder) => void
+  /**
+   * The pick in words when the market's Yes stands for one result of a
+   * bigger question (a match imported as "Will A win?" / "Draw?" / "Will B
+   * win?"). Hides the Yes/No picker and names the pick ("Al Ain FC") instead.
+   */
+  pickLabel?: string
 }
 
 /** Stake on an outcome: outcome picker, amount, summary and submit. */
@@ -84,6 +90,7 @@ const OrderForm = ({
   onSelectOutcome,
   submitText = 'Place prediction',
   onPlaced,
+  pickLabel,
 }: OrderFormProps) => {
   const { priceLabel, format: oddsFormat } = useOddsFormat()
   const authNavigate = useAuthNavigate()
@@ -413,7 +420,7 @@ const OrderForm = ({
       const fundedBy = bet.fundedBy ?? (usingBonus ? 'BONUS' : 'CASH')
       onPlaced({
         bet,
-        outcomeLabel: outcome.label,
+        outcomeLabel: pickLabel ?? outcome.label,
         stake: stakeNum,
         price,
         payout: fundedBy === 'BONUS' ? bonusSlip.creditOnWin : payout,
@@ -485,7 +492,7 @@ const OrderForm = ({
   return (
     <>
       {/* Outcome selector */}
-      <div className='flex items-stretch gap-2'>
+      <div className={`flex items-stretch gap-2 ${pickLabel ? 'hidden' : ''}`}>
         {market.outcomes.map((o, i) => {
           const active = o.id === outcome?.id
           const tone = outcomeTone(market, o.id, i)
@@ -689,7 +696,7 @@ const OrderForm = ({
           <div className='flex justify-between gap-3'>
             <span className='shrink-0 text-neutral-10'>Your pick</span>
             <span className='min-w-0 truncate text-right font-semibold text-black'>
-              <span className='uppercase'>{outcome.label}</span>
+              <span className='uppercase'>{pickLabel ?? outcome.label}</span>
               {!isPool && ` @ ${formatSharePrice(price)}`}
             </span>
           </div>
@@ -745,7 +752,7 @@ const OrderForm = ({
             <div className='flex justify-between'>
               <span className='text-neutral-10'>
                 {estimated ? 'Est. payout' : 'Payout'} if{' '}
-                {outcome?.label ?? 'it'} wins
+                {pickLabel ?? outcome?.label ?? 'it'} wins
               </span>
               <span className='font-semibold text-black'>
                 {amountValid ? formatCurrency(Math.max(payout, 0)) : '-'}
