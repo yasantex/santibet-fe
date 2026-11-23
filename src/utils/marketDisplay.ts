@@ -470,6 +470,22 @@ export const groupedChoices = <M extends UiMarket>(markets: M[]) => {
   }))
 }
 
+/**
+ * A match imported as one Yes/No market per result ("Will A win?", "Draw?",
+ * "Will B win?"): the choices, in the event's order, or null when the event
+ * isn't a match. It reads as one "Match winner" question.
+ */
+export const matchResultChoices = <M extends UiMarket>(event: {
+  title: string
+  markets: M[]
+}) => {
+  const choices = groupedChoices(event.markets)
+  if (!choices) return null
+  const isMatch =
+    choices.some((c) => c.label === 'Draw') || /\bvs?\.?\s/i.test(event.title)
+  return isMatch ? choices : null
+}
+
 /** Shared hover treatment for market/event cards: brand-tinted border, a
  *  soft lift and shadow. Pair with a `border` on the card. */
 export const CARD_HOVER =

@@ -10,8 +10,8 @@ import ModalComponent from '../globals/ModalComponent'
 import {
   categoryIcon,
   eventMarketLabels,
-  groupedChoices,
   MARKET_STATUS_LABELS,
+  matchResultChoices,
 } from '../../utils/marketDisplay'
 import { formatNairaCompact } from '../../utils/functions'
 import { shortOutcomeLabel, teamsFromTitle } from '../../utils/teamNames'
@@ -231,11 +231,8 @@ const MultiChoiceEventView = ({
   const labels = useMemo(() => eventMarketLabels(markets), [markets])
   // A match's Home / Draw / Away, in the event's own order.
   const matchChoices = useMemo<MatchChoice[] | null>(() => {
-    const choices = groupedChoices(event.markets)
+    const choices = matchResultChoices(event)
     if (!choices) return null
-    const isMatch =
-      choices.some((c) => c.label === 'Draw') || /\bvs?\.?\s/i.test(event.title)
-    if (!isMatch) return null
     // Team codes as on the live cards: the API's short name, else one made
     // from the name ("Arsenal FC" → "ARS").
     const teams = event.teams?.length && event.teams.length >= 2 ? event.teams : null
@@ -256,7 +253,7 @@ const MultiChoiceEventView = ({
   const selectedOutcome =
     selectedMarket?.outcomes.find((o) => o.id === pick.outcomeId) ??
     selectedMarket?.yes
-  // A match's result: always that result's Yes, named rather than Yes/No.
+  // A match's result: the panel names it, and Yes/No backs it or not.
   const selectedChoice = matchChoices?.find(
     (c) => c.market.id === selectedMarket?.id,
   )
@@ -273,7 +270,7 @@ const MultiChoiceEventView = ({
   const panel = selectedMarket && (
     <TradePanel
       market={selectedMarket}
-      selectedOutcome={selectedChoice ? selectedMarket.yes : selectedOutcome}
+      selectedOutcome={selectedOutcome}
       onSelectOutcome={(o) =>
         setPick({ marketId: selectedMarket.id, outcomeId: o.id })
       }

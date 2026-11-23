@@ -76,9 +76,10 @@ interface OrderFormProps {
   submitText?: string
   onPlaced: (order: PlacedOrder) => void
   /**
-   * The pick in words when the market's Yes stands for one result of a
-   * bigger question (a match imported as "Will A win?" / "Draw?" / "Will B
-   * win?"). Hides the Yes/No picker and names the pick ("Al Ain FC") instead.
+   * The result this market stands for when it's one result of a bigger
+   * question (a match imported as "Will A win?" / "Draw?" / "Will B win?"),
+   * e.g. "Al Ain FC". The Yes/No picker stays; the summary names the result
+   * ("AL AIN FC · YES", "if Al Ain FC doesn't win").
    */
   pickLabel?: string
 }
@@ -420,7 +421,9 @@ const OrderForm = ({
       const fundedBy = bet.fundedBy ?? (usingBonus ? 'BONUS' : 'CASH')
       onPlaced({
         bet,
-        outcomeLabel: pickLabel ?? outcome.label,
+        outcomeLabel: pickLabel
+          ? `${pickLabel} · ${outcome.label}`
+          : outcome.label,
         stake: stakeNum,
         price,
         payout: fundedBy === 'BONUS' ? bonusSlip.creditOnWin : payout,
@@ -489,10 +492,18 @@ const OrderForm = ({
     slipTeams ? slipTeams.map((t) => t.shortName) : [],
   )
 
+  // With a named result, Yes backs it and No backs it not happening.
+  const backsResult = outcome?.id === market.yes?.id
+  const pickSummary =
+    pickLabel && outcome ? `${pickLabel} · ${outcome.label}` : outcome?.label
+  const winsLabel = pickLabel
+    ? `${pickLabel} ${backsResult ? 'wins' : 'doesn’t win'}`
+    : `${outcome?.label ?? 'it'} wins`
+
   return (
     <>
       {/* Outcome selector */}
-      <div className={`flex items-stretch gap-2 ${pickLabel ? 'hidden' : ''}`}>
+      <div className='flex items-stretch gap-2'>
         {market.outcomes.map((o, i) => {
           const active = o.id === outcome?.id
           const tone = outcomeTone(market, o.id, i)
@@ -696,7 +707,7 @@ const OrderForm = ({
           <div className='flex justify-between gap-3'>
             <span className='shrink-0 text-neutral-10'>Your pick</span>
             <span className='min-w-0 truncate text-right font-semibold text-black'>
-              <span className='uppercase'>{pickLabel ?? outcome.label}</span>
+              <span className='uppercase'>{pickSummary}</span>
               {!isPool && ` @ ${formatSharePrice(price)}`}
             </span>
           </div>
@@ -749,12 +760,12 @@ const OrderForm = ({
           </div>
         ) : (
           <>
-            <div className='flex justify-between'>
-              <span className='text-neutral-10'>
+            <div className='flex justify-between gap-3'>
+              <span className='min-w-0 text-neutral-10'>
                 {estimated ? 'Est. payout' : 'Payout'} if{' '}
-                {pickLabel ?? outcome?.label ?? 'it'} wins
+                {winsLabel}
               </span>
-              <span className='font-semibold text-black'>
+              <span className='shrink-0 font-semibold text-black'>
                 {amountValid ? formatCurrency(Math.max(payout, 0)) : '-'}
               </span>
             </div>

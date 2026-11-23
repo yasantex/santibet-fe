@@ -10,8 +10,9 @@ interface TradePanelProps {
   market: UiMarket
   selectedOutcome?: UiOutcome
   onSelectOutcome: (outcome: UiOutcome) => void
-  /** Replaces the market's question and Yes/No with one named pick, e.g.
-   *  "Match winner" / "Al Ain FC" (see OrderForm's `pickLabel`). */
+  /** Names the question and the result this market stands for, e.g.
+   *  "Match winner" / "Al Ain FC", in place of the market's own question
+   *  (see OrderForm's `pickLabel`). Yes/No still picks the side. */
   pick?: { heading: string; label: string }
 }
 
