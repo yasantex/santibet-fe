@@ -27,6 +27,7 @@ import {
   categoryIcon,
   findTeam,
   isMultiChoiceEvent,
+  matchResultChoices,
   MARKET_STATUS_LABELS,
   outcomeTone,
   TONE_STYLES,
@@ -277,11 +278,17 @@ const MarketDetail = () => {
       <main className='mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 pt-4 pb-20 md:px-8'>
         {seo}
         <PageNav
-          crumbs={[
-            ...categoryCrumbs,
-            { label: event.title, href: `/events/${event.id}` },
-            { label: market.subtitle?.trim() || market.title },
-          ]}
+          crumbs={
+            // A match result is picked on the page itself, so the trail ends
+            // at the match rather than naming one result.
+            matchResultChoices(event)
+              ? [...categoryCrumbs, { label: event.title }]
+              : [
+                  ...categoryCrumbs,
+                  { label: event.title, href: `/events/${event.id}` },
+                  { label: market.subtitle?.trim() || market.title },
+                ]
+          }
         />
         <MultiChoiceEventView
           event={event}

@@ -71,20 +71,25 @@ const isYesNo = (m: UiMarket) =>
   m.outcomes.length === 2 &&
   m.outcomes.some((o) => YES_LABELS.includes(o.label.trim().toLowerCase()))
 
-const moneyline = (
-  markets: UiMarket[],
-  title: string,
-): MatchPick[] | undefined => {
-  // API-Sports: one "Match Winner" market with Home / Draw / Away.
-  // Polymarket games: the market is titled like the match ("Hawks vs.
-  // Wizards") and its outcomes are the teams.
-  const winner = markets.find(
+/**
+ * A match's winner market: API-Sports' "Match Winner" (Home / Draw / Away),
+ * or a Polymarket game market titled like the match ("Hawks vs. Wizards")
+ * whose outcomes are the teams.
+ */
+export const matchWinnerMarket = (markets: UiMarket[], title: string) =>
+  markets.find(
     (m) =>
       m.outcomes.length >= 2 &&
       !isYesNo(m) &&
       (/match winner|moneyline|1x2|full time result/i.test(m.title) ||
-        m.title.trim().toLowerCase() === title.toLowerCase()),
+        m.title.trim().toLowerCase() === title.trim().toLowerCase()),
   )
+
+const moneyline = (
+  markets: UiMarket[],
+  title: string,
+): MatchPick[] | undefined => {
+  const winner = matchWinnerMarket(markets, title)
   if (winner)
     return winner.outcomes.map((outcome) => ({
       market: winner,

@@ -32,6 +32,7 @@ import {
   formatChartTick,
   formatChartValue,
 } from '../../utils/chartFormat'
+import { matchWinnerMarket } from '../../utils/sportsMatches'
 import ChartTooltip from './ChartTooltip'
 import ChartRangeTabs from './ChartRangeTabs'
 import ShareMarketButton from './ShareMarketButton'
@@ -49,6 +50,9 @@ interface FeaturedMarketCardProps {
   /** Carousel controls, rendered in the footer. */
   controls?: ReactNode
 }
+
+/** One line on the card: a market's Yes, or one outcome of a match winner. */
+type Row = { key: string; market: UiMarket; outcome: UiOutcome; label: string }
 
 /** Countdown in its own component so its 1s tick doesn't re-render the chart. */
 const EndsIn = ({ market }: { market: UiMarket }) => {
@@ -87,20 +91,38 @@ const FeaturedMarketCard = ({
     return open.length ? open : tradeable
   }, [event])
 
-  const multi = markets.length > 1
-  // Multi: the most likely outcomes, highest first. Single: the one market.
-  const rows = useMemo(
-    () =>
-      [...markets]
-        .sort((a, b) => (b.yes?.percent ?? 0) - (a.yes?.percent ?? 0))
-        .slice(0, MAX_LINES),
-    [markets],
+  // A match shows only its winner market (Home / Draw / Away), not one line
+  // per market type (winner, over/under, both teams to score).
+  const winner = useMemo(
+    () => matchWinnerMarket(markets, event.title),
+    [markets, event.title],
   )
-  const labels = useMemo(() => {
+  const multi = !!winner || markets.length > 1
+  // Match: the winner's outcomes in their own order. Multi: the most likely
+  // markets, highest first. Single: the one market.
+  const rows = useMemo<Row[]>(() => {
+    if (winner)
+      return winner.outcomes.slice(0, MAX_LINES).map((o) => ({
+        key: o.id,
+        market: winner,
+        outcome: o,
+        label: o.label,
+      }))
     const short = siblingShortLabels(markets.map((m) => m.title))
-    return new Map(markets.map((m, i) => [m.id, short[i]]))
-  }, [markets])
-  const lead = rows[0]
+    const labels = new Map(markets.map((m, i) => [m.id, short[i]]))
+    return [...markets]
+      .sort((a, b) => (b.yes?.percent ?? 0) - (a.yes?.percent ?? 0))
+      .slice(0, MAX_LINES)
+      .flatMap((m) =>
+        m.yes
+          ? [{ key: m.id, market: m, outcome: m.yes, label: labels.get(m.id) ?? m.title }]
+          : [],
+      )
+  }, [winner, markets])
+  const hiddenCount = winner
+    ? winner.outcomes.length - rows.length
+    : markets.length - rows.length
+  const lead = rows[0]?.market
 
   // Rolling price markets are best watched live; everything else over a day.
   const [range, setRange] = useState<ChartMode>(
@@ -108,7 +130,7 @@ const FeaturedMarketCard = ({
   )
 
   const charts = useMarketCharts(
-    rows.map((m) => ({ marketId: m.id, outcomeId: m.yes?.id })),
+    rows.map((r) => ({ marketId: r.market.id, outcomeId: r.outcome.id })),
     range,
   )
   const leadChart = charts[0]?.data
@@ -117,7 +139,7 @@ const FeaturedMarketCard = ({
 
   const data = mergeSeries(
     charts.map((c) => c.data?.points ?? []),
-    rows,
+    rows.map((r) => ({ yes: r.outcome })),
     range,
   )
 
@@ -187,13 +209,14 @@ const FeaturedMarketCard = ({
         <div className='flex flex-col justify-between gap-4'>
           {multi ? (
             <div className='flex flex-col divide-y divide-border/40'>
-              {rows.map((m, i) => (
+              {rows.map((r, i) => (
                 <button
-                  key={m.id}
+                  key={r.key}
                   type='button'
                   onClick={(e) => {
                     e.stopPropagation()
-                    onSelect?.(m)
+                    if (winner) onSelectOutcome?.(r.market, r.outcome)
+                    else onSelect?.(r.market)
                   }}
                   className='flex cursor-pointer items-center justify-between gap-3 rounded-md px-1 py-2.5 text-left hover:bg-hover'
                 >
@@ -203,17 +226,17 @@ const FeaturedMarketCard = ({
                       style={{ backgroundColor: LINE_COLORS[i] }}
                     />
                     <span className='truncate text-sm text-black'>
-                      {labels.get(m.id)}
+                      {r.label}
                     </span>
                   </span>
                   <span className='shrink-0 text-lg font-bold text-black tabular-nums'>
-                    {chanceLabel(m.yes)}
+                    {chanceLabel(r.outcome)}
                   </span>
                 </button>
               ))}
-              {markets.length > rows.length && (
+              {hiddenCount > 0 && (
                 <span className='px-1 pt-2.5 text-xs font-semibold text-neutral-10'>
-                  +{markets.length - rows.length} more outcomes
+                  +{hiddenCount} more outcomes
                 </span>
               )}
             </div>
@@ -291,13 +314,13 @@ const FeaturedMarketCard = ({
           <div className='flex flex-wrap items-center justify-between gap-2'>
             {multi ? (
               <div className='flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs'>
-                {rows.map((m, i) => (
-                  <span key={m.id} className='flex items-center gap-1 text-neutral-10'>
+                {rows.map((r, i) => (
+                  <span key={r.key} className='flex items-center gap-1 text-neutral-10'>
                     <span
                       className='h-2 w-2 rounded-full'
                       style={{ backgroundColor: LINE_COLORS[i] }}
                     />
-                    <span className='max-w-28 truncate'>{labels.get(m.id)}</span>
+                    <span className='max-w-28 truncate'>{r.label}</span>
                   </span>
                 ))}
               </div>
@@ -359,12 +382,12 @@ const FeaturedMarketCard = ({
                     }}
                   />
                 )}
-                {rows.map((m, i) => (
+                {rows.map((r, i) => (
                   <Line
-                    key={m.id}
+                    key={r.key}
                     type='monotone'
                     dataKey={`s${i}`}
-                    name={multi ? labels.get(m.id) : (m.yes?.label ?? 'Chance')}
+                    name={multi ? r.label : (r.outcome.label ?? 'Chance')}
                     stroke={unit === 'usd' ? 'var(--color-warning)' : LINE_COLORS[i]}
                     strokeWidth={2}
                     dot={false}
