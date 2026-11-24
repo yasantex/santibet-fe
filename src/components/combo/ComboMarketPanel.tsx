@@ -3,7 +3,7 @@ import {
   TicketStarIcon,
   CheckmarkCircle02Icon,
 } from '@hugeicons/core-free-icons'
-import { useComboSlip } from '../../hooks/useComboSlip'
+import { useComboSlip, useQuotedComboOdds } from '../../hooks/useComboSlip'
 import useMarketOpen from '../../hooks/useMarketOpen'
 import {
   findTeam,
@@ -25,6 +25,7 @@ import { formatOdds } from '../../utils/odds'
 const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
   const { priceLabel } = useOddsFormat()
   const combo = useComboSlip()
+  const comboOdds = useQuotedComboOdds()
   const selectedOutcomeId = combo.selectedOutcomeIdForMarket(market.id)
   const isOpen = useMarketOpen(market)
 
@@ -82,8 +83,8 @@ const ComboMarketPanel = ({ market }: { market: UiMarket }) => {
         <p className='text-center text-xs font-semibold text-neutral-10'>
           {combo.legCount} selection{combo.legCount > 1 ? 's' : ''} in your bet
           slip
-          {combo.combinedOdds > 0
-            ? ` · ${formatOdds(combo.combinedOdds)}`
+          {comboOdds > 0
+            ? ` · ${formatOdds(comboOdds)}`
             : ''}
         </p>
       ) : (
