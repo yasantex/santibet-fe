@@ -1,25 +1,29 @@
 import { createContext, useContext } from 'react'
 import type { ReportPrefill } from '../types/support.types'
 
-export type ChatStatus = 'idle' | 'loading' | 'ready' | 'error'
-
 export interface SupportContextValue {
-  /** False when Chatwoot env vars are missing — hide live-chat entry points. */
+  /** Live chat is always on (in-house); kept for the FAB stacking callers. */
   chatAvailable: boolean
-  chatStatus: ChatStatus
-  /** Unread agent replies since the widget was last opened. */
+  /** Whether the chat panel is open. */
+  chatOpen: boolean
+  /** Unread agent replies across all conversations. */
   unreadCount: number
-  /** Opens the live-chat widget, loading it first if needed. */
+  /** Opens live chat on the player's open conversation (or a new one). */
   openChat: () => void
+  /** Opens live chat on a specific conversation, e.g. a report's. */
+  openConversation: (conversationId: string) => void
+  closeChat: () => void
   /** Opens the "Report an issue" form, optionally pre-filled. */
   openReport: (prefill?: ReportPrefill) => void
 }
 
 export const SupportContext = createContext<SupportContextValue>({
   chatAvailable: false,
-  chatStatus: 'idle',
+  chatOpen: false,
   unreadCount: 0,
   openChat: () => {},
+  openConversation: () => {},
+  closeChat: () => {},
   openReport: () => {},
 })
 

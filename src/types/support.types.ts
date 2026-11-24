@@ -1,23 +1,3 @@
-import type { ChatwootAttributes } from '../utils/chatwoot'
-
-/**
- * GET /support/chatwoot/identity
- *
- * Signed identity for the live-chat widget. The backend owns the Chatwoot
- * inbox HMAC token and computes `identifierHash = HMAC-SHA256(identifier)`,
- * so a user can't impersonate someone else's chat history.
- */
-export interface ChatwootIdentityResponse {
-  /** Stable, opaque contact id — the SantiBet user id. */
-  identifier: string
-  identifierHash: string
-  /**
-   * Optional server-sourced contact attributes (KYC status, VIP tier, …)
-   * merged into the contact so agents see them in the sidebar.
-   */
-  customAttributes?: ChatwootAttributes
-}
-
 export type SupportReportCategory =
   | 'ACCOUNT'
   | 'DEPOSIT'
@@ -54,8 +34,8 @@ export interface SupportReport {
   ticketNumber: string
   category: SupportReportCategory
   status: SupportReportStatus
-  /** Chatwoot conversation the report was filed into. */
-  conversationId: number | null
+  /** The live-chat conversation the report opened (null for pre-2026-11 reports). */
+  conversationId: string | null
   createdAt: string
 }
 
@@ -80,7 +60,7 @@ export type ContactTopic =
 /**
  * POST /contact — the public "Contact us" form. Works signed in or out; with a
  * session the message is linked to the account. Answered by email from the
- * backoffice (separate from the Chatwoot reports above).
+ * backoffice (separate from live chat and the reports above).
  */
 export interface CreateContactMessageRequest {
   name: string

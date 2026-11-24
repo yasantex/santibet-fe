@@ -31,6 +31,12 @@ import {
   type DepositStatusListener,
 } from './notificationStreamContext'
 import type { NotificationType } from '../types/notification.types'
+import type {
+  ChatSummary,
+  SupportStreamEvent,
+  SupportStreamListener,
+} from '../types/supportChat.types'
+import { CHAT_CONVERSATIONS_KEY, CHAT_SUMMARY_KEY } from './supportChat'
 
 /** `hello` is sent once on connect and seeds the badge. */
 interface HelloPayload {
@@ -188,6 +194,15 @@ export const NotificationStreamProvider = ({
     [],
   )
 
+  const supportListeners = useRef(new Set<SupportStreamListener>())
+
+  const subscribeToSupport = useCallback((listener: SupportStreamListener) => {
+    supportListeners.current.add(listener)
+    return () => {
+      supportListeners.current.delete(listener)
+    }
+  }, [])
+
   const subscribeToDepositFailed = useCallback(
     (listener: DepositFailedListener) => {
       depositFailedListeners.current.add(listener)
@@ -243,6 +258,7 @@ export const NotificationStreamProvider = ({
           queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY })
           queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY })
           queryClient.invalidateQueries({ queryKey: WALLET_BALANCE_KEY })
+          queryClient.invalidateQueries({ queryKey: CHAT_SUMMARY_KEY })
         }
         hasConnectedBefore = true
       }
@@ -278,6 +294,9 @@ export const NotificationStreamProvider = ({
         queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY })
 
         invalidateForNotification(queryClient, notificationType)
+        if (notificationType === 'SUPPORT_REPLY') {
+          queryClient.invalidateQueries({ queryKey: CHAT_SUMMARY_KEY })
+        }
 
         if (notificationType === 'DEPOSIT_SUCCESS') {
           const depositEvent: DepositSuccessEvent = {
@@ -351,6 +370,38 @@ export const NotificationStreamProvider = ({
         })
       })
 
+      // Live chat. The badge is kept in the summary cache; the open chat panel
+      // listens for the rest (message bodies, typing, status).
+      const onSupport = (event: Event) => {
+        let payload: SupportStreamEvent
+        try {
+          payload = JSON.parse((event as MessageEvent).data)
+        } catch (error) {
+          console.error('Malformed support payload', error)
+          return
+        }
+        if (payload.type === 'support_message') {
+          queryClient.setQueryData<ChatSummary>(CHAT_SUMMARY_KEY, (previous) =>
+            previous ? { ...previous, unread: payload.unread } : previous,
+          )
+          queryClient.invalidateQueries({ queryKey: CHAT_SUMMARY_KEY })
+          queryClient.invalidateQueries({ queryKey: CHAT_CONVERSATIONS_KEY })
+        } else if (payload.type === 'support_conversation') {
+          queryClient.invalidateQueries({ queryKey: CHAT_SUMMARY_KEY })
+          queryClient.invalidateQueries({ queryKey: CHAT_CONVERSATIONS_KEY })
+        }
+        supportListeners.current.forEach((listener) => {
+          try {
+            listener(payload)
+          } catch (error) {
+            console.error('Support listener failed', error)
+          }
+        })
+      }
+      source.addEventListener('support_message', onSupport)
+      source.addEventListener('support_typing', onSupport)
+      source.addEventListener('support_conversation', onSupport)
+
       source.onerror = () => {
         if (cancelled) return
         setConnected(false)
@@ -385,12 +436,14 @@ export const NotificationStreamProvider = ({
       subscribeToDepositSuccess,
       subscribeToDepositFailed,
       subscribeToDepositStatus,
+      subscribeToSupport,
     }),
     [
       connected,
       subscribeToDepositSuccess,
       subscribeToDepositFailed,
       subscribeToDepositStatus,
+      subscribeToSupport,
     ],
   )
 

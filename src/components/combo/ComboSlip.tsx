@@ -51,14 +51,18 @@ const legPickLabel = (leg: ComboLeg) => {
 
 const LegRow = ({
   leg,
-  livePrice,
+  shownPrice,
+  movedFrom,
   unavailable,
   onRemove,
 }: {
   leg: ComboLeg
-  /** Re-quoted price when it moved from the slip's, else undefined. */
-  livePrice?: number
-  unavailable?: boolean
+  /** The price this leg would be accepted at now (combo margin included). */
+  shownPrice: number
+  /** The price shown before the market moved, when it moved; else undefined. */
+  movedFrom?: number
+  /** Why the leg can't be placed, when it can't. */
+  unavailable?: 'UNAVAILABLE' | 'NO_ODDS'
   onRemove: () => void
 }) => (
   <div className='flex items-start gap-3 rounded-xl border border-border bg-card p-3'>
@@ -79,21 +83,23 @@ const LegRow = ({
         </span>
         {unavailable ? (
           <span className='text-xs font-semibold text-error'>
-            No longer available
+            {unavailable === 'NO_ODDS'
+              ? 'No bookmaker odds yet · bet it on its own'
+              : 'No longer available'}
           </span>
-        ) : livePrice != null ? (
+        ) : movedFrom != null ? (
           <span className='flex items-center gap-1 text-xs font-semibold'>
             <span className='text-neutral-10 line-through'>
-              {formatOdds(legOdds(leg.price))}
+              {formatOdds(legOdds(movedFrom))}
             </span>
             {/* Higher odds = lower price. */}
-            <span className={livePrice < leg.price ? 'text-success' : 'text-error'}>
-              {livePrice < leg.price ? '↑' : '↓'} {formatOdds(legOdds(livePrice))}
+            <span className={shownPrice < movedFrom ? 'text-success' : 'text-error'}>
+              {shownPrice < movedFrom ? '↑' : '↓'} {formatOdds(legOdds(shownPrice))}
             </span>
           </span>
         ) : (
           <span className='text-xs font-semibold text-neutral-10'>
-            {formatOdds(legOdds(leg.price))}
+            {formatOdds(legOdds(shownPrice))}
           </span>
         )}
       </div>
@@ -249,17 +255,28 @@ const ComboSlip = ({
   const quoteLegs = new Map(
     (quote?.legs ?? []).map((l) => [l.outcomeId, l] as const),
   )
-  const unavailableIds = new Set(
-    legs
-      .filter((l) => quoteLegs.get(l.outcomeId)?.available === false)
-      .map((l) => l.outcomeId),
-  )
-  // outcomeId → re-quoted price, for legs whose odds moved.
-  const movedPrices: Record<string, number> = {}
+  // outcomeId → why the leg can't be placed.
+  const unavailable = new Map<string, 'UNAVAILABLE' | 'NO_ODDS'>()
   legs.forEach((l) => {
-    const live = Number(quoteLegs.get(l.outcomeId)?.price)
-    if (live > 0 && Math.abs(live - l.price) >= PRICE_MOVE_THRESHOLD) {
-      movedPrices[l.outcomeId] = live
+    const q = quoteLegs.get(l.outcomeId)
+    if (q?.available === false) unavailable.set(l.outcomeId, q.reason ?? 'UNAVAILABLE')
+  })
+  // outcomeId → the market's new (fair) price, for legs whose market moved. A
+  // leg's slip price is the market's own price, so it is compared with the
+  // quote's pre-margin price: the house margin alone is not an odds move.
+  const movedPrices: Record<string, number> = {}
+  // outcomeId → what the leg is shown at: the quoted price, margin included.
+  const shown: Record<string, { price: number; movedFrom?: number }> = {}
+  legs.forEach((l) => {
+    const q = quoteLegs.get(l.outcomeId)
+    const quoted = Number(q?.price)
+    const fair = Number(q?.fairPrice ?? q?.price)
+    // Margin as a ratio, to show the old price the way the new one is shown.
+    const margin = quoted > 0 && fair > 0 ? quoted / fair : 1
+    shown[l.outcomeId] = { price: quoted > 0 ? quoted : l.price }
+    if (fair > 0 && Math.abs(fair - l.price) >= PRICE_MOVE_THRESHOLD) {
+      movedPrices[l.outcomeId] = fair
+      shown[l.outcomeId].movedFrom = l.price * margin
     }
   })
   const oddsMoved = Object.keys(movedPrices).length > 0
@@ -276,7 +293,8 @@ const ComboSlip = ({
   const toWin = stakeNum * totalOdds
   const quotedMin = quoteMatches ? toMajorUnits(quote.minStakeMinor) : 0
   const minStake = quotedMin > 0 ? quotedMin : minStakeNaira
-  const blocked = hasInvalidLeg || unavailableIds.size > 0
+  const blocked = hasInvalidLeg || unavailable.size > 0
+  const noOddsLeg = legs.find((l) => unavailable.get(l.outcomeId) === 'NO_ODDS')
 
   const handleStake = (value: string) => {
     setError(null)
@@ -305,8 +323,21 @@ const ComboSlip = ({
       setError(`${closedLeg.eventTitle} has closed. Remove it to continue.`)
       return
     }
+    if (noOddsLeg) {
+      setError(
+        `${noOddsLeg.eventTitle} has no bookmaker odds yet, so it can't go in a combo. Remove it, or bet it on its own.`,
+      )
+      return
+    }
     if (blocked) {
       setError('One of your selections is no longer available. Remove it to continue.')
+      return
+    }
+    // Place only at odds the server has priced (they carry the house margin, so
+    // the slip's own sum would overstate them and be refused as an odds move).
+    if (!quoteMatches || quotedOdds <= 0) {
+      void refetchQuote()
+      setError('Checking the latest odds. Try again in a moment.')
       return
     }
     // Odds moved since the legs were added — this click accepts them.
@@ -336,9 +367,7 @@ const ComboSlip = ({
           outcomeId: l.outcomeId,
         })),
         // The odds on screen; the API rejects the combo if they've drifted.
-        ...(totalOdds > 0
-          ? { expectedCombinedOdds: totalOdds.toFixed(4) }
-          : {}),
+        expectedCombinedOdds: quotedOdds.toFixed(4),
       })
       showSuccessToast(
         `Combo placed · pays ${formatCurrency(toWin)} if all win`,
@@ -481,8 +510,9 @@ const ComboSlip = ({
                 <LegRow
                   key={leg.outcomeId}
                   leg={leg}
-                  livePrice={movedPrices[leg.outcomeId]}
-                  unavailable={unavailableIds.has(leg.outcomeId)}
+                  shownPrice={shown[leg.outcomeId]?.price ?? leg.price}
+                  movedFrom={shown[leg.outcomeId]?.movedFrom}
+                  unavailable={unavailable.get(leg.outcomeId)}
                   onRemove={() => remove(leg.outcomeId)}
                 />
               ))}

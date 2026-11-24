@@ -11,6 +11,7 @@ import { formatDate } from '../utils/functions'
 import FilterComponent from '../components/globals/FilterComponent'
 import { notificationFilterCategories } from '../utils/filters'
 import { Button } from '../components/globals/Button'
+import { useSupport } from '../support/supportContext'
 import type { AppNotification, NotificationType } from '../types/notification.types'
 
 type NotificationFilterValues = Record<'type' | 'read', string[]>
@@ -36,6 +37,7 @@ const typeLabels: Record<NotificationType, string> = {
 
 const NotificationRow = ({ notification }: { notification: AppNotification }) => {
   const navigate = useNavigate()
+  const { openChat, openConversation } = useSupport()
   const { mutate: markRead } = useMarkNotificationRead(notification.id)
   const isRead = !!notification.readAt
 
@@ -43,6 +45,12 @@ const NotificationRow = ({ notification }: { notification: AppNotification }) =>
     if (!isRead) markRead()
     // Bonus updates open the bonus screen.
     if (notification.type === 'BONUS_UPDATE') navigate('/bonuses')
+    // A support reply opens its conversation in the chat panel.
+    if (notification.type === 'SUPPORT_REPLY') {
+      const conversationId = notification.data?.conversationId
+      if (typeof conversationId === 'string') openConversation(conversationId)
+      else openChat()
+    }
   }
 
   return (

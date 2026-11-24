@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { TicketStarIcon } from '@hugeicons/core-free-icons'
-import { useComboSlip } from '../../hooks/useComboSlip'
+import { useComboSlip, useQuotedComboOdds } from '../../hooks/useComboSlip'
 import { FAB_STACK_CLASS, useSupport } from '../../support/supportContext'
 import { formatOdds } from '../../utils/odds'
 
@@ -18,7 +18,8 @@ const isSportsSurface = (pathname: string) =>
  * - Empty elsewhere: hidden.
  */
 const BetSlipFab = ({ onClick }: { onClick: () => void }) => {
-  const { legCount, combinedOdds } = useComboSlip()
+  const { legCount } = useComboSlip()
+  const combinedOdds = useQuotedComboOdds()
   const { pathname } = useLocation()
   const { chatAvailable } = useSupport()
   const onSportsSurface = isSportsSurface(pathname)
