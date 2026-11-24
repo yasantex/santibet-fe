@@ -417,6 +417,22 @@ export const marketSport = (market: { seriesKey?: string | null }): string | nul
   )
 }
 
+/**
+ * Breadcrumb to a sports market's league on the Sports page — the same
+ * `?sport=&league=` filter CategoryPage sets when a league is picked (league =
+ * the market's subtitle). Null when it isn't an API-Sports market with a league.
+ */
+export const sportsLeagueCrumb = (market: {
+  seriesKey?: string | null
+  subtitle?: string | null
+}): { label: string; href: string } | null => {
+  const sport = marketSport(market)
+  const league = market.subtitle?.trim()
+  if (!sport || !league) return null
+  const params = new URLSearchParams({ sport, league })
+  return { label: league, href: `/category/sports?${params.toString()}` }
+}
+
 const MORE_MARKETS_SUFFIX = ' - More Markets'
 
 /** Slug of an event's "<title> - More Markets" sibling (spreads, totals…),
