@@ -198,9 +198,26 @@ const CategoryPage = () => {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTopic, setActiveTopic] = useState<string | null>(null)
-  // Sports sub-navigation: pick a sport type, then a league within it.
-  const [activeSport, setActiveSport] = useState<string | null>(null)
-  const [activeLeague, setActiveLeague] = useState<string | null>(null)
+  // Sports sub-navigation: pick a sport type, then a league within it. Kept
+  // in the URL (?sport=&league=) so leaving for a match and pressing Back
+  // returns to the same league instead of the Sports landing view (UAT-05-01).
+  const activeSport = isSports ? searchParams.get('sport') : null
+  const activeLeague = activeSport ? searchParams.get('league') : null
+  // Each pick is its own history entry (no `replace`), so Back steps
+  // match → league → sport → all sports, one level at a time.
+  const changeSportsNav = (nav: {
+    sub: string | null
+    sport: string | null
+    league: string | null
+  }) =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      for (const [key, value] of Object.entries(nav)) {
+        if (value) next.set(key, value)
+        else next.delete(key)
+      }
+      return next
+    })
   // Crypto: round-length filter for the live section (seconds; null = all).
   const [liveInterval, setLiveInterval] = useState<number | null>(null)
   // When markets kick off / end (Today, This week…); null = any time.
@@ -213,8 +230,6 @@ const CategoryPage = () => {
   if (topicResetKey !== active) {
     setTopicResetKey(active)
     setActiveTopic(null)
-    setActiveSport(null)
-    setActiveLeague(null)
     setLiveInterval(null)
     setActiveTime(null)
   }
@@ -438,11 +453,8 @@ const CategoryPage = () => {
     activeSub
       ? item.subSlug === activeSub.slug.toLowerCase()
       : !!activeSport && item.dataSport === activeSport && !activeLeague
-  const selectAllSports = () => {
-    changeSub(null)
-    setActiveSport(null)
-    setActiveLeague(null)
-  }
+  const selectAllSports = () =>
+    changeSportsNav({ sub: null, sport: null, league: null })
   // The whole row is the accordion: a sport already picked opens/closes;
   // another one is picked and opened.
   const selectSport = (item: SportNavItem) => {
@@ -450,22 +462,16 @@ const CategoryPage = () => {
       toggleSportOpen(item.key)
       return
     }
-    if (item.subSlug) {
-      changeSub(item.subSlug)
-      setActiveSport(null)
-    } else {
-      changeSub(null)
-      setActiveSport(item.dataSport)
-    }
-    setActiveLeague(null)
+    changeSportsNav({
+      sub: item.subSlug,
+      sport: item.subSlug ? null : item.dataSport,
+      league: null,
+    })
     setOpenSports((prev) => new Set(prev).add(item.key))
   }
   // Leagues live in the parent feed, so picking one leaves the subcategory.
-  const selectLeague = (item: SportNavItem, league: string) => {
-    changeSub(null)
-    setActiveSport(item.dataSport)
-    setActiveLeague(league)
-  }
+  const selectLeague = (item: SportNavItem, league: string) =>
+    changeSportsNav({ sub: null, sport: item.dataSport, league })
 
   const byTopic = useMemo(() => {
     if (isSports) {
@@ -566,7 +572,11 @@ const CategoryPage = () => {
               All sports
             </button>
             {sportsNav.map((item) => {
-              const open = openSports.has(item.key)
+              // Also open when one of its leagues is picked, so coming Back
+              // from a match shows the league highlighted in its list.
+              const open =
+                openSports.has(item.key) ||
+                (!!activeLeague && item.dataSport === activeSport)
               return (
                 <div key={item.key} className='flex flex-col gap-0.5'>
                   <button
