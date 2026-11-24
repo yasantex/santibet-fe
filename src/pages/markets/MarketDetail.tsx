@@ -30,6 +30,7 @@ import {
   matchResultChoices,
   MARKET_STATUS_LABELS,
   outcomeTone,
+  sportsLeagueCrumb,
   TONE_STYLES,
 } from '../../utils/marketDisplay'
 import TeamLogo from '../../components/markets/TeamLogo'
@@ -100,10 +101,14 @@ const MarketDetail = () => {
   const category = event?.category ?? market?.category ?? ''
   const inMultiEvent =
     !!event && Math.max(event.marketCount ?? 0, event.markets.length) > 1
-  const categoryCrumbs = useCategoryCrumbs(
+  const baseCrumbs = useCategoryCrumbs(
     event?.categorySlug ?? market?.categorySlug,
     category,
   )
+  // Sports › UEFA Champions League › …: the league links back to its filtered
+  // list, so Back on a page opened directly (no history) lands there too.
+  const leagueCrumb = market ? sportsLeagueCrumb(market) : null
+  const categoryCrumbs = leagueCrumb ? [...baseCrumbs, leagueCrumb] : baseCrumbs
 
   const selectedOutcome: UiOutcome | undefined = useMemo(() => {
     if (!market) return undefined

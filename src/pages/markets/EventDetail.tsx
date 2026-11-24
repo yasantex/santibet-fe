@@ -11,6 +11,7 @@ import {
   isMultiChoiceEvent,
   marketHref,
   moreMarketsSlug,
+  sportsLeagueCrumb,
 } from '../../utils/marketDisplay'
 import { MarketCardSkeleton } from '../../components/globals/ReusedText'
 import { formatCloseTimer } from '../../utils/functions'
@@ -45,7 +46,13 @@ const EventDetail = () => {
     [event, moreEvent],
   )
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
-  const categoryCrumbs = useCategoryCrumbs(event?.categorySlug, event?.category)
+  const baseCrumbs = useCategoryCrumbs(event?.categorySlug, event?.category)
+  // The match's league links back to its filtered Sports list (also Back's
+  // fallback when the page was opened directly).
+  const leagueCrumb = event?.markets[0]
+    ? sportsLeagueCrumb(event.markets[0])
+    : null
+  const categoryCrumbs = leagueCrumb ? [...baseCrumbs, leagueCrumb] : baseCrumbs
 
   const goToMarket = (m: UiMarket) => navigate(marketHref(m))
   const goToTrade = (m: UiMarket, o: UiOutcome) => navigate(marketHref(m, o.id))
