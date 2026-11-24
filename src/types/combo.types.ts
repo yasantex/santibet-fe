@@ -50,9 +50,14 @@ export interface ComboQuote {
   legs: {
     marketId: string
     outcomeId: string
+    /** Price the leg would be accepted at, the house's combo margin included. */
     price: string | null
+    /** The market's own price before the margin — what "odds moved" is judged on. */
+    fairPrice?: string | null
     /** False once the leg can no longer be bet (closed, suspended, unpriced). */
     available: boolean
+    /** Why it's unavailable: NO_ODDS = no bookmaker line yet (fine as a single). */
+    reason?: 'UNAVAILABLE' | 'NO_ODDS' | null
   }[]
 }
 

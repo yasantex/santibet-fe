@@ -12,7 +12,7 @@ export type NotificationType =
   | 'MARKET_RESOLVED'
   | 'WINNINGS_CREDITED'
   | 'SECURITY_ALERT'
-  /** An agent replied to a support report / chat (via Chatwoot webhook). */
+  /** A live-chat reply the player had not seen after a couple of minutes. `data.conversationId` opens it. */
   | 'SUPPORT_REPLY'
   /** Bonus granted / activated / won / completed / ended — see `data.event`. */
   | 'BONUS_UPDATE'

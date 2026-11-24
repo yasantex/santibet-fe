@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { SupportStreamListener } from '../types/supportChat.types'
 
 export interface DepositSuccessEvent {
   depositId?: string
@@ -44,6 +45,8 @@ export interface NotificationStreamValue {
   subscribeToDepositFailed: (listener: DepositFailedListener) => () => void
   /** Subscribe to live crypto deposit progress. Returns an unsubscribe function. */
   subscribeToDepositStatus: (listener: DepositStatusListener) => () => void
+  /** Live chat events (new agent message, typing, status). Returns an unsubscribe function. */
+  subscribeToSupport: (listener: SupportStreamListener) => () => void
 }
 
 export const NotificationStreamContext =
@@ -52,6 +55,7 @@ export const NotificationStreamContext =
     subscribeToDepositSuccess: () => () => {},
     subscribeToDepositFailed: () => () => {},
     subscribeToDepositStatus: () => () => {},
+    subscribeToSupport: () => () => {},
   })
 
 export const useNotificationStream = () =>

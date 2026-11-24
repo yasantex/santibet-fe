@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useComboQuote } from '../data_layer/bets'
 import { useAppDispatch, useAppSelector } from '../utils/hooks'
 import {
   addOrReplaceMarketLeg,
@@ -143,4 +144,32 @@ export const useComboSlip = () => {
     acceptPrices,
     payout,
   }
+}
+
+/** Any stake will do: combined odds don't depend on it, and a fixed one lets
+ *  every badge share one cached quote. */
+const BADGE_QUOTE_STAKE = '100000'
+
+/**
+ * The slip's combined odds as the server prices them — the house's combo
+ * margin included — for the badges outside the slip (bet-slip button, market
+ * panel). Falls back to the slip's own sum while signed out or until the quote
+ * for the current legs arrives.
+ */
+export const useQuotedComboOdds = () => {
+  const { legs, combinedOdds } = useComboSlip()
+  const body =
+    legs.length >= MIN_COMBO_LEGS
+      ? {
+          stake: BADGE_QUOTE_STAKE,
+          legs: legs.map((l) => ({ marketId: l.marketId, outcomeId: l.outcomeId })),
+        }
+      : null
+  const { data } = useComboQuote(body)
+  const matches =
+    !!data &&
+    data.legs.length === legs.length &&
+    legs.every((l) => data.legs.some((q) => q.outcomeId === l.outcomeId))
+  const quoted = matches ? Number(data.combinedOdds) : 0
+  return quoted > 0 ? quoted : combinedOdds
 }

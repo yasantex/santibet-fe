@@ -11,7 +11,6 @@ import { Button } from '../globals/Button'
 import { useAppSelector } from '../../utils/hooks'
 import useAuthNavigate from '../../hooks/useAuthNavigate'
 import { useCreateSupportReport } from '../../data_layer/support'
-import { chatwoot } from '../../utils/chatwoot'
 import { useSupport } from '../../support/supportContext'
 import type {
   ReportPrefill,
@@ -62,15 +61,15 @@ type Props = {
 }
 
 /**
- * "Report an issue" — files a structured ticket into the Chatwoot support
- * inbox via our backend, with page/market context attached automatically.
- * Complements live chat: a report survives the user leaving, and agents get a
- * categorised, referenced ticket instead of a free-form first message.
+ * "Report an issue" — files a structured ticket that opens a conversation in
+ * the support inbox, with page/market context attached automatically. Agents
+ * get a categorised, referenced ticket instead of a free-form first message,
+ * and the player continues it in live chat.
  */
 const ReportIssueModal = ({ prefill, onClose }: Props) => {
   const { user } = useAppSelector((state) => state.user)
   const authNavigate = useAuthNavigate()
-  const { chatAvailable, openChat } = useSupport()
+  const { chatAvailable, openChat, openConversation } = useSupport()
   const { mutateAsync, isPending } = useCreateSupportReport()
   const [submitted, setSubmitted] = useState<SupportReport | null>(null)
   const [submitError, setSubmitError] = useState('')
@@ -96,12 +95,6 @@ const ReportIssueModal = ({ prefill, onClose }: Props) => {
             marketTitle: prefill?.marketTitle,
           },
         })
-        // Surface the ticket on the chat contact too, so an agent picking up a
-        // live chat can see the user already filed a report.
-        chatwoot.setCustomAttributes({
-          last_report_ticket: result.ticketNumber,
-          last_report_category: result.category,
-        })
         setSubmitted(result)
       } catch (error) {
         setSubmitError(
@@ -115,7 +108,9 @@ const ReportIssueModal = ({ prefill, onClose }: Props) => {
 
   const continueInChat = () => {
     onClose()
-    openChat()
+    // After submitting, carry on in the report's own conversation.
+    if (submitted?.conversationId) openConversation(submitted.conversationId)
+    else openChat()
   }
 
   const showReference =
