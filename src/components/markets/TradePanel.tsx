@@ -10,6 +10,10 @@ interface TradePanelProps {
   market: UiMarket
   selectedOutcome?: UiOutcome
   onSelectOutcome: (outcome: UiOutcome) => void
+  /** Names the question and the result this market stands for, e.g.
+   *  "Match winner" / "Al Ain FC", in place of the market's own question
+   *  (see OrderForm's `pickLabel`). Yes/No still picks the side. */
+  pick?: { heading: string; label: string }
 }
 
 /**
@@ -21,6 +25,7 @@ const TradePanel = ({
   market,
   selectedOutcome,
   onSelectOutcome,
+  pick,
 }: TradePanelProps) => {
   const [placed, setPlaced] = useState<PlacedOrder | null>(null)
   const [trade, setTrade] = useState<{
@@ -42,9 +47,11 @@ const TradePanel = ({
   return (
     <div className='flex flex-col gap-4 rounded-2xl border border-border bg-card p-4'>
       <div>
-        <p className='text-xs text-neutral-10'>{market.title}</p>
+        <p className='text-sm font-bold text-black'>
+          {pick?.heading ?? market.title}
+        </p>
         <p className='text-sm font-semibold text-black'>
-          {outcome?.label ?? '-'}
+          {pick?.label ?? outcome?.label ?? '-'}
         </p>
       </div>
 
@@ -68,6 +75,7 @@ const TradePanel = ({
         outcome={outcome}
         onSelectOutcome={onSelectOutcome}
         onPlaced={setPlaced}
+        pickLabel={pick?.label}
       />
 
       <PredictionSuccessModal

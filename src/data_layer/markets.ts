@@ -13,6 +13,7 @@ import { apiClient, type QueryParams } from './utils'
 import { toCents, toMajorUnits, toPercent } from '../utils/functions'
 import {
   categoryIcon,
+  marketDisplayTitle,
   withoutMoreMarketsDuplicates,
 } from '../utils/marketDisplay'
 import type { SearchResult, SearchSection } from '../utils/constants'
@@ -152,6 +153,17 @@ const LOBBY_STATUS: Record<LobbyStatus, MarketStatus> = {
   UNKNOWN: 'unknown',
 }
 
+/** Statuses where a market is still in play. Paused counts: in-play
+ *  markets pause briefly (a goal, a VAR check) without the game ending. */
+const IN_PLAY_STATUSES: MarketStatus[] = ['open', 'paused']
+
+/**
+ * The feed can leave `live` set after a game ends, so a settled market (or
+ * the bet on it) would still show LIVE. Only a market still trading is live.
+ */
+const isInPlay = (live: boolean | null | undefined, status: MarketStatus) =>
+  !!live && IN_PLAY_STATUSES.includes(status)
+
 export const normalizeLobbyMarket = (
   m: LobbyMarket,
   category = 'General',
@@ -175,6 +187,8 @@ export const normalizeLobbyMarket = (
     outcomes[0]
   const no = outcomes.find((o) => o.id !== yes?.id) ?? outcomes[1]
 
+  const status = LOBBY_STATUS[m.status] ?? 'unknown'
+
   return {
     id: m.id,
     eventId,
@@ -183,14 +197,14 @@ export const normalizeLobbyMarket = (
     eventTitle,
     subtitle: m.subtitle ?? '',
     category,
-    status: LOBBY_STATUS[m.status] ?? 'unknown',
+    status,
     openTime: m.openTime,
     closeTime: m.closeTime,
     volume: Number(m.volume) || 0,
     liquidity: Number(m.liquidity) || 0,
     slug: m.slug,
     imageUrl: m.imageUrl ?? imageUrl,
-    live: m.live ?? false,
+    live: isInPlay(m.live, status),
     seriesKey: m.seriesKey ?? null,
     durationSeconds: m.durationSeconds ?? null,
     resolvedOutcomeId: m.resolvedOutcomeId,
@@ -216,7 +230,14 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
     closeTime: e.closeTime,
     slug: e.slug,
     imageUrl: e.imageUrl,
-    live: e.live ?? false,
+    // A finished event isn't live, even if the feed still says so: it needs
+    // at least one market still in play (when its markets are included).
+    live:
+      !!e.live &&
+      (!e.markets?.length ||
+        e.markets.some((m) =>
+          IN_PLAY_STATUSES.includes(LOBBY_STATUS[m.status] ?? 'unknown'),
+        )),
     liveState: e.liveState ?? null,
     featured: e.featured ?? false,
     teams: e.teams ?? null,
@@ -1013,18 +1034,31 @@ export const normalizeText = (s: string): string =>
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
 
-const marketToSearchResult = (m: UiMarket): SearchResult => ({
-  id: m.id,
-  title: m.title,
-  subtitle: m.subtitle || m.category,
-  href: m.eventId ? `/markets/${m.id}?event=${m.eventId}` : `/markets/${m.id}`,
-  iconLabel: categoryIcon(m.category),
-  iconBg: '#183123',
-  iconTextColor: '#c6f135',
-  percentage: m.yes?.percent ?? 0,
-  change: null,
-  direction: 'neutral',
-})
+const marketToSearchResult = (m: UiMarket): SearchResult => {
+  const where = m.subtitle || m.category
+  const isYesNo =
+    m.outcomes.length === 2 &&
+    m.outcomes.some((o) => YES_LABELS.includes(o.label.trim().toLowerCase()))
+  // A "Match Winner" (Home / Draw / Away) market's own title says nothing on
+  // its own, so lead with the match and show the favourite's chance.
+  const favourite = isYesNo
+    ? undefined
+    : [...m.outcomes].sort((a, b) => b.percent - a.percent)[0]
+  return {
+    id: m.id,
+    title: favourite && m.eventTitle ? m.eventTitle : marketDisplayTitle(m),
+    subtitle: favourite
+      ? `${m.title} · ${favourite.label} · ${where}`
+      : where,
+    href: m.eventId ? `/markets/${m.id}?event=${m.eventId}` : `/markets/${m.id}`,
+    iconLabel: categoryIcon(m.category),
+    iconBg: '#183123',
+    iconTextColor: '#c6f135',
+    percentage: favourite?.percent ?? m.yes?.percent ?? 0,
+    change: null,
+    direction: 'neutral',
+  }
+}
 
 const SEARCH_ICON_BG = '#183123'
 const SEARCH_ICON_TEXT = '#c6f135'

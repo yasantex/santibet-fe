@@ -11,8 +11,10 @@ import {
   categoryIcon,
   eventMarketLabels,
   MARKET_STATUS_LABELS,
+  matchResultChoices,
 } from '../../utils/marketDisplay'
 import { formatNairaCompact } from '../../utils/functions'
+import { shortOutcomeLabel, teamsFromTitle } from '../../utils/teamNames'
 import type { UiEvent, UiMarket, UiOutcome } from '../../types/market.types'
 
 const formatEndDate = (iso?: string) => {
@@ -118,6 +120,74 @@ const ChoiceRow = ({
   )
 }
 
+type MatchChoice = {
+  market: UiMarket
+  outcome: UiOutcome
+  /** Full name, for the tooltip and the resolved line. */
+  label: string
+  /** Button label: team code or "DRAW" (e.g. ARS / DRAW / BVB). */
+  code: string
+}
+
+/**
+ * A match imported as one Yes/No market per result ("Arsenal", "Draw",
+ * "Dortmund") is one question, so it reads as one card with a button per
+ * result, as on Polymarket. Each button buys that result's Yes; the order
+ * panel still offers No.
+ */
+const MatchWinnerCard = ({
+  choices,
+  selectedMarketId,
+  onSelect,
+}: {
+  choices: MatchChoice[]
+  selectedMarketId?: string
+  onSelect: (market: UiMarket, outcome?: UiOutcome) => void
+}) => {
+  const { priceLabel } = useOddsFormat()
+  const volume = choices.reduce((sum, c) => sum + (c.market.volume || 0), 0)
+  const settled = choices.find((c) => c.market.resolvedOutcomeId === c.outcome.id)
+
+  return (
+    <div className='flex flex-col gap-4 rounded-xl border border-border p-4 md:flex-row md:items-center md:justify-between md:p-5'>
+      <div className='flex flex-col gap-0.5'>
+        <span className='text-base font-semibold text-black'>Match winner</span>
+        <span className='text-xs text-neutral-10'>
+          {settled
+            ? `Resolved · ${settled.label}`
+            : `${formatNairaCompact(volume)} Vol.`}
+        </span>
+      </div>
+      <div
+        className='grid gap-2 md:w-[460px]'
+        style={{ gridTemplateColumns: `repeat(${choices.length}, minmax(0, 1fr))` }}
+      >
+        {choices.map(({ market, outcome, label, code }) => {
+          const selected = market.id === selectedMarketId
+          const open = market.status === 'open'
+          return (
+            <button
+              key={market.id}
+              type='button'
+              disabled={!open}
+              title={label}
+              onClick={() => onSelect(market, outcome)}
+              className={`flex min-w-0 cursor-pointer flex-col items-center gap-0.5 rounded-lg border px-2 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                selected
+                  ? 'border-brand-green bg-brand-green text-text-black'
+                  : 'border-border bg-card text-black hover:border-brand-green/60'
+              }`}
+            >
+              <span className='w-full truncate text-center'>{code}</span>
+              <span className='tabular-nums'>{priceLabel(market, outcome)}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 /** The selected choice's Rules and Recent Trades, below the list. */
 const SelectedMarketInfo = ({
   market,
@@ -159,6 +229,19 @@ const MultiChoiceEventView = ({
     [event],
   )
   const labels = useMemo(() => eventMarketLabels(markets), [markets])
+  // A match's Home / Draw / Away, in the event's own order.
+  const matchChoices = useMemo<MatchChoice[] | null>(() => {
+    const choices = matchResultChoices(event)
+    if (!choices) return null
+    // Team codes as on the live cards: the API's short name, else one made
+    // from the name ("Arsenal FC" → "ARS").
+    const teams = event.teams?.length && event.teams.length >= 2 ? event.teams : null
+    const shorten = shortOutcomeLabel(
+      teams ? teams.map((t) => t.name) : teamsFromTitle(event.title),
+      teams ? teams.map((t) => t.shortName) : [],
+    )
+    return choices.map((c) => ({ ...c, code: shorten(c.label).toUpperCase() }))
+  }, [event])
   const [pick, setPick] = useState<{ marketId?: string; outcomeId?: string }>({
     marketId: initialMarketId,
     outcomeId: initialOutcomeId,
@@ -170,6 +253,10 @@ const MultiChoiceEventView = ({
   const selectedOutcome =
     selectedMarket?.outcomes.find((o) => o.id === pick.outcomeId) ??
     selectedMarket?.yes
+  // A match's result: the panel names it, and Yes/No backs it or not.
+  const selectedChoice = matchChoices?.find(
+    (c) => c.market.id === selectedMarket?.id,
+  )
 
   const select = (market: UiMarket, outcome?: UiOutcome) => {
     setPick({ marketId: market.id, outcomeId: outcome?.id ?? market.yes?.id })
@@ -186,6 +273,11 @@ const MultiChoiceEventView = ({
       selectedOutcome={selectedOutcome}
       onSelectOutcome={(o) =>
         setPick({ marketId: selectedMarket.id, outcomeId: o.id })
+      }
+      pick={
+        selectedChoice
+          ? { heading: 'Match winner', label: selectedChoice.label }
+          : undefined
       }
     />
   )
@@ -226,21 +318,29 @@ const MultiChoiceEventView = ({
               {endDate}
             </span>
           )}
-          <span>{markets.length} markets</span>
+          {!matchChoices && <span>{markets.length} markets</span>}
         </div>
 
-        <div className='-mt-3 flex flex-col'>
-          {markets.map((m) => (
-            <ChoiceRow
-              key={m.id}
-              market={m}
-              label={labels.get(m.id) ?? m.title}
-              selected={m.id === selectedMarket?.id}
-              selectedOutcomeId={selectedOutcome?.id}
-              onSelect={select}
-            />
-          ))}
-        </div>
+        {matchChoices ? (
+          <MatchWinnerCard
+            choices={matchChoices}
+            selectedMarketId={selectedMarket?.id}
+            onSelect={select}
+          />
+        ) : (
+          <div className='-mt-3 flex flex-col'>
+            {markets.map((m) => (
+              <ChoiceRow
+                key={m.id}
+                market={m}
+                label={labels.get(m.id) ?? m.title}
+                selected={m.id === selectedMarket?.id}
+                selectedOutcomeId={selectedOutcome?.id}
+                onSelect={select}
+              />
+            ))}
+          </div>
+        )}
 
         {selectedMarket && (
           <SelectedMarketInfo

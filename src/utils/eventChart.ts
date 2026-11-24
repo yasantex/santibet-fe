@@ -19,7 +19,7 @@ export type ChartRow = Record<string, number>
  */
 export const mergeSeries = (
   series: ChartPoint[][],
-  rows: UiMarket[],
+  rows: Pick<UiMarket, 'yes'>[],
   range: ChartMode,
 ): ChartRow[] => {
   const times = [...new Set(series.flatMap((s) => s.map((p) => p.t)))].sort(
