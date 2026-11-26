@@ -50,8 +50,11 @@ import Seo from '../../seo/Seo'
 
 type SortOption = NonNullable<EventQueryParams['sort']>
 
+// "Trending" is what SantiBet players are betting on; "Breaking" is the
+// partner-volume score, as in the header.
 const SORT_OPTIONS: { label: string; value: SortOption }[] = [
-  { label: 'Trending', value: 'trending' },
+  { label: 'Trending', value: 'most_bets' },
+  { label: 'Breaking', value: 'trending' },
   { label: 'Newest', value: 'newest' },
   { label: 'Closing soon', value: 'closing_soon' },
 ]
@@ -133,7 +136,7 @@ const CategoryPage = () => {
   const isSports = active.toLowerCase() === 'sports'
   const isCrypto = active.toLowerCase() === 'crypto'
 
-  // Nav links (e.g. Header's New / Breaking / Upcoming) deep-link into a sort
+  // Nav links (e.g. Header's Trending / Breaking / Upcoming) deep-link into a sort
   // mode via `?sort=`. Derive it from the URL on every render (not just the
   // first) so switching between those links while already on /browse works.
   const sortParam = searchParams.get('sort')

@@ -6,7 +6,8 @@ import { marketTags, type MarketTag } from '../../utils/marketDisplay'
 import type { UiMarket } from '../../types/market.types'
 
 /** "₦582K Vol. · 1.2K trades · UEFA Nations League · 7:45 PM" — volume, trade
- *  count (lobby feed only) and context tags. */
+ *  count (lobby feed only) and context tags. On Trending, the recent bet
+ *  count takes the trade count's place. */
 const MarketMetaLine = ({
   market,
   className = '',
@@ -20,7 +21,15 @@ const MarketMetaLine = ({
       className={`flex min-w-0 items-center gap-1.5 text-xs text-placeholder ${className}`}
     >
       <span className='shrink-0'>{formatNairaCompact(market.volume)} Vol.</span>
-      {market.tradeCount != null && market.tradeCount > 0 && (
+      {market.recentBetCount != null && market.recentBetCount > 0 ? (
+        <>
+          <span aria-hidden>·</span>
+          <span className='shrink-0'>
+            {formatCompact(market.recentBetCount)}{' '}
+            {market.recentBetCount === 1 ? 'recent bet' : 'recent bets'}
+          </span>
+        </>
+      ) : market.tradeCount != null && market.tradeCount > 0 && (
         <>
           <span aria-hidden>·</span>
           <span className='shrink-0'>

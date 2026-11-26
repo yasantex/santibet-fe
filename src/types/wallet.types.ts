@@ -36,7 +36,38 @@ export type TransactionStatus =
   | 'COMPLETED'
   | 'FAILED'
   | 'CANCELED'
-export interface Transaction {
+/** One statutory charge on a withdrawal. `rate` is in basis points (500 = 5%). */
+export interface WithdrawalDeduction {
+  label: string
+  rate: number
+  /** Kobo. */
+  amount: string
+}
+
+/**
+ * Statutory charges on a withdrawal (NRC, State Regulator, SantiBet
+ * commission), charged on top of the amount. The backend only sends these
+ * while its `withdrawal-statutory-deductions` flag is on, or on rows that were
+ * snapshotted while it was; their presence is the only sign a charge applied.
+ */
+export interface WithdrawalBreakdown {
+  deductions?: WithdrawalDeduction[]
+  /** Kobo: the sum of `deductions`. */
+  totalDeductions?: string
+  /** Kobo: what the player receives. Always the amount requested. */
+  netPayable?: string
+}
+
+/** `POST /wallet/withdrawal-quote`: read-only preview of a withdrawal's cost. */
+export interface WithdrawalChargesQuote extends WithdrawalBreakdown {
+  amount: string
+  netPayable: string
+  /** Kobo: the usual withdrawal fee, from the same settings as the request.
+   *  Optional until every environment returns it. */
+  fee?: string
+}
+
+export interface Transaction extends WithdrawalBreakdown {
   id: string
   type: TransactionType
   direction: string
@@ -125,7 +156,7 @@ export interface WithdrawalAccountsListResponse {
   data: WithdrawalAccount[]
 }
 
-export interface WithdrawalRecord {
+export interface WithdrawalRecord extends WithdrawalBreakdown {
   id: string
   amount: string
   fee: string

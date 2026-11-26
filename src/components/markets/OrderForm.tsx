@@ -362,7 +362,10 @@ const OrderForm = ({
         return
       }
     } else if (isSignedIn && stakeNum > cash) {
-      showWarningToast('Amount exceeds your available balance')
+      // Same wording as the live notice under the amount (UAT 06-04).
+      setBetError(
+        `You need ${formatCurrency(stakeNum - cash)} more to bet this amount. Available: ${formatCurrency(cash)}.`,
+      )
       return
     }
     if (marketMinNaira != null && stakeNum < marketMinNaira) {

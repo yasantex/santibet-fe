@@ -11,10 +11,12 @@ import { VerifySchema } from '../../utils/validations'
 import { StatusBadge } from '../globals/ReusedText'
 import { WithdrawalStatusConfig } from '../../utils/status'
 import { toMajorUnits } from '../../utils/functions'
+import type { WithdrawalBreakdown } from '../../types/wallet.types'
+import WithdrawalCharges from '../account/WithdrawalCharges'
 
 type WithdrawalStatus = 'PENDING' | 'DISPATCHED' | 'SUCCESS' | 'FAILED'
 
-interface WithdrawalRecord {
+interface WithdrawalRecord extends WithdrawalBreakdown {
   id: string
   amount: string
   fee: string
@@ -110,18 +112,30 @@ const ConfirmWithdrawal = ({
     >
       {withdrawal ? (
         <div className='w-full flex flex-col gap-5 mt-4'>
-          <div className='flex justify-between gap-4 font-medium text-sm text-black'>
-            <p>Amount</p>
-            <span>
-              {withdrawal.currency} {toMajorUnits(withdrawal.amount).toLocaleString('en-NG')}
-            </span>
-          </div>
-          <div className='flex justify-between gap-4 font-medium text-sm text-black'>
-            <p>Fee</p>
-            <span>
-              {withdrawal.currency} {toMajorUnits(withdrawal.fee).toLocaleString('en-NG')}
-            </span>
-          </div>
+          {withdrawal.deductions?.length ? (
+            // Statutory charges applied: what they receive, each charge, the
+            // fee and the full wallet debit.
+            <WithdrawalCharges
+              breakdown={withdrawal}
+              amount={withdrawal.amount}
+              fee={withdrawal.fee}
+            />
+          ) : (
+            <>
+              <div className='flex justify-between gap-4 font-medium text-sm text-black'>
+                <p>Amount</p>
+                <span>
+                  {withdrawal.currency} {toMajorUnits(withdrawal.amount).toLocaleString('en-NG')}
+                </span>
+              </div>
+              <div className='flex justify-between gap-4 font-medium text-sm text-black'>
+                <p>Fee</p>
+                <span>
+                  {withdrawal.currency} {toMajorUnits(withdrawal.fee).toLocaleString('en-NG')}
+                </span>
+              </div>
+            </>
+          )}
           <div className='flex justify-between gap-4 font-medium text-sm text-black'>
             <p>Destination</p>
             <span>{withdrawal.destination}</span>

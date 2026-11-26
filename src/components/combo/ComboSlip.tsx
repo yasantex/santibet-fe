@@ -293,6 +293,13 @@ const ComboSlip = ({
   const toWin = stakeNum * totalOdds
   const quotedMin = quoteMatches ? toMajorUnits(quote.minStakeMinor) : 0
   const minStake = quotedMin > 0 ? quotedMin : minStakeNaira
+  // Short of cash: worded like the single-bet form so both say the same thing
+  // (UAT 06-04). The full available balance can be staked (MAX).
+  const shortfall = isSignedIn && wallet ? Math.max(stakeNum - cash, 0) : 0
+  const shortfallNotice =
+    shortfall > 0
+      ? `You need ${formatCurrency(shortfall)} more to place this combo. Available: ${formatCurrency(cash)}.`
+      : null
   const blocked = hasInvalidLeg || unavailable.size > 0
   const noOddsLeg = legs.find((l) => unavailable.get(l.outcomeId) === 'NO_ODDS')
 
@@ -350,8 +357,8 @@ const ComboSlip = ({
       setError('Enter a stake.')
       return
     }
-    if (stakeNum > cash) {
-      setError('Stake exceeds your available balance.')
+    if (shortfallNotice) {
+      setError(shortfallNotice)
       return
     }
     if (minStake != null && stakeNum < minStake) {
@@ -609,6 +616,11 @@ const ComboSlip = ({
                 </div>
               )}
 
+              {shortfallNotice && !error && (
+                <p className='rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-black'>
+                  {shortfallNotice}
+                </p>
+              )}
               {error && (
                 <p className='rounded-lg bg-error-bg px-3 py-2 text-xs font-medium text-error'>
                   {error}

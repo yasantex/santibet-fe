@@ -150,8 +150,9 @@ const AccountPortfolio = () => {
     )
   }, [ordersQuery.data, search])
 
-  // History: buys from the bets list, results from finished positions, and
-  // combos — merged into one newest-first feed.
+  // History, one row per finished bet: results from finished positions and
+  // combos, plus bets that never went in (cancelled / rejected) from the bets
+  // list — merged into one newest-first feed.
   const activity = useMemo(() => {
     const bets = flatten<Bet>(betsQuery.data?.pages)
     const settledPositions = flatten<BetPosition>(settledQuery.data?.pages)

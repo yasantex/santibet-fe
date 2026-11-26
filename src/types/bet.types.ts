@@ -24,6 +24,20 @@ export type PositionStatusApi = 'OPEN' | 'CLOSED' | 'SETTLED'
 
 export type PositionResult = 'WON' | 'LOST' | 'CASHED_OUT' | 'VOID'
 
+/**
+ * Why a stake came back (`refundReason` on bets, positions and combos,
+ * `voidReason` on combo legs, `voidCode` on a market's result).
+ * PARTIAL_UNMATCHED isn't produced today.
+ */
+export type RefundReason =
+  | 'MARKET_VOIDED'
+  | 'EVENT_CANCELLED'
+  | 'ADMIN_VOID'
+  | 'DUPLICATE_SOURCE'
+  | 'POOL_NO_OPPOSITION'
+  | 'POOL_NO_WINNER'
+  | 'PARTIAL_UNMATCHED'
+
 export interface Money {
   amount: string
   currency: string
@@ -40,6 +54,14 @@ export interface MarketSummary {
   /** The market's lobby status (OPEN, CLOSED, PAUSED, SETTLED, VOIDED,
    *  DISPUTED, UNKNOWN). */
   status?: string
+  /** How the market ended; null while it's open. */
+  result?: {
+    status?: 'SETTLED' | 'VOIDED' | 'DISPUTED'
+    /** Why the market was voided. Prefer this to `voidReason`. */
+    voidCode?: RefundReason | null
+    /** Free-text note (operator, feed or resolver); not written for players. */
+    voidReason?: string | null
+  } | null
 }
 
 export interface PlaceBetPayload {
@@ -116,6 +138,9 @@ export interface Bet {
   result?: 'WON' | 'LOST' | 'VOID' | 'CASHED_OUT' | null
   /** What the bet actually returned (a refund = the stake); null while open. */
   payout?: Money | null
+  /** Set when the stake came back. */
+  refundReason?: RefundReason | null
+  refundAmount?: Money | null
   /** payout − stake: positive won, 0 refunded, negative lost; null while open. */
   realizedPnl?: Money | null
   /** Pool (parimutuel) bets: potentialReturn floats until close. */
@@ -179,6 +204,8 @@ export interface BetPosition {
   /** ₦100-settling contract count (= shares ÷ 100). Preferred for display. */
   contracts?: string | number | null
   avgPrice: string | null
+  /** Pool positions: the effective odds (payout ÷ stake). */
+  odds?: string | null
   currentPrice?: string | null
   stake?: Money
   potentialReturn?: Money
@@ -193,6 +220,9 @@ export interface BetPosition {
   realizedPnl?: Money | null
   /** What the position actually returned; null while open. */
   payout?: Money | null
+  /** Set when the stake came back. */
+  refundReason?: RefundReason | null
+  refundAmount?: Money | null
   /** Pool (parimutuel) position: no live value until close; potentialReturn
    *  is an estimate. */
   estimated?: boolean
