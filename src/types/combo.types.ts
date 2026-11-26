@@ -1,4 +1,4 @@
-import type { MarketSummary, Money } from './bet.types'
+import type { MarketSummary, Money, RefundReason } from './bet.types'
 import type { EventTeam } from './market.types'
 
 /**
@@ -93,6 +93,9 @@ export interface ComboTicket {
   potentialReturn: Money
   /** Settled payout once resolved; null while open (and "0" on a loss). */
   payout: Money | null
+  /** Set when the combo's stake came back. */
+  refundReason?: RefundReason | null
+  refundAmount?: Money | null
   legs: {
     marketId: string
     outcomeId: string
@@ -100,6 +103,8 @@ export interface ComboTicket {
     /** The leg's captured probability price (0–1). */
     price: string
     status: ComboStatus
+    /** Why a VOID leg was voided. */
+    voidReason?: RefundReason | null
     market: MarketSummary | null
   }[]
   createdAt: string

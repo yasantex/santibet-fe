@@ -22,7 +22,11 @@ import {
   toMajorUnits,
 } from '../utils/functions'
 import ComboLegs from '../components/portfolio/ComboLegs'
-import { marketLabel } from '../components/portfolio/betDisplay'
+import {
+  marketLabel,
+  refundLine,
+  refundReason,
+} from '../components/portfolio/betDisplay'
 import { outcomeLabelClass } from '../utils/marketDisplay'
 import { showSuccessToast, showWarningToast } from '../utils/toastUtils'
 import type { Bet } from '../types/bet.types'
@@ -107,6 +111,10 @@ const OrderRow = ({
 }) => {
   const label = bet.outcomeLabel ?? 'Outcome'
   const badge = betBadge(bet)
+  const refund =
+    bet.result === 'VOID'
+      ? refundLine(bet.refundAmount, refundReason(bet.refundReason, bet.market))
+      : null
   const shares = Number(bet.shares) || 0
   const filledPct =
     bet.status === 'PARTIALLY_FILLED' && shares > 0
@@ -142,6 +150,7 @@ const OrderRow = ({
         {bet.status === 'REJECTED' && bet.rejectReason && (
           <p className='mt-1 text-xs text-error'>{bet.rejectReason}</p>
         )}
+        {refund && <p className='mt-1 text-xs text-neutral-10'>{refund}</p>}
         <p className='mt-1 text-xs text-placeholder'>{formatDate(bet.createdAt)}</p>
       </div>
 
@@ -184,6 +193,10 @@ const ComboOrderRow = ({ combo }: { combo: ComboTicket }) => {
   const [expanded, setExpanded] = useState(false)
   const badge = COMBO_BADGE[combo.status]
   const settled = combo.status !== 'OPEN'
+  const refund =
+    combo.status === 'VOID'
+      ? refundLine(combo.refundAmount, refundReason(combo.refundReason))
+      : null
   const toggle = () => setExpanded((e) => !e)
   return (
     <article
@@ -226,6 +239,7 @@ const ComboOrderRow = ({ combo }: { combo: ComboTicket }) => {
                 .join(' · ')}
             </p>
           )}
+          {refund && <p className='mt-1 text-xs text-neutral-10'>{refund}</p>}
           <p className='mt-1 text-xs text-placeholder'>
             {formatDate(combo.createdAt)}
           </p>

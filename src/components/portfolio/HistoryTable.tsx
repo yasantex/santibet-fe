@@ -95,6 +95,9 @@ const HistoryRow = ({ a }: { a: Activity }) => {
             <OutcomeChip label={a.outcomeLabel} price={a.price} />
             {odds && <span className='text-xs text-neutral-10'>{odds}</span>}
           </div>
+          {a.refundLine && (
+            <span className='text-xs text-neutral-10'>{a.refundLine}</span>
+          )}
         </div>
       </div>
       <span
