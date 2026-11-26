@@ -15,6 +15,9 @@ import type { BaseApiResponse } from '../../types/types'
 import { isAxiosError } from 'axios'
 import { showWarningToast } from '../../utils/toastUtils'
 import { useQueryClient } from '@tanstack/react-query'
+import { useDebounce } from 'use-debounce'
+import { useWithdrawalQuote } from '../../data_layer/wallet'
+import WithdrawalCharges from '../account/WithdrawalCharges'
 import ConfirmWithdrawal from './ConfirmWithdrawal'
 import { useNavigate } from 'react-router'
 import { KYC_PATH } from '../../utils/authRedirect'
@@ -195,6 +198,19 @@ const Withdraw = ({
             showVerificationRequired(errorData)
             return
           }
+          // The balance can't cover amount + fee + charges: back to the
+          // amount, with the server's own figures.
+          if (errorData?.code === 'EXCEEDS_WINNINGS_BALANCE') {
+            const requested = toMajorUnits(errorData.requested ?? 0)
+            const available = toMajorUnits(errorData.available ?? 0)
+            handleBackToForm()
+            setAmountError(
+              requested > available
+                ? `You need ${formatCurrency(requested - available)} more to withdraw this amount, including charges and fees. Withdrawable: ${formatCurrency(available)}.`
+                : 'Amount exceeds your withdrawable balance',
+            )
+            return
+          }
           if (errorData?.code === 'AMOUNT_BELOW_MINIMUM' && errorData?.minimum) {
             const minimum = Number(errorData.minimum)
             setMinWithdrawalMinor(minimum)
@@ -245,6 +261,32 @@ const Withdraw = ({
   // Only winnings can be withdrawn; deposits have to be bet first.
   const winningBalance = withdrawableBalance(wallet)
 
+  // Statutory charges (NRC, State Regulator, SantiBet commission) for the
+  // amount typed, once it's past the minimum. Debounced: the quote endpoint is
+  // rate-limited. The backend leaves `deductions` out while the charges are
+  // switched off, and then nothing extra shows.
+  const [debouncedAmount] = useDebounce(amount, 500)
+  const debouncedNumeric = Number(debouncedAmount)
+  const chargesKobo =
+    open &&
+    debouncedNumeric > 0 &&
+    toMinorUnits(debouncedNumeric) >= minWithdrawalMinor
+      ? String(toMinorUnits(debouncedNumeric))
+      : null
+  const { data: chargesQuote } = useWithdrawalQuote(chargesKobo)
+  // The hook keeps the last quote while the next loads: only trust one for
+  // the amount on screen.
+  const quoteForAmount =
+    chargesQuote &&
+    amount === debouncedAmount &&
+    chargesQuote.amount === chargesKobo
+      ? chargesQuote
+      : null
+  const charges = quoteForAmount?.deductions?.length ? quoteForAmount : null
+  const chargesTotal = toMajorUnits(charges?.totalDeductions ?? 0)
+  // The withdrawal fee, when the quote returns it.
+  const quotedFee = toMajorUnits(quoteForAmount?.fee ?? 0)
+
   const validateAmount = () => {
     const numeric = Number(amount)
     if (!amount || Number.isNaN(numeric) || numeric <= 0) {
@@ -259,6 +301,15 @@ const Withdraw = ({
     }
     if (numeric > winningBalance) {
       setAmountError('Amount exceeds your withdrawable balance')
+      return null
+    }
+    // The fee and charges come out of the same balance. The server still has
+    // the final say (EXCEEDS_WINNINGS_BALANCE), e.g. if the quote is stale.
+    const debit = numeric + chargesTotal + quotedFee
+    if (debit > winningBalance) {
+      setAmountError(
+        `You need ${formatCurrency(debit - winningBalance)} more to withdraw this amount, including fees and charges. Withdrawable: ${formatCurrency(winningBalance)}.`,
+      )
       return null
     }
     // Explained (with a link to verify) under the amount field.
@@ -499,6 +550,15 @@ const Withdraw = ({
                       </button>
                     ))}
                 </span>
+              </div>
+            )}
+            {charges && !amountError && (
+              <div className='-mt-1 rounded-lg border border-border p-3'>
+                <WithdrawalCharges
+                  breakdown={charges}
+                  amount={charges.amount}
+                  fee={charges.fee}
+                />
               </div>
             )}
             {Number(wallet?.bonus ?? 0) + Number(wallet?.bonusLocked ?? 0) > 0 && (

@@ -1,6 +1,6 @@
 import type { ComboTicket } from '../../types/bet.types'
 import { OutcomeChip } from './PortfolioBits'
-import { usePriceOdds } from './betDisplay'
+import { refundReason, usePriceOdds } from './betDisplay'
 
 const LEG_STATUS: Record<
   ComboTicket['legs'][number]['status'],
@@ -37,6 +37,11 @@ const ComboLegs = ({ combo }: { combo: ComboTicket }) => {
                 )}
                 <OutcomeChip label={leg.outcomeLabel ?? 'Pick'} />
               </div>
+              {leg.status === 'VOID' && refundReason(leg.voidReason, leg.market) && (
+                <span className='text-xs text-neutral-10'>
+                  Refunded: {refundReason(leg.voidReason, leg.market)}
+                </span>
+              )}
             </div>
             <div className='flex shrink-0 flex-col items-end gap-1'>
               <span className='text-sm font-semibold text-black'>

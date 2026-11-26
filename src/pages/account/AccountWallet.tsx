@@ -28,6 +28,7 @@ import { StatusBadge } from '../../components/globals/ReusedText'
 import FilterComponent from '../../components/globals/FilterComponent'
 import { filterCategories } from '../../utils/filters'
 import WithdrawalAccounts from '../../components/account/WithdrawalAccounts'
+import WithdrawalCharges from '../../components/account/WithdrawalCharges'
 import { Button } from '../../components/globals/Button'
 import SuspendedHint from '../../components/globals/SuspendedHint'
 import useAccountSuspended from '../../hooks/useAccountSuspended'
@@ -319,6 +320,22 @@ const AccountWallet = () => {
                             <span className='text-sm text-black'>
                               {item.description}
                             </span>
+                            {item.type === 'WITHDRAWAL' &&
+                              !!item.deductions?.length && (
+                                <details className='mt-1 text-xs text-neutral-10'>
+                                  <summary className='cursor-pointer select-none'>
+                                    + {formatCurrency(toMajorUnits(item.totalDeductions ?? 0))}{' '}
+                                    charges
+                                  </summary>
+                                  <div className='mt-2 min-w-56'>
+                                    <WithdrawalCharges
+                                      breakdown={item}
+                                      amount={item.amount}
+                                      fee={item.fee}
+                                    />
+                                  </div>
+                                </details>
+                              )}
                             <span className='text-xs text-placeholder'>
                               {formatDate(item.createdAt)}
                             </span>

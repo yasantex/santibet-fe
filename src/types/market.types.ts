@@ -256,6 +256,8 @@ export interface UiMarket {
   executionModel?: ExecutionModel | null
   /** Filled single bets + combo legs. Lobby feed only. */
   tradeCount?: number | null
+  /** The event's bets in the Trending window (`sort=most_bets` only). */
+  recentBetCount?: number | null
   outcomes: UiOutcome[]
   /** Binary-market convenience accessors (derived from outcomes). */
   yes?: UiOutcome
@@ -281,6 +283,8 @@ export interface UiEvent {
   featured?: boolean
   /** Sports fixtures: the two teams, with logos. */
   teams?: EventTeam[] | null
+  /** Bets in the Trending window (`sort=most_bets` only). */
+  recentBetCount?: number | null
   markets: UiMarket[]
 }
 
@@ -371,6 +375,12 @@ export interface LobbyEvent {
   /** Sports fixtures: home/away teams with logos. */
   teams?: EventTeam[] | null
   marketCount: number
+  /** `sort=most_bets` only: SantiBet bets in the trending window (default
+   *  24h; at most 3 per player count). Totals, never who bet. */
+  recentBetCount?: number
+  bettorCount?: number
+  /** Kobo. */
+  recentStakeMinor?: string
   markets: LobbyMarket[]
 }
 

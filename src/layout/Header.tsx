@@ -55,6 +55,11 @@ import type { WalletBalance } from '../types/wallet.types'
 import { WALLET_LABELS } from '../utils/walletLabels'
 
 const CategoryRow = () => {
+  const location = useLocation()
+  // Mobile leads the row with Trending (desktop has it in the top nav).
+  const trendingActive =
+    location.pathname === '/browse' &&
+    new URLSearchParams(location.search).get('sort') === 'most_bets'
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
@@ -157,6 +162,14 @@ const CategoryRow = () => {
           ref={scrollRef}
           className='hide-scroll-bar flex items-center gap-6 overflow-x-auto scroll-smooth text-sm font-semibold'
         >
+          <Link
+            to='/browse?sort=most_bets'
+            className={`flex shrink-0 items-center py-1 lg:hidden ${
+              trendingActive ? 'text-black' : 'text-black/60 hover:text-black'
+            }`}
+          >
+            Trending
+          </Link>
           {visibleLinks.map((link) => (
             <NavLink
               key={link.label}
@@ -333,6 +346,9 @@ const Header = () => {
           <div className='hidden shrink-0 items-center gap-4 text-sm font-semibold lg:flex'>
             <Link to='/browse' className={browseLinkClass('')}>
               Events
+            </Link>
+            <Link to='/browse?sort=most_bets' className={browseLinkClass('most_bets')}>
+              Trending
             </Link>
             <NavLink
               to='/live'

@@ -241,13 +241,15 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
     liveState: e.liveState ?? null,
     featured: e.featured ?? false,
     teams: e.teams ?? null,
+    recentBetCount: e.recentBetCount ?? null,
     marketCount: e.marketCount ?? e.markets?.length ?? 0,
     markets: (e.markets ?? []).map((m) => ({
       ...normalizeLobbyMarket(m, category, e.id, e.imageUrl, e.title),
       categorySlug,
       // Markets render on their own (cards, match rows), so they carry the
-      // event's teams for logos.
+      // event's teams for logos, and its recent bet count for Trending.
       teams: e.teams ?? null,
+      recentBetCount: e.recentBetCount ?? null,
     })),
   }
 }
@@ -420,7 +422,9 @@ export interface EventQueryParams extends QueryParams {
   q?: string
   featured?: boolean
   live?: boolean
-  sort?: 'trending' | 'closing_soon' | 'newest'
+  /** `trending`: partner-volume score ("Breaking"). `most_bets`: open events
+   *  ranked by SantiBet bets in the last 24h (the Trending tab). */
+  sort?: 'trending' | 'closing_soon' | 'newest' | 'most_bets'
   limit?: number
 }
 

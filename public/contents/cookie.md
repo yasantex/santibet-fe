@@ -26,4 +26,4 @@ We may update this Cookie Policy as SantiBet grows. Significant changes will be 
 
 ## Questions
 
-Email [info@santibet.com](mailto:info@santibet.com) if anything on this page is unclear.
+Email [support@santibet.com](mailto:support@santibet.com) if anything on this page is unclear.
