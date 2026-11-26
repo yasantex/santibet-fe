@@ -2,7 +2,7 @@ Our support team is here to help with anything related to your SantiBet account,
 
 ## How to reach us
 
-- Email: info@santibet.com
+- Email: support@santibet.com
 - Support hours: Monday to Sunday, 8am to 10pm WAT
 
 ## What to include when you contact us
