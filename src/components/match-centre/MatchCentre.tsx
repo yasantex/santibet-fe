@@ -3,7 +3,7 @@ import { useMatchCentre } from '../../data_layer/matchCentre'
 import { showSuccessToast } from '../../utils/toastUtils'
 import type { MatchCentre as MatchData } from '../../types/matchCentre.types'
 import CommentaryFeed from './CommentaryFeed'
-import LatestEvent from './LatestEvent'
+import TrackerPitch from './TrackerPitch'
 import LineupsPanel from './LineupsPanel'
 import MatchHeader from './MatchHeader'
 import MatchTimeline from './MatchTimeline'
@@ -108,7 +108,7 @@ const MatchCentre = ({
         <div className={`bg-background ${tab === 'tracker' ? '' : 'p-3'} ${compact ? 'max-h-[420px] overflow-y-auto' : ''}`}>
           {tab === 'tracker' && (
             <div className='flex flex-col'>
-              <LatestEvent match={match} />
+              <TrackerPitch match={match} />
               <div className='p-3'>
                 <MomentumChart match={match} />
               </div>
