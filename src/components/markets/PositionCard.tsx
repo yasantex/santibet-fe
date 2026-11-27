@@ -2,6 +2,7 @@ import ShareBetButton from './ShareBetButton'
 import CashOutButton from './CashOutButton'
 import BonusBetBadge from '../bonus/BonusBetBadge'
 import MarketTitleLink from './MarketTitleLink'
+import BetMatchTracker from '../match-centre/BetMatchTracker'
 import { useMarket } from '../../data_layer/markets'
 import {
   formatCurrency,
@@ -131,6 +132,13 @@ const PositionCard = ({ position, shareable = false }: PositionCardProps) => {
           </div>
         )}
       </section>
+
+      {isOpen && position.market?.matchCentre && position.market.eventId && (
+        <BetMatchTracker
+          eventId={position.market.eventId}
+          liveState={position.market.liveState}
+        />
+      )}
 
       <div className='flex flex-wrap items-center justify-between gap-2 text-xs text-placeholder'>
         <span>Staked {formatCurrency(String(staked), currency)}</span>
