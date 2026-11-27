@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { TicketStarIcon } from '@hugeicons/core-free-icons'
 import MarketTitleLink from './MarketTitleLink'
+import BetMatchTracker from '../match-centre/BetMatchTracker'
 import {
   formatCurrency,
   formatDate,
@@ -59,28 +60,35 @@ const ComboCard = ({ combo }: { combo: ComboTicket }) => {
         {combo.legs.map((leg) => {
           const mark = LEG_MARK[leg.status] ?? LEG_MARK.OPEN
           return (
-            <li key={leg.outcomeId} className='flex items-start gap-2 text-sm'>
-              <span className={`w-3 shrink-0 font-bold ${mark.className}`}>
-                {mark.icon}
-              </span>
-              <MarketTitleLink
-                marketId={leg.marketId}
-                marketStatus={leg.market?.status}
-                settled={leg.status !== 'OPEN'}
-                className='min-w-0 flex-1 text-left'
-              >
-                <span className='font-semibold text-black'>
-                  {leg.outcomeLabel ?? 'Selection'}
+            <li key={leg.outcomeId} className='flex flex-col gap-1.5'>
+              <div className='flex items-start gap-2 text-sm'>
+                <span className={`w-3 shrink-0 font-bold ${mark.className}`}>
+                  {mark.icon}
                 </span>
-                <span className='text-neutral-10'>
-                  {' '}
-                  · {leg.market?.title ?? leg.marketId}
-                </span>
-              </MarketTitleLink>
-              {Number(leg.price) > 0 && (
-                <span className='shrink-0 text-xs font-semibold text-neutral-10'>
-                  {formatOdds(oddsFromPrice(leg.price))}
-                </span>
+                <MarketTitleLink
+                  marketId={leg.marketId}
+                  marketStatus={leg.market?.status}
+                  settled={leg.status !== 'OPEN'}
+                  className='min-w-0 flex-1 text-left'
+                >
+                  <span className='font-semibold text-black'>
+                    {leg.outcomeLabel ?? 'Selection'}
+                  </span>
+                  <span className='text-neutral-10'>
+                    {' '}
+                    · {leg.market?.title ?? leg.marketId}
+                  </span>
+                </MarketTitleLink>
+                {Number(leg.price) > 0 && (
+                  <span className='shrink-0 text-xs font-semibold text-neutral-10'>
+                    {formatOdds(oddsFromPrice(leg.price))}
+                  </span>
+                )}
+              </div>
+              {leg.status === 'OPEN' && leg.market?.matchCentre && leg.market.eventId && (
+                <div className='pl-5'>
+                  <BetMatchTracker eventId={leg.market.eventId} liveState={leg.market.liveState} />
+                </div>
               )}
             </li>
           )

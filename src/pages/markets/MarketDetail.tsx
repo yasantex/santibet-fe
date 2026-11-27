@@ -19,6 +19,7 @@ import MarketInfoTabs from '../../components/markets/MarketInfoTabs'
 import MultiChoiceEventView from '../../components/markets/MultiChoiceEventView'
 import ComboMarketPanel from '../../components/combo/ComboMarketPanel'
 import { LiveBadge, ScoreBoard } from '../../components/markets/LiveBits'
+import MatchCentre from '../../components/match-centre/MatchCentre'
 import ChartTooltip from '../../components/markets/ChartTooltip'
 import ChartRangeTabs from '../../components/markets/ChartRangeTabs'
 import { chartDomain, formatChartTick } from '../../utils/chartFormat'
@@ -379,9 +380,11 @@ const MarketDetail = () => {
                 )}
               </div>
             </div>
-            {event?.liveState && (
+            {event?.matchCentre ? (
+              <MatchCentre eventId={event.id} compact showMyBets goalAlerts />
+            ) : event?.liveState ? (
               <ScoreBoard state={event.liveState} teams={teams} />
-            )}
+            ) : null}
             {winner ? (
               <p className='rounded-lg bg-success-bg px-3 py-2 text-sm font-semibold text-success'>
                 Resolved · {winner.label} won
