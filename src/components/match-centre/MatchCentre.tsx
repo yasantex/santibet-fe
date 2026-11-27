@@ -81,7 +81,17 @@ const MatchCentre = ({
   const [tab, setTab] = useState<Tab>('tracker')
 
   if (isLoading) {
-    return <div className={`w-full animate-pulse rounded-xl bg-card ${compact ? 'h-40' : 'h-72'}`} />
+    return (
+      <div
+        className={`flex w-full flex-col overflow-hidden rounded-xl border border-border ${compact ? 'h-40' : 'h-72'}`}
+        aria-busy='true'
+      >
+        <div className='flex h-20 animate-pulse items-center justify-center bg-[#14181b] text-xs text-[#9ba19e]'>
+          Loading match tracker…
+        </div>
+        <div className='flex-1 animate-pulse bg-[#2f8f3a]/40' />
+      </div>
+    )
   }
   if (!match) return null
 
