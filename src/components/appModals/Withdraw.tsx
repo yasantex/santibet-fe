@@ -286,6 +286,20 @@ const Withdraw = ({
   const chargesTotal = toMajorUnits(charges?.totalDeductions ?? 0)
   // The withdrawal fee, when the quote returns it.
   const quotedFee = toMajorUnits(quoteForAmount?.fee ?? 0)
+  // Everything that leaves the wallet, from the server. Older responses don't
+  // send it; the parts are added up then (charges only count when on top).
+  const quotedDebit =
+    quoteForAmount?.totalDebit != null
+      ? toMajorUnits(quoteForAmount.totalDebit)
+      : null
+
+  // The most this user can ask for right now, net of the fee, any charges
+  // and the per-withdrawal maximum (the quote's figure is the fresher one).
+  // Not `withdrawable`: asking for all of that fails once the fee is added.
+  const maxWithdrawalMinor =
+    quoteForAmount?.maxAmount ?? wallet?.maxWithdrawal ?? null
+  const maxWithdrawal =
+    maxWithdrawalMinor != null ? toMajorUnits(maxWithdrawalMinor) : null
 
   const validateAmount = () => {
     const numeric = Number(amount)
@@ -303,9 +317,21 @@ const Withdraw = ({
       setAmountError('Amount exceeds your withdrawable balance')
       return null
     }
+    if (maxWithdrawal != null && numeric > maxWithdrawal) {
+      setAmountError(
+        maxWithdrawal > 0
+          ? `The most you can withdraw right now is ${formatCurrency(maxWithdrawal, wallet?.currency)}, after fees and charges.`
+          : 'Your withdrawable balance is below the minimum withdrawal once fees and charges are added.',
+      )
+      return null
+    }
     // The fee and charges come out of the same balance. The server still has
     // the final say (EXCEEDS_WINNINGS_BALANCE), e.g. if the quote is stale.
-    const debit = numeric + chargesTotal + quotedFee
+    const debit =
+      quotedDebit ??
+      numeric +
+        (charges?.deductionsIncluded ? 0 : chargesTotal) +
+        quotedFee
     if (debit > winningBalance) {
       setAmountError(
         `You need ${formatCurrency(debit - winningBalance)} more to withdraw this amount, including fees and charges. Withdrawable: ${formatCurrency(winningBalance)}.`,
@@ -457,6 +483,19 @@ const Withdraw = ({
                 <span className='text-black'>
                   {formatCurrency(winningBalance, wallet?.currency)}
                 </span>
+                {maxWithdrawal != null && maxWithdrawal > 0 && (
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setAmount(String(maxWithdrawal))
+                      setAmountError('')
+                      setServerCheck(null)
+                    }}
+                    className='ml-2 cursor-pointer rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-black hover:border-success'
+                  >
+                    Max {formatCurrency(maxWithdrawal, wallet?.currency)}
+                  </button>
+                )}
               </p>
               <p className='text-xs text-neutral-10'>
                 Only winnings can be withdrawn. Deposits have to be bet first.
@@ -559,6 +598,28 @@ const Withdraw = ({
                   amount={charges.amount}
                   fee={charges.fee}
                 />
+              </div>
+            )}
+            {!charges && quoteForAmount?.totalDebit != null && !amountError && (
+              // No statutory charges: just the fee and what leaves the wallet.
+              <div className='-mt-1 flex flex-col gap-2 rounded-lg border border-border p-3 text-sm'>
+                {quotedFee > 0 && (
+                  <div className='flex justify-between gap-4 font-medium text-neutral-10'>
+                    <p>Withdrawal fee</p>
+                    <span className='text-black'>
+                      {formatCurrency(quotedFee, wallet?.currency)}
+                    </span>
+                  </div>
+                )}
+                <div className='flex justify-between gap-4 font-semibold text-black'>
+                  <p>Total from your wallet</p>
+                  <span>
+                    {formatCurrency(
+                      toMajorUnits(quoteForAmount.totalDebit),
+                      wallet?.currency,
+                    )}
+                  </span>
+                </div>
               </div>
             )}
             {Number(wallet?.bonus ?? 0) + Number(wallet?.bonusLocked ?? 0) > 0 && (

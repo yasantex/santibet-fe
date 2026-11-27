@@ -953,18 +953,19 @@ const CategoryPage = () => {
             {!isLoading &&
               !filtered.length &&
               !(showLive && liveInTopic.length) && (
-                <p className='py-12 text-center text-sm text-neutral-10'>
-                  {searchTerm
-                    ? `No markets match "${searchTerm}".`
-                    : `No open markets in ${
-                        activeLeague ??
-                        (isSports
-                          ? (activeSport ?? activeLabel)
-                          : activeLabel)
-                      }${
-                        !isSports && activeTopic ? ` / ${activeTopic}` : ''
-                      }. Try loading more or another category.`}
-                </p>
+                <EmptyMarkets
+                  searchTerm={searchTerm}
+                  scope={(() => {
+                    const name =
+                      activeLeague ??
+                      (isSports ? (activeSport ?? activeLabel) : activeLabel)
+                    // "All" isn't a place: say nothing rather than "in All".
+                    const base = name && name !== 'All' ? name : null
+                    const topic = !isSports && activeTopic ? activeTopic : null
+                    return [base, topic].filter(Boolean).join(' · ') || null
+                  })()}
+                  canLoadMore={!!hasNextPage}
+                />
               )}
 
             {hasNextPage && (
@@ -988,3 +989,34 @@ const CategoryPage = () => {
 }
 
 export default CategoryPage
+
+/** Shown when the list is empty: what's missing, and what the player can do. */
+const EmptyMarkets = ({
+  searchTerm,
+  scope,
+  canLoadMore,
+}: {
+  searchTerm?: string
+  /** e.g. "Football" or "Business · Oil"; null for all markets. */
+  scope: string | null
+  canLoadMore: boolean
+}) => {
+  const title = searchTerm
+    ? `No markets match "${searchTerm}"`
+    : scope
+      ? `No open markets in ${scope} right now`
+      : 'No open markets right now'
+  const hint = searchTerm
+    ? 'Check the spelling or try a shorter search.'
+    : canLoadMore
+      ? 'Tap Load more to see more markets.'
+      : scope
+        ? 'New markets are added throughout the day. Check back soon or try another category.'
+        : 'New markets are added throughout the day. Check back soon.'
+  return (
+    <div className='flex flex-col items-center gap-1.5 px-4 py-12 text-center'>
+      <p className='text-sm font-semibold text-black'>{title}</p>
+      <p className='text-sm text-neutral-10'>{hint}</p>
+    </div>
+  )
+}

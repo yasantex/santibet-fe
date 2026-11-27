@@ -27,10 +27,14 @@ const Row = ({
  * A withdrawal's statutory charges, in the backend's order. Renders nothing
  * unless the API sent `deductions`: that's the only sign they applied.
  *
- * The charges come on top of the amount: the player receives `netPayable` (the
- * amount they asked for) and the wallet is debited amount + fee + charges.
- * Pass `fee` (kobo) once it's known (on a requested withdrawal) to show the
- * full debit; the quote doesn't include it.
+ * The backend decides whether the charges come on top of the amount or out of
+ * it (`deductionsIncluded`), and every withdrawal keeps the mode it was made
+ * under, so this reads the flag rather than assuming one. `amount` is always
+ * what the player asked for; `netPayable` is what reaches the bank;
+ * `totalDebit` is what leaves the wallet. The server's figures are shown as
+ * sent; the client only adds them up for responses that predate `totalDebit`.
+ *
+ * Pass `fee` (kobo) once it's known to show the full debit.
  */
 const WithdrawalCharges = ({
   breakdown,
@@ -42,19 +46,55 @@ const WithdrawalCharges = ({
   amount: string
   fee?: string
 }) => {
-  const { deductions, totalDeductions, netPayable } = breakdown
+  const { deductions, totalDeductions, netPayable, deductionsIncluded, totalDebit } =
+    breakdown
   if (!deductions?.length) return null
 
-  const receive = toMajorUnits(netPayable ?? amount)
+  const requested = toMajorUnits(amount)
   const charges = toMajorUnits(
     totalDeductions ??
       deductions.reduce((sum, d) => sum + Number(d.amount), 0),
   )
+  const receive =
+    netPayable != null
+      ? toMajorUnits(netPayable)
+      : deductionsIncluded
+        ? requested - charges
+        : requested
   const feeNaira = fee != null ? toMajorUnits(fee) : null
+  const debit =
+    totalDebit != null
+      ? toMajorUnits(totalDebit)
+      : feeNaira != null
+        ? (deductionsIncluded ? requested : requested + charges) + feeNaira
+        : null
+
+  const feeText =
+    feeNaira != null && feeNaira > 0
+      ? `the ${formatCurrency(feeNaira)} fee`
+      : feeNaira == null
+        ? 'the usual withdrawal fee'
+        : null
+
+  let explanation: string
+  if (deductionsIncluded) {
+    explanation = `${formatCurrency(charges)} in charges comes out of your ${formatCurrency(requested)}, so you receive ${formatCurrency(receive)}.`
+    if (debit != null)
+      explanation += ` ${feeText ? `With ${feeText}, ` : ''}${formatCurrency(debit)} leaves your wallet.`
+    else if (feeText) explanation += ` ${feeText[0].toUpperCase()}${feeText.slice(1)} is taken from your wallet on top.`
+  } else {
+    explanation = `You receive ${formatCurrency(receive)}. ${formatCurrency(charges)} in charges${feeText ? ` and ${feeText}` : ''} ${feeText ? 'are' : 'is'} added`
+    explanation +=
+      debit != null
+        ? `: ${formatCurrency(debit)} leaves your wallet.`
+        : ' to what comes out of your wallet.'
+  }
 
   return (
     <div className='flex flex-col gap-2'>
-      <Row label='You receive' value={formatCurrency(receive)} strong />
+      {deductionsIncluded && (
+        <Row label='Amount requested' value={formatCurrency(requested)} />
+      )}
       {deductions.map((d) => (
         <Row
           key={d.label}
@@ -62,24 +102,18 @@ const WithdrawalCharges = ({
           value={formatCurrency(toMajorUnits(d.amount))}
         />
       ))}
-      {feeNaira != null ? (
-        <>
-          {feeNaira > 0 && (
-            <Row label='Withdrawal fee' value={formatCurrency(feeNaira)} />
-          )}
-          <Row
-            label='Total from your wallet'
-            value={formatCurrency(toMajorUnits(amount) + charges + feeNaira)}
-            strong
-          />
-        </>
-      ) : (
-        <p className='text-xs text-neutral-10'>
-          You receive {formatCurrency(receive)}. The{' '}
-          {formatCurrency(charges)} in charges, plus the usual withdrawal fee,
-          are added to what comes out of your wallet.
-        </p>
+      <Row label='You receive' value={formatCurrency(receive)} strong />
+      {feeNaira != null && feeNaira > 0 && (
+        <Row label='Withdrawal fee' value={formatCurrency(feeNaira)} />
       )}
+      {debit != null && (
+        <Row
+          label='Total from your wallet'
+          value={formatCurrency(debit)}
+          strong
+        />
+      )}
+      <p className='text-xs text-neutral-10'>{explanation}</p>
     </div>
   )
 }
