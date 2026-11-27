@@ -6,6 +6,7 @@ import { useCategoryCrumbs } from '../../hooks/useCategoryCrumbs'
 import MarketCard from '../../components/markets/MarketCard'
 import MultiChoiceEventView from '../../components/markets/MultiChoiceEventView'
 import MatchCentre from '../../components/match-centre/MatchCentre'
+import { useMatchCentre } from '../../data_layer/matchCentre'
 import PageNav from '../../components/globals/PageNav'
 import {
   categoryIcon,
@@ -30,6 +31,11 @@ const EventDetail = () => {
     refetchMs: EVENT_POLL_MS,
   })
   const multiChoice = !!event && isMultiChoiceEvent(event.markets)
+  // The tracker gets its column only while it loads or has a match to show; a
+  // match with no live data (404) or a failed load gives the space back to the
+  // markets. Same query as the tracker itself, so it is fetched once.
+  const tracker = useMatchCentre(event?.matchCentre ? event.id : undefined)
+  const showTracker = !!event?.matchCentre && (tracker.isPending || !!tracker.data) && !tracker.isError
   // The feed imports a match's spreads/totals as a separate
   // "<match> - More Markets" event; list them here too.
   const { data: moreEvent } = useEvent(
@@ -124,13 +130,13 @@ const EventDetail = () => {
             </div>
           </div>
 
-          <div className={event.matchCentre ? 'flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start' : ''}>
-          {event.matchCentre && (
+          <div className={showTracker ? 'flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start' : ''}>
+          {showTracker && (
             <div className='lg:sticky lg:top-4 lg:order-2'>
               <MatchCentre eventId={event.id} />
             </div>
           )}
-          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${event.matchCentre ? '' : 'lg:grid-cols-3'}`}>
+          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${showTracker ? '' : 'lg:grid-cols-3'}`}>
             {markets.map((market) => (
               <MarketCard
                 key={market.id}
