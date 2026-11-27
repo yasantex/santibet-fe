@@ -27,6 +27,23 @@ export interface MatchEvent {
   comment: string | null
 }
 
+export type MomentType =
+  | 'dangerous_attack'
+  | 'shot_on_target'
+  | 'shot'
+  | 'corner'
+  | 'free_kick'
+  | 'offside'
+
+export interface MatchMoment {
+  id: string
+  minute: number
+  /** The attacking team. */
+  side: MatchSide
+  type: MomentType
+  count: number
+}
+
 export interface MatchStat {
   key: string
   label: string
@@ -101,6 +118,8 @@ export interface MatchCentre {
   stats: MatchStat[]
   lineups: { home: TeamLineup; away: TeamLineup } | null
   momentum: { minute: number; home: number; away: number }[]
+  /** Inferred from the statistics rising between minute readings; oldest first. */
+  moments: MatchMoment[]
   preMatch: {
     headToHead: {
       date: string
