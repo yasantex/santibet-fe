@@ -121,7 +121,7 @@ const PortfolioSummaryCards = ({
             </div>
             {summary && openStake && (
               <span className='text-xs text-neutral-10'>
-                {summary.openPositions} live bet
+                {summary.openPositions} open bet
                 {summary.openPositions === 1 ? '' : 's'} ·{' '}
                 {show(formatCurrency(cashStaked))} staked
               </span>

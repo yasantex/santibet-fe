@@ -134,6 +134,14 @@ const ConfirmWithdrawal = ({
                   {withdrawal.currency} {toMajorUnits(withdrawal.fee).toLocaleString('en-NG')}
                 </span>
               </div>
+              {withdrawal.totalDebit != null && (
+                <div className='flex justify-between gap-4 font-semibold text-sm text-black'>
+                  <p>Total debited</p>
+                  <span>
+                    {withdrawal.currency} {toMajorUnits(withdrawal.totalDebit).toLocaleString('en-NG')}
+                  </span>
+                </div>
+              )}
             </>
           )}
           <div className='flex justify-between gap-4 font-medium text-sm text-black'>
