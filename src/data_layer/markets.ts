@@ -239,6 +239,7 @@ export const normalizeLobbyEvent = (e: LobbyEvent): UiEvent => {
           IN_PLAY_STATUSES.includes(LOBBY_STATUS[m.status] ?? 'unknown'),
         )),
     liveState: e.liveState ?? null,
+    matchCentre: e.matchCentre ?? false,
     featured: e.featured ?? false,
     teams: e.teams ?? null,
     recentBetCount: e.recentBetCount ?? null,

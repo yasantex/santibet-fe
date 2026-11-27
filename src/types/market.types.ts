@@ -276,6 +276,8 @@ export interface UiEvent {
   imageUrl?: string | null
   live?: boolean
   liveState?: LiveState | null
+  /** Football: a live match tracker exists (GET /match-centre/:id). */
+  matchCentre?: boolean
   /** Markets in the event. List feeds embed only a few of them, so this can
    *  exceed `markets.length`; the event endpoint returns them all. */
   marketCount?: number
@@ -372,6 +374,7 @@ export interface LobbyEvent {
   hot?: boolean // operator-curated hot pick (admin → Events → Hot pick)
   live?: boolean
   liveState?: LiveState | null
+  matchCentre?: boolean
   /** Sports fixtures: home/away teams with logos. */
   teams?: EventTeam[] | null
   marketCount: number

@@ -5,6 +5,7 @@ import { useFavorites } from '../../hooks/useFavorites'
 import { useCategoryCrumbs } from '../../hooks/useCategoryCrumbs'
 import MarketCard from '../../components/markets/MarketCard'
 import MultiChoiceEventView from '../../components/markets/MultiChoiceEventView'
+import MatchCentre from '../../components/match-centre/MatchCentre'
 import PageNav from '../../components/globals/PageNav'
 import {
   categoryIcon,
@@ -123,7 +124,13 @@ const EventDetail = () => {
             </div>
           </div>
 
-          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+          <div className={event.matchCentre ? 'flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start' : ''}>
+          {event.matchCentre && (
+            <div className='lg:sticky lg:top-4 lg:order-2'>
+              <MatchCentre eventId={event.id} />
+            </div>
+          )}
+          <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${event.matchCentre ? '' : 'lg:grid-cols-3'}`}>
             {markets.map((market) => (
               <MarketCard
                 key={market.id}
@@ -139,6 +146,7 @@ const EventDetail = () => {
                 No markets in this event.
               </p>
             )}
+          </div>
           </div>
         </>
       )}

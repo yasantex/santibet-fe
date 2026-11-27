@@ -1,5 +1,5 @@
 import type { ComboTicket } from './combo.types'
-import type { ExecutionModel } from './market.types'
+import type { ExecutionModel, LiveState } from './market.types'
 import type { BonusQuote, FundedBy } from './bonus.types'
 
 // The combo ticket shape is owned by combo.types; re-exported here so callers
@@ -51,6 +51,12 @@ export interface MarketSummary {
   imageUrl: string | null
   /** The event/fixture, e.g. "Arsenal vs Chelsea" — a sports market's title is only its type. */
   eventTitle?: string | null
+  /** The match/event the market belongs to. */
+  eventId?: string | null
+  /** Football: a live match tracker exists for the event. */
+  matchCentre?: boolean
+  /** Sports: live score / clock while playing, final score once finished. */
+  liveState?: LiveState | null
   /** The market's lobby status (OPEN, CLOSED, PAUSED, SETTLED, VOIDED,
    *  DISPUTED, UNKNOWN). */
   status?: string
