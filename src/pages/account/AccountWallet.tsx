@@ -324,8 +324,9 @@ const AccountWallet = () => {
                               !!item.deductions?.length && (
                                 <details className='mt-1 text-xs text-neutral-10'>
                                   <summary className='cursor-pointer select-none'>
-                                    + {formatCurrency(toMajorUnits(item.totalDeductions ?? 0))}{' '}
-                                    charges
+                                    {item.deductionsIncluded
+                                      ? `${formatCurrency(toMajorUnits(item.totalDeductions ?? 0))} charges taken out`
+                                      : `+ ${formatCurrency(toMajorUnits(item.totalDeductions ?? 0))} charges`}
                                   </summary>
                                   <div className='mt-2 min-w-56'>
                                     <WithdrawalCharges

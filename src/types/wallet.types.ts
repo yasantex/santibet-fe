@@ -11,6 +11,10 @@ export interface WalletBalance {
    *  has to be bet first. A withdrawal's fee is taken from this on top of the
    *  amount requested. */
   withdrawable?: string
+  /** Kobo: the most this user can ask to withdraw right now, after the fee,
+   *  any statutory charges and the per-withdrawal maximum. `"0"` when they
+   *  can't reach the minimum. Use it for "Max", not `withdrawable`. */
+  maxWithdrawal?: string
   /** Bonus credit (kobo). Never part of `total` and never withdrawable. */
   bonus?: string
   /** Locked bonus winnings (kobo). Never part of `total`. */
@@ -46,16 +50,24 @@ export interface WithdrawalDeduction {
 
 /**
  * Statutory charges on a withdrawal (NRC, State Regulator, SantiBet
- * commission), charged on top of the amount. The backend only sends these
- * while its `withdrawal-statutory-deductions` flag is on, or on rows that were
+ * commission). The backend only sends these while its
+ * `withdrawal-statutory-deductions` flag is on, or on rows that were
  * snapshotted while it was; their presence is the only sign a charge applied.
+ * Each withdrawal keeps the mode (on top / taken out) it was made under.
  */
 export interface WithdrawalBreakdown {
   deductions?: WithdrawalDeduction[]
   /** Kobo: the sum of `deductions`. */
   totalDeductions?: string
-  /** Kobo: what the player receives. Always the amount requested. */
+  /** Kobo: what reaches the bank. The amount requested when the charges are
+   *  on top; the amount minus the charges when they're taken out. */
   netPayable?: string
+  /** Sent with `deductions`. `true`: the charges come out of the amount.
+   *  `false`: they're added on top of it. */
+  deductionsIncluded?: boolean
+  /** Kobo: everything that leaves the wallet (amount or net + charges + fee).
+   *  Show this rather than adding the parts up. */
+  totalDebit?: string
 }
 
 /** `POST /wallet/withdrawal-quote`: read-only preview of a withdrawal's cost. */
@@ -65,6 +77,8 @@ export interface WithdrawalChargesQuote extends WithdrawalBreakdown {
   /** Kobo: the usual withdrawal fee, from the same settings as the request.
    *  Optional until every environment returns it. */
   fee?: string
+  /** Kobo: the most this user can ask for right now. */
+  maxAmount?: string
 }
 
 export interface Transaction extends WithdrawalBreakdown {
